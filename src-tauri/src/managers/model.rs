@@ -45,6 +45,8 @@ pub struct ModelInfo {
     pub is_recommended: bool,       // Whether this is the recommended model for new users
     pub supported_languages: Vec<String>, // Languages this model can transcribe
     pub is_custom: bool,            // Whether this is a user-provided custom model
+    #[serde(default)]
+    pub sha256: Option<String>,     // Expected SHA-256 hash for integrity verification
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -115,6 +117,7 @@ impl ModelManager {
                 is_recommended: false,
                 supported_languages: whisper_languages.clone(),
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -139,6 +142,7 @@ impl ModelManager {
                 is_recommended: false,
                 supported_languages: whisper_languages.clone(),
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -162,6 +166,7 @@ impl ModelManager {
                 is_recommended: true,
                 supported_languages: whisper_languages.clone(),
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -185,6 +190,7 @@ impl ModelManager {
                 is_recommended: false,
                 supported_languages: whisper_languages.clone(),
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -209,6 +215,7 @@ impl ModelManager {
                 is_recommended: false,
                 supported_languages: whisper_languages.clone(),
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -233,6 +240,7 @@ impl ModelManager {
                 is_recommended: false,
                 supported_languages: vec!["en".to_string()],
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -266,6 +274,7 @@ impl ModelManager {
                 is_recommended: true,
                 supported_languages: parakeet_v3_languages,
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -289,6 +298,7 @@ impl ModelManager {
                 is_recommended: false,
                 supported_languages: vec!["en".to_string()],
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -314,6 +324,7 @@ impl ModelManager {
                 is_recommended: false,
                 supported_languages: vec!["en".to_string()],
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -339,6 +350,7 @@ impl ModelManager {
                 is_recommended: false,
                 supported_languages: vec!["en".to_string()],
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -364,6 +376,7 @@ impl ModelManager {
                 is_recommended: false,
                 supported_languages: vec!["en".to_string()],
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -395,6 +408,7 @@ impl ModelManager {
                 is_recommended: false,
                 supported_languages: sense_voice_languages,
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -420,6 +434,7 @@ impl ModelManager {
                 is_recommended: false,
                 supported_languages: whisper_languages.clone(),
                 is_custom: false,
+                sha256: None,
             },
         );
 
@@ -696,6 +711,7 @@ impl ModelManager {
                     is_recommended: false,
                     supported_languages: vec![],
                     is_custom: true,
+                    sha256: None,
                 },
             );
         }
@@ -938,6 +954,32 @@ impl ModelManager {
                     actual_size
                 ));
             }
+        }
+
+        // Verify SHA-256 hash if available
+        if let Some(ref expected_hash) = model_info.sha256 {
+            use sha2::{Sha256, Digest};
+            info!("Verifying SHA-256 hash for model {}", model_id);
+            let mut hasher = Sha256::new();
+            let mut hash_file = std::fs::File::open(&partial_path)?;
+            std::io::copy(&mut hash_file, &mut hasher)?;
+            let actual_hash = format!("{:x}", hasher.finalize());
+            if actual_hash != *expected_hash {
+                let _ = fs::remove_file(&partial_path);
+                {
+                    let mut models = self.available_models.lock().unwrap();
+                    if let Some(model) = models.get_mut(model_id) {
+                        model.is_downloading = false;
+                    }
+                }
+                return Err(anyhow::anyhow!(
+                    "SHA-256 hash mismatch for model {}: expected {}, got {}",
+                    model_id,
+                    expected_hash,
+                    actual_hash
+                ));
+            }
+            info!("SHA-256 hash verified for model {}", model_id);
         }
 
         // Handle directory-based models (extract tar.gz) vs file-based models
@@ -1262,6 +1304,7 @@ mod tests {
                 is_recommended: false,
                 supported_languages: vec!["en".to_string()],
                 is_custom: false,
+                sha256: None,
             },
         );
 
