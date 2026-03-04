@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSettings } from "../../../hooks/useSettings";
+import { commands } from "@/bindings";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Dropdown } from "../../ui/Dropdown";
 import { Input } from "../../ui/Input";
@@ -13,20 +14,18 @@ const GEMINI_MODELS = [
 
 export const GeminiSettings: React.FC = () => {
   const { t } = useTranslation();
-  const { getSetting, updateSetting } = useSettings();
+  const { getSetting, updateSetting, refreshSettings } = useSettings();
 
-  const apiKey = (getSetting("gemini_api_key") as string | undefined) ?? "";
+  const hasApiKey = !!(getSetting("gemini_api_key_set") as boolean | undefined);
   const currentModel =
     (getSetting("gemini_model") as string | undefined) ?? "gemini-2.5-flash";
-  const [localApiKey, setLocalApiKey] = useState(apiKey);
+  const [localApiKey, setLocalApiKey] = useState("");
 
-  React.useEffect(() => {
-    setLocalApiKey(apiKey);
-  }, [apiKey]);
-
-  const handleApiKeyBlur = () => {
-    if (localApiKey !== apiKey) {
-      updateSetting("gemini_api_key", localApiKey || null);
+  const handleApiKeyBlur = async () => {
+    if (localApiKey) {
+      await commands.changeGeminiApiKeySetting(localApiKey);
+      await refreshSettings();
+      setLocalApiKey("");
     }
   };
 
@@ -45,7 +44,7 @@ export const GeminiSettings: React.FC = () => {
             value={localApiKey}
             onChange={(e) => setLocalApiKey(e.target.value)}
             onBlur={handleApiKeyBlur}
-            placeholder={t("settings.gemini.apiKeyPlaceholder")}
+            placeholder={hasApiKey ? "********" : t("settings.gemini.apiKeyPlaceholder")}
             variant="compact"
             className="flex-1 w-[280px]"
           />

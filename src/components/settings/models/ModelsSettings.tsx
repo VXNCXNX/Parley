@@ -52,9 +52,8 @@ const ProcessingModelsSection: React.FC = () => {
     (providerId: string) => {
       setSelectedProviderId(providerId);
       setSelectedModel("");
-      const existingKey =
-        settings?.post_process_api_keys?.[providerId] ?? "";
-      setApiKey(existingKey);
+      // API keys are no longer sent to frontend - clear the field
+      setApiKey("");
     },
     [settings],
   );
@@ -259,7 +258,7 @@ export const ModelsSettings: React.FC = () => {
   const [geminiKeyInput, setGeminiKeyInput] = useState("");
   const languageDropdownRef = useRef<HTMLDivElement>(null);
   const languageSearchInputRef = useRef<HTMLInputElement>(null);
-  const { getSetting, updateSetting } = useSettings();
+  const { getSetting, updateSetting, refreshSettings } = useSettings();
   const {
     models,
     currentModel,
@@ -313,8 +312,7 @@ export const ModelsSettings: React.FC = () => {
     return LANGUAGES.find((lang) => lang.value === languageFilter)?.label || "";
   }, [languageFilter, t]);
 
-  const geminiApiKey = getSetting("gemini_api_key") as string | undefined;
-  const hasGeminiKey = !!geminiApiKey && geminiApiKey.length > 0;
+  const hasGeminiKey = !!(getSetting("gemini_api_key_set") as boolean | undefined);
 
   const getModelStatus = (modelId: string): ModelCardStatus => {
     if (modelId in extractingModels) {
@@ -366,7 +364,8 @@ export const ModelsSettings: React.FC = () => {
   const handleGeminiKeySave = async () => {
     const key = geminiKeyInput.trim();
     if (!key) return;
-    await updateSetting("gemini_api_key", key);
+    await commands.changeGeminiApiKeySetting(key);
+    await refreshSettings();
     setShowGeminiKeyDialog(false);
     setSwitchingModelId("gemini-api");
     try {

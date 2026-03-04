@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import type { AppSettings as Settings, AudioDevice } from "@/bindings";
+import type { AppSettingsResponse as Settings, AudioDevice } from "@/bindings";
 import { commands } from "@/bindings";
 
 interface SettingsStore {
@@ -139,8 +139,8 @@ const settingUpdaters: {
     commands.changeLongAudioModelSetting((value as string | null) ?? null),
   long_audio_threshold_seconds: (value) =>
     commands.changeLongAudioThresholdSetting(value as number),
-  gemini_api_key: (value) =>
-    commands.changeGeminiApiKeySetting((value as string | null) ?? ""),
+  // gemini_api_key is handled directly via commands.changeGeminiApiKeySetting
+  // because the response type only exposes gemini_api_key_set (boolean)
   gemini_model: (value) => commands.changeGeminiModelSetting(value as string),
 };
 
