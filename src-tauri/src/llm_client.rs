@@ -4,6 +4,19 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE, REFER
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+/// Defense-in-depth: validate that a URL uses http or https scheme before making requests.
+fn validate_url_scheme(url: &str) -> Result<(), String> {
+    let parsed =
+        url::Url::parse(url).map_err(|e| format!("Invalid URL '{}': {}", url, e))?;
+    match parsed.scheme() {
+        "http" | "https" => Ok(()),
+        scheme => Err(format!(
+            "URL scheme '{}' is not allowed. Only http and https are permitted.",
+            scheme
+        )),
+    }
+}
+
 #[derive(Debug, Serialize)]
 struct ChatMessage {
     role: String,
@@ -129,6 +142,9 @@ pub async fn send_chat_completion_with_schema(
     let base_url = provider.base_url.trim_end_matches('/');
     let url = format!("{}/chat/completions", base_url);
 
+    // Defense-in-depth: re-validate URL scheme before sending request
+    validate_url_scheme(&url)?;
+
     debug!("Sending chat completion request to: {}", url);
 
     let client = create_client(provider, &api_key)?;
@@ -209,6 +225,9 @@ pub async fn fetch_models(
 
     let base_url = provider.base_url.trim_end_matches('/');
     let url = format!("{}/models", base_url);
+
+    // Defense-in-depth: re-validate URL scheme before sending request
+    validate_url_scheme(&url)?;
 
     debug!("Fetching models from: {}", url);
 

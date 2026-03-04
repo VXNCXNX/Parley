@@ -251,7 +251,8 @@ pub fn change_binding(
 #[tauri::command]
 #[specta::specta]
 pub fn reset_binding(app: AppHandle, id: String) -> Result<BindingResponse, String> {
-    let binding = settings::get_stored_binding(&app, &id);
+    let binding = settings::get_stored_binding(&app, &id)
+        .ok_or_else(|| format!("Binding '{}' not found", id))?;
     change_binding(app, id, binding.default_binding)
 }
 
@@ -768,6 +769,26 @@ pub fn change_external_script_path_setting(
     app: AppHandle,
     path: Option<String>,
 ) -> Result<(), String> {
+    // Validate the script path if provided
+    if let Some(ref p) = path {
+        let script_path = std::path::Path::new(p);
+        if !script_path.exists() {
+            return Err(format!("Script path '{}' does not exist", p));
+        }
+        if !script_path.is_file() {
+            return Err(format!("Script path '{}' is not a file", p));
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let metadata = std::fs::metadata(script_path)
+                .map_err(|e| format!("Failed to read script metadata: {}", e))?;
+            if metadata.permissions().mode() & 0o111 == 0 {
+                return Err(format!("Script '{}' is not executable", p));
+            }
+        }
+    }
+
     let mut settings = settings::get_settings(&app);
     settings.external_script_path = path;
     settings::write_settings(&app, settings);
@@ -875,6 +896,39 @@ pub fn change_post_process_base_url_setting(
             "Provider '{}' does not allow editing the base URL",
             label
         ));
+    }
+
+    // Validate URL scheme and host
+    let parsed = url::Url::parse(&base_url)
+        .map_err(|e| format!("Invalid URL '{}': {}", base_url, e))?;
+
+    match parsed.scheme() {
+        "http" | "https" => {}
+        scheme => {
+            return Err(format!(
+                "URL scheme '{}' is not allowed. Only http and https are permitted.",
+                scheme
+            ));
+        }
+    }
+
+    // Block cloud metadata endpoints (SSRF protection)
+    if let Some(host) = parsed.host_str() {
+        if host == "169.254.169.254" || host == "metadata.google.internal" {
+            return Err("Cloud metadata endpoints are not allowed".to_string());
+        }
+    }
+
+    // Warn if using HTTP with non-localhost host
+    if parsed.scheme() == "http" {
+        if let Some(host) = parsed.host_str() {
+            if host != "localhost" && host != "127.0.0.1" && host != "::1" {
+                warn!(
+                    "Custom provider base URL uses HTTP (not HTTPS) with non-localhost host: {}",
+                    host
+                );
+            }
+        }
     }
 
     provider.base_url = base_url;

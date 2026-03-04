@@ -502,6 +502,15 @@ fn send_key_combo_via_xdotool(paste_method: &PasteMethod) -> Result<(), String> 
 /// Pastes text by invoking an external script.
 /// The script receives the text to paste as a single argument.
 fn paste_via_external_script(text: &str, script_path: &str) -> Result<(), String> {
+    // Re-validate script path before execution
+    let path = std::path::Path::new(script_path);
+    if !path.exists() || !path.is_file() {
+        return Err(format!(
+            "External script '{}' does not exist or is not a file",
+            script_path
+        ));
+    }
+
     info!("Pasting via external script: {}", script_path);
 
     let output = Command::new(script_path)

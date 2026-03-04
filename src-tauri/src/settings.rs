@@ -814,7 +814,12 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
         // Parse the entire settings object
         match serde_json::from_value::<AppSettings>(settings_value) {
             Ok(mut settings) => {
-                debug!("Found existing settings: {:?}", settings);
+                debug!(
+                    "Found existing settings (model={}, provider={}, bindings={})",
+                    settings.selected_model,
+                    settings.post_process_provider_id,
+                    settings.bindings.len()
+                );
                 let default_settings = get_default_settings();
                 let mut updated = false;
 
@@ -893,12 +898,9 @@ pub fn get_bindings(app: &AppHandle) -> HashMap<String, ShortcutBinding> {
     settings.bindings
 }
 
-pub fn get_stored_binding(app: &AppHandle, id: &str) -> ShortcutBinding {
+pub fn get_stored_binding(app: &AppHandle, id: &str) -> Option<ShortcutBinding> {
     let bindings = get_bindings(app);
-
-    let binding = bindings.get(id).unwrap().clone();
-
-    binding
+    bindings.get(id).cloned()
 }
 
 pub fn get_history_limit(app: &AppHandle) -> usize {
