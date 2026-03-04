@@ -354,12 +354,7 @@ impl TranscriptionManager {
             }
             EngineType::GeminiApi => {
                 let settings = get_settings(&self.app_handle);
-                if settings.gemini_api_key.is_none()
-                    || settings
-                        .gemini_api_key
-                        .as_ref()
-                        .map_or(true, |k| k.is_empty())
-                {
+                if settings.get_decrypted_gemini_api_key().is_none() {
                     let error_msg = "Gemini API key not configured";
                     let _ = self.app_handle.emit(
                         "model-state-changed",
@@ -474,10 +469,8 @@ impl TranscriptionManager {
             if let Some(LoadedEngine::GeminiApi) = engine_guard.as_ref() {
                 drop(engine_guard);
                 let api_key = settings
-                    .gemini_api_key
-                    .as_ref()
-                    .ok_or_else(|| anyhow::anyhow!("Gemini API key not configured"))?
-                    .clone();
+                    .get_decrypted_gemini_api_key()
+                    .ok_or_else(|| anyhow::anyhow!("Gemini API key not configured"))?;
                 let gemini_model = settings.gemini_model.clone();
 
                 // Use block_in_place to safely run async code from a tokio worker thread.

@@ -7,7 +7,8 @@ pub fn change_gemini_api_key_setting(app: AppHandle, api_key: String) -> Result<
     settings.gemini_api_key = if api_key.is_empty() {
         None
     } else {
-        Some(api_key)
+        // Encrypt the API key before storing
+        Some(crate::secret_store::encrypt_api_key(&api_key))
     };
     crate::settings::write_settings(&app, settings);
     Ok(())

@@ -114,11 +114,7 @@ async fn post_process_transcription(settings: &AppSettings, transcription: &str)
         provider.id, model
     );
 
-    let api_key = settings
-        .post_process_api_keys
-        .get(&provider.id)
-        .cloned()
-        .unwrap_or_default();
+    let api_key = settings.get_decrypted_api_key(&provider.id);
 
     if provider.supports_structured_output {
         debug!("Using structured outputs for provider '{}'", provider.id);
@@ -361,11 +357,7 @@ async fn process_action(
         return None;
     }
 
-    let api_key = settings
-        .post_process_api_keys
-        .get(&provider.id)
-        .cloned()
-        .unwrap_or_default();
+    let api_key = settings.get_decrypted_api_key(&provider.id);
 
     let system_prompt = "You are a text processing assistant. Output ONLY the final processed text. Do not add any explanation, commentary, preamble, or formatting such as markdown code blocks. Just output the raw result text, nothing else.".to_string();
 

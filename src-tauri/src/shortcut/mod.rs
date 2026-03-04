@@ -960,7 +960,9 @@ pub fn change_post_process_api_key_setting(
 ) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
     validate_provider_exists(&settings, &provider_id)?;
-    settings.post_process_api_keys.insert(provider_id, api_key);
+    // Encrypt the API key before storing
+    let encrypted = crate::secret_store::encrypt_api_key(&api_key);
+    settings.post_process_api_keys.insert(provider_id, encrypted);
     settings::write_settings(&app, settings);
     Ok(())
 }
@@ -1220,12 +1222,8 @@ pub async fn fetch_post_process_models(
         }
     }
 
-    // Get API key
-    let api_key = settings
-        .post_process_api_keys
-        .get(&provider_id)
-        .cloned()
-        .unwrap_or_default();
+    // Get decrypted API key
+    let api_key = settings.get_decrypted_api_key(&provider_id);
 
     // Skip fetching if no API key for providers that typically need one
     if api_key.trim().is_empty() && provider.id != "custom" {

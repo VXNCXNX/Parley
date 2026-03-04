@@ -456,13 +456,26 @@ impl AppSettings {
         let post_process_api_keys_set = self
             .post_process_api_keys
             .iter()
-            .map(|(k, v)| (k.clone(), !v.is_empty()))
+            .map(|(k, v)| {
+                let has_key = if crate::secret_store::is_encrypted(v) {
+                    !crate::secret_store::decrypt_api_key(v).is_empty()
+                } else {
+                    !v.is_empty()
+                };
+                (k.clone(), has_key)
+            })
             .collect();
 
         let gemini_api_key_set = self
             .gemini_api_key
             .as_ref()
-            .map(|k| !k.is_empty())
+            .map(|k| {
+                if crate::secret_store::is_encrypted(k) {
+                    !crate::secret_store::decrypt_api_key(k).is_empty()
+                } else {
+                    !k.is_empty()
+                }
+            })
             .unwrap_or(false);
 
         AppSettingsResponse {
@@ -928,6 +941,22 @@ impl AppSettings {
             .iter_mut()
             .find(|provider| provider.id == provider_id)
     }
+
+    /// Get decrypted post-process API key for a provider.
+    pub fn get_decrypted_api_key(&self, provider_id: &str) -> String {
+        self.post_process_api_keys
+            .get(provider_id)
+            .map(|k| crate::secret_store::decrypt_api_key(k))
+            .unwrap_or_default()
+    }
+
+    /// Get decrypted Gemini API key.
+    pub fn get_decrypted_gemini_api_key(&self) -> Option<String> {
+        self.gemini_api_key
+            .as_ref()
+            .filter(|k| !k.is_empty())
+            .map(|k| crate::secret_store::decrypt_api_key(k))
+    }
 }
 
 pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
@@ -983,7 +1012,36 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
         store.set("settings", serde_json::to_value(&settings).unwrap());
     }
 
+    // Migrate plaintext API keys to encrypted form
+    if encrypt_plaintext_api_keys(&mut settings) {
+        store.set("settings", serde_json::to_value(&settings).unwrap());
+        debug!("Migrated plaintext API keys to encrypted storage");
+    }
+
     settings
+}
+
+/// Encrypt any plaintext (non-prefixed) API keys in-place. Returns true if any were migrated.
+fn encrypt_plaintext_api_keys(settings: &mut AppSettings) -> bool {
+    use crate::secret_store;
+
+    let mut changed = false;
+
+    for value in settings.post_process_api_keys.values_mut() {
+        if !value.is_empty() && !secret_store::is_encrypted(value) {
+            *value = secret_store::encrypt_api_key(value);
+            changed = true;
+        }
+    }
+
+    if let Some(ref key) = settings.gemini_api_key {
+        if !key.is_empty() && !secret_store::is_encrypted(key) {
+            settings.gemini_api_key = Some(secret_store::encrypt_api_key(key));
+            changed = true;
+        }
+    }
+
+    changed
 }
 
 pub fn get_settings(app: &AppHandle) -> AppSettings {
