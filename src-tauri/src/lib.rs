@@ -12,6 +12,7 @@ mod input;
 mod llm_client;
 mod managers;
 mod overlay;
+mod secret_store;
 mod settings;
 mod shortcut;
 mod signal_handle;

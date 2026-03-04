@@ -393,6 +393,132 @@ pub struct AppSettings {
     pub saved_processing_models: Vec<SavedProcessingModel>,
 }
 
+/// Frontend-safe version of AppSettings that replaces raw API keys with
+/// boolean flags indicating whether a key is configured.
+#[derive(Serialize, Debug, Clone, Type)]
+pub struct AppSettingsResponse {
+    pub bindings: HashMap<String, ShortcutBinding>,
+    pub push_to_talk: bool,
+    pub audio_feedback: bool,
+    pub audio_feedback_volume: f32,
+    pub sound_theme: SoundTheme,
+    pub start_hidden: bool,
+    pub autostart_enabled: bool,
+    pub update_checks_enabled: bool,
+    pub selected_model: String,
+    pub always_on_microphone: bool,
+    pub selected_microphone: Option<String>,
+    pub clamshell_microphone: Option<String>,
+    pub selected_output_device: Option<String>,
+    pub translate_to_english: bool,
+    pub selected_language: String,
+    pub overlay_position: OverlayPosition,
+    pub debug_mode: bool,
+    pub log_level: LogLevel,
+    pub custom_words: Vec<String>,
+    pub model_unload_timeout: ModelUnloadTimeout,
+    pub word_correction_threshold: f64,
+    pub history_limit: usize,
+    pub recording_retention_period: RecordingRetentionPeriod,
+    pub paste_method: PasteMethod,
+    pub clipboard_handling: ClipboardHandling,
+    pub auto_submit: bool,
+    pub auto_submit_key: AutoSubmitKey,
+    pub post_process_enabled: bool,
+    pub post_process_provider_id: String,
+    pub post_process_providers: Vec<PostProcessProvider>,
+    /// Maps provider_id -> true if API key is configured (non-empty)
+    pub post_process_api_keys_set: HashMap<String, bool>,
+    pub post_process_models: HashMap<String, String>,
+    pub post_process_prompts: Vec<LLMPrompt>,
+    pub post_process_selected_prompt_id: Option<String>,
+    pub mute_while_recording: bool,
+    pub append_trailing_space: bool,
+    pub app_language: String,
+    pub experimental_enabled: bool,
+    pub keyboard_implementation: KeyboardImplementation,
+    pub show_tray_icon: bool,
+    pub paste_delay_ms: u64,
+    pub typing_tool: TypingTool,
+    pub external_script_path: Option<String>,
+    pub long_audio_model: Option<String>,
+    pub long_audio_threshold_seconds: f32,
+    /// true if gemini_api_key is configured (non-empty)
+    pub gemini_api_key_set: bool,
+    pub gemini_model: String,
+    pub post_process_actions: Vec<PostProcessAction>,
+    pub saved_processing_models: Vec<SavedProcessingModel>,
+}
+
+impl AppSettings {
+    /// Convert to a frontend-safe response that redacts API keys.
+    pub fn to_response(&self) -> AppSettingsResponse {
+        let post_process_api_keys_set = self
+            .post_process_api_keys
+            .iter()
+            .map(|(k, v)| (k.clone(), !v.is_empty()))
+            .collect();
+
+        let gemini_api_key_set = self
+            .gemini_api_key
+            .as_ref()
+            .map(|k| !k.is_empty())
+            .unwrap_or(false);
+
+        AppSettingsResponse {
+            bindings: self.bindings.clone(),
+            push_to_talk: self.push_to_talk,
+            audio_feedback: self.audio_feedback,
+            audio_feedback_volume: self.audio_feedback_volume,
+            sound_theme: self.sound_theme,
+            start_hidden: self.start_hidden,
+            autostart_enabled: self.autostart_enabled,
+            update_checks_enabled: self.update_checks_enabled,
+            selected_model: self.selected_model.clone(),
+            always_on_microphone: self.always_on_microphone,
+            selected_microphone: self.selected_microphone.clone(),
+            clamshell_microphone: self.clamshell_microphone.clone(),
+            selected_output_device: self.selected_output_device.clone(),
+            translate_to_english: self.translate_to_english,
+            selected_language: self.selected_language.clone(),
+            overlay_position: self.overlay_position,
+            debug_mode: self.debug_mode,
+            log_level: self.log_level,
+            custom_words: self.custom_words.clone(),
+            model_unload_timeout: self.model_unload_timeout,
+            word_correction_threshold: self.word_correction_threshold,
+            history_limit: self.history_limit,
+            recording_retention_period: self.recording_retention_period,
+            paste_method: self.paste_method,
+            clipboard_handling: self.clipboard_handling,
+            auto_submit: self.auto_submit,
+            auto_submit_key: self.auto_submit_key,
+            post_process_enabled: self.post_process_enabled,
+            post_process_provider_id: self.post_process_provider_id.clone(),
+            post_process_providers: self.post_process_providers.clone(),
+            post_process_api_keys_set,
+            post_process_models: self.post_process_models.clone(),
+            post_process_prompts: self.post_process_prompts.clone(),
+            post_process_selected_prompt_id: self.post_process_selected_prompt_id.clone(),
+            mute_while_recording: self.mute_while_recording,
+            append_trailing_space: self.append_trailing_space,
+            app_language: self.app_language.clone(),
+            experimental_enabled: self.experimental_enabled,
+            keyboard_implementation: self.keyboard_implementation,
+            show_tray_icon: self.show_tray_icon,
+            paste_delay_ms: self.paste_delay_ms,
+            typing_tool: self.typing_tool,
+            external_script_path: self.external_script_path.clone(),
+            long_audio_model: self.long_audio_model.clone(),
+            long_audio_threshold_seconds: self.long_audio_threshold_seconds,
+            gemini_api_key_set,
+            gemini_model: self.gemini_model.clone(),
+            post_process_actions: self.post_process_actions.clone(),
+            saved_processing_models: self.saved_processing_models.clone(),
+        }
+    }
+}
+
 fn default_model() -> String {
     "".to_string()
 }

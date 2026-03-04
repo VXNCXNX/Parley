@@ -4,7 +4,7 @@ pub mod history;
 pub mod models;
 pub mod transcription;
 
-use crate::settings::{get_settings, write_settings, AppSettings, LogLevel};
+use crate::settings::{get_settings, write_settings, AppSettingsResponse, LogLevel};
 use crate::utils::cancel_current_operation;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_opener::OpenerExt;
@@ -28,14 +28,14 @@ pub fn get_app_dir_path(app: AppHandle) -> Result<String, String> {
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_app_settings(app: AppHandle) -> Result<AppSettings, String> {
-    Ok(get_settings(&app))
+pub fn get_app_settings(app: AppHandle) -> Result<AppSettingsResponse, String> {
+    Ok(get_settings(&app).to_response())
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_default_settings() -> Result<AppSettings, String> {
-    Ok(crate::settings::get_default_settings())
+pub fn get_default_settings() -> Result<AppSettingsResponse, String> {
+    Ok(crate::settings::get_default_settings().to_response())
 }
 
 #[tauri::command]
