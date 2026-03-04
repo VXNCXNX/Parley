@@ -273,14 +273,19 @@ impl HistoryManager {
             )?;
 
             // Delete WAV file
-            let file_path = self.recordings_dir.join(file_name);
-            if file_path.exists() {
-                if let Err(e) = fs::remove_file(&file_path) {
-                    error!("Failed to delete WAV file {}: {}", file_name, e);
-                } else {
-                    debug!("Deleted old WAV file: {}", file_name);
-                    deleted_count += 1;
+            match self.get_audio_file_path(file_name) {
+                Ok(file_path) if file_path.exists() => {
+                    if let Err(e) = fs::remove_file(&file_path) {
+                        error!("Failed to delete WAV file {}: {}", file_name, e);
+                    } else {
+                        debug!("Deleted old WAV file: {}", file_name);
+                        deleted_count += 1;
+                    }
                 }
+                Err(e) => {
+                    error!("Skipping invalid file name '{}': {}", file_name, e);
+                }
+                _ => {}
             }
         }
 
@@ -448,8 +453,18 @@ impl HistoryManager {
         Ok(())
     }
 
-    pub fn get_audio_file_path(&self, file_name: &str) -> PathBuf {
-        self.recordings_dir.join(file_name)
+    /// Returns the full path for an audio file, rejecting path traversal attempts.
+    pub fn get_audio_file_path(&self, file_name: &str) -> Result<PathBuf> {
+        if file_name.contains("..")
+            || file_name.contains('/')
+            || file_name.contains('\\')
+            || std::path::Path::new(file_name).is_absolute()
+        {
+            return Err(anyhow::anyhow!(
+                "Invalid file name: must not contain path separators, '..', or be absolute"
+            ));
+        }
+        Ok(self.recordings_dir.join(file_name))
     }
 
     pub fn update_transcription_text(&self, id: i64, new_text: &str) -> Result<()> {
@@ -502,12 +517,17 @@ impl HistoryManager {
         // Get the entry to find the file name
         if let Some(entry) = self.get_entry_by_id(id).await? {
             // Delete the audio file first
-            let file_path = self.get_audio_file_path(&entry.file_name);
-            if file_path.exists() {
-                if let Err(e) = fs::remove_file(&file_path) {
-                    error!("Failed to delete audio file {}: {}", entry.file_name, e);
-                    // Continue with database deletion even if file deletion fails
+            match self.get_audio_file_path(&entry.file_name) {
+                Ok(file_path) if file_path.exists() => {
+                    if let Err(e) = fs::remove_file(&file_path) {
+                        error!("Failed to delete audio file {}: {}", entry.file_name, e);
+                        // Continue with database deletion even if file deletion fails
+                    }
                 }
+                Err(e) => {
+                    error!("Invalid audio file name '{}': {}", entry.file_name, e);
+                }
+                _ => {}
             }
         }
 

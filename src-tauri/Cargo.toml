@@ -47,7 +47,7 @@ rusqlite_migration = "2.3"
 tauri-plugin-fs = "2.4.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-rdev = { git = "https://github.com/rustdesk-org/rdev" }
+rdev = { git = "https://github.com/rustdesk-org/rdev", rev = "a90dbe1172f8832f54c97c62e823c5a34af5fdfe" }
 cpal = "0.16.0"
 anyhow = "1.0.95"
 rubato = "0.16.2"
@@ -56,9 +56,9 @@ base64 = "0.22"
 log = "0.4.25"
 env_filter = "0.1.0"
 tokio = "1.43.0"
-vad-rs = { git = "https://github.com/cjpais/vad-rs", default-features = false }
+vad-rs = { git = "https://github.com/cjpais/vad-rs", rev = "88b3a01f72f83a5d80d0e7ea9bacfc0d897fd03f", default-features = false }
 enigo = "0.6.1"
-rodio = { git = "https://github.com/cjpais/rodio.git" }
+rodio = { git = "https://github.com/cjpais/rodio.git", rev = "fed30292db417cb95305c118c0e1d804fb74cbff" }
 reqwest = { version = "0.12", features = ["json", "stream"] }
 futures-util = "0.3"
 rustfft = "6.4.0"
@@ -77,6 +77,10 @@ specta = "=2.0.0-rc.22"
 specta-typescript = "0.0.9"
 tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
 tauri-plugin-dialog = "2"
+url = "2"
+aes-gcm = "0.10"
+pbkdf2 = { version = "0.12", features = ["simple"] }
+sha2 = "0.10"
 
 [target.'cfg(unix)'.dependencies]
 signal-hook = "0.3"
@@ -97,16 +101,16 @@ windows = { version = "0.61.3", features = [
 ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v2.1" }
+tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", rev = "da9c9a8d4eb7f0524a2508988df1a7d9585b4904" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 gtk-layer-shell = { version = "0.8", features = ["v0_6"] }
 gtk = "0.18"
 
 [patch.crates-io]
-tauri-runtime = { git = "https://github.com/cjpais/tauri.git", branch = "handy-2.9.1" }
-tauri-runtime-wry = { git = "https://github.com/cjpais/tauri.git", branch = "handy-2.9.1" }
-tauri-utils = { git = "https://github.com/cjpais/tauri.git", branch = "handy-2.9.1" }
+tauri-runtime = { git = "https://github.com/cjpais/tauri.git", rev = "8ba98c7b543ec155961e1840641b1f28c548b8dd" }
+tauri-runtime-wry = { git = "https://github.com/cjpais/tauri.git", rev = "8ba98c7b543ec155961e1840641b1f28c548b8dd" }
+tauri-utils = { git = "https://github.com/cjpais/tauri.git", rev = "8ba98c7b543ec155961e1840641b1f28c548b8dd" }
 
 [dev-dependencies]
 tempfile = "3"
