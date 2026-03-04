@@ -457,26 +457,16 @@ impl AppSettings {
             .post_process_api_keys
             .iter()
             .map(|(k, v)| {
-                let has_key = if crate::secret_store::is_encrypted(v) {
-                    !crate::secret_store::decrypt_api_key(v).is_empty()
-                } else {
-                    !v.is_empty()
-                };
-                (k.clone(), has_key)
+                // Encrypted keys are always non-empty (enc: prefix + ciphertext).
+                // Plaintext keys just need a non-empty check. No need to decrypt.
+                (k.clone(), !v.is_empty())
             })
             .collect();
 
         let gemini_api_key_set = self
             .gemini_api_key
             .as_ref()
-            .map(|k| {
-                if crate::secret_store::is_encrypted(k) {
-                    !crate::secret_store::decrypt_api_key(k).is_empty()
-                } else {
-                    !k.is_empty()
-                }
-            })
-            .unwrap_or(false);
+            .is_some_and(|k| !k.is_empty());
 
         AppSettingsResponse {
             bindings: self.bindings.clone(),

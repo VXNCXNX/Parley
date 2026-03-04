@@ -9,20 +9,27 @@ use base64::Engine;
 use log::warn;
 use pbkdf2::pbkdf2_hmac_array;
 use sha2::Sha256;
+use std::sync::OnceLock;
 
 const ENC_PREFIX: &str = "enc:";
 const PBKDF2_ITERATIONS: u32 = 100_000;
 
+/// Cached machine key (derived once via PBKDF2, reused for all operations).
+static MACHINE_KEY: OnceLock<[u8; 32]> = OnceLock::new();
+
 /// Derive a 256-bit encryption key from machine-specific identifiers.
-fn get_machine_key() -> [u8; 32] {
-    let hostname = hostname::get()
-        .map(|h| h.to_string_lossy().to_string())
-        .unwrap_or_else(|_| "unknown-host".to_string());
+/// Result is cached after first call to avoid repeated PBKDF2 iterations.
+fn get_machine_key() -> &'static [u8; 32] {
+    MACHINE_KEY.get_or_init(|| {
+        let hostname = hostname::get()
+            .map(|h| h.to_string_lossy().to_string())
+            .unwrap_or_else(|_| "unknown-host".to_string());
 
-    let username = whoami::username();
-    let salt = format!("parler-api-key-{}-{}", hostname, username);
+        let username = whoami::username();
+        let salt = format!("parler-api-key-{}-{}", hostname, username);
 
-    pbkdf2_hmac_array::<Sha256, 32>(b"parler-secret-store", salt.as_bytes(), PBKDF2_ITERATIONS)
+        pbkdf2_hmac_array::<Sha256, 32>(b"parler-secret-store", salt.as_bytes(), PBKDF2_ITERATIONS)
+    })
 }
 
 /// Encrypt a plaintext API key. Returns a string prefixed with `enc:`.
@@ -31,8 +38,7 @@ pub fn encrypt_api_key(plaintext: &str) -> String {
         return String::new();
     }
 
-    let key_bytes = get_machine_key();
-    let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
+    let key = Key::<Aes256Gcm>::from_slice(get_machine_key());
     let cipher = Aes256Gcm::new(key);
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
 
@@ -82,8 +88,7 @@ pub fn decrypt_api_key(value: &str) -> String {
     let (nonce_bytes, ciphertext) = combined.split_at(12);
     let nonce = aes_gcm::Nonce::from_slice(nonce_bytes);
 
-    let key_bytes = get_machine_key();
-    let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
+    let key = Key::<Aes256Gcm>::from_slice(get_machine_key());
     let cipher = Aes256Gcm::new(key);
 
     match cipher.decrypt(nonce, ciphertext) {

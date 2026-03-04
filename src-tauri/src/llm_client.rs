@@ -4,17 +4,9 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE, REFER
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-/// Defense-in-depth: validate that a URL uses http or https scheme before making requests.
-fn validate_url_scheme(url: &str) -> Result<(), String> {
-    let parsed =
-        url::Url::parse(url).map_err(|e| format!("Invalid URL '{}': {}", url, e))?;
-    match parsed.scheme() {
-        "http" | "https" => Ok(()),
-        scheme => Err(format!(
-            "URL scheme '{}' is not allowed. Only http and https are permitted.",
-            scheme
-        )),
-    }
+/// Defense-in-depth: validate URL scheme and block SSRF targets before making requests.
+fn validate_url_for_request(url: &str) -> Result<(), String> {
+    crate::url_validation::validate_provider_url(url)
 }
 
 #[derive(Debug, Serialize)]
@@ -143,7 +135,7 @@ pub async fn send_chat_completion_with_schema(
     let url = format!("{}/chat/completions", base_url);
 
     // Defense-in-depth: re-validate URL scheme before sending request
-    validate_url_scheme(&url)?;
+    validate_url_for_request(&url)?;
 
     debug!("Sending chat completion request to: {}", url);
 
@@ -227,7 +219,7 @@ pub async fn fetch_models(
     let url = format!("{}/models", base_url);
 
     // Defense-in-depth: re-validate URL scheme before sending request
-    validate_url_scheme(&url)?;
+    validate_url_for_request(&url)?;
 
     debug!("Fetching models from: {}", url);
 

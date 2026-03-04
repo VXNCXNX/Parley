@@ -14,6 +14,7 @@ mod managers;
 mod overlay;
 mod secret_store;
 mod settings;
+mod url_validation;
 mod shortcut;
 mod signal_handle;
 mod transcription_coordinator;

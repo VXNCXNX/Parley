@@ -898,35 +898,19 @@ pub fn change_post_process_base_url_setting(
         ));
     }
 
-    // Validate URL scheme and host
-    let parsed = url::Url::parse(&base_url)
-        .map_err(|e| format!("Invalid URL '{}': {}", base_url, e))?;
-
-    match parsed.scheme() {
-        "http" | "https" => {}
-        scheme => {
-            return Err(format!(
-                "URL scheme '{}' is not allowed. Only http and https are permitted.",
-                scheme
-            ));
-        }
-    }
-
-    // Block cloud metadata endpoints (SSRF protection)
-    if let Some(host) = parsed.host_str() {
-        if host == "169.254.169.254" || host == "metadata.google.internal" {
-            return Err("Cloud metadata endpoints are not allowed".to_string());
-        }
-    }
+    // Validate URL scheme and block SSRF targets
+    crate::url_validation::validate_provider_url(&base_url)?;
 
     // Warn if using HTTP with non-localhost host
-    if parsed.scheme() == "http" {
-        if let Some(host) = parsed.host_str() {
-            if host != "localhost" && host != "127.0.0.1" && host != "::1" {
-                warn!(
-                    "Custom provider base URL uses HTTP (not HTTPS) with non-localhost host: {}",
-                    host
-                );
+    if let Ok(parsed) = url::Url::parse(&base_url) {
+        if parsed.scheme() == "http" {
+            if let Some(host) = parsed.host_str() {
+                if host != "localhost" && host != "127.0.0.1" && host != "::1" {
+                    warn!(
+                        "Custom provider base URL uses HTTP (not HTTPS) with non-localhost host: {}",
+                        host
+                    );
+                }
             }
         }
     }
