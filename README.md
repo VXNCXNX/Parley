@@ -1,4 +1,4 @@
-# Parler
+# Parley
 
 > **This is a personal fork of [cjpais/Handy](https://github.com/cjpais/Handy)** by Melvyn.
 > It adds custom features on top of the original Handy app while keeping full compatibility with upstream.
@@ -13,24 +13,24 @@
 
 **A free, open source, and extensible speech-to-text application that works completely offline.**
 
-Parler is a cross-platform desktop application that provides simple, privacy-focused speech transcription. Press a shortcut, speak, and have your words appear in any text field. This happens on your own computer without sending any information to the cloud.
+Parley is a cross-platform desktop application that provides simple, privacy-focused speech transcription. Press a shortcut, speak, and have your words appear in any text field. This happens on your own computer without sending any information to the cloud.
 
-## Why Parler?
+## Why Parley?
 
-Parler was created to fill the gap for a truly open source, extensible speech-to-text tool. As stated on [handy.computer](https://handy.computer):
+Parley was created to fill the gap for a truly open source, extensible speech-to-text tool. As stated on [handy.computer](https://handy.computer):
 
 - **Free**: Accessibility tooling belongs in everyone's hands, not behind a paywall
-- **Open Source**: Together we can build further. Extend Parler for yourself and contribute to something bigger
+- **Open Source**: Together we can build further. Extend Parley for yourself and contribute to something bigger
 - **Private**: Your voice stays on your computer. Get transcriptions without sending audio to the cloud
 - **Simple**: One tool, one job. Transcribe what you say and put it into a text box
 
-Parler isn't trying to be the best speech-to-text app—it's trying to be the most forkable one.
+Parley isn't trying to be the best speech-to-text app—it's trying to be the most forkable one.
 
 ## How It Works
 
 1. **Press** a configurable keyboard shortcut to start/stop recording (or use push-to-talk mode)
 2. **Speak** your words while the shortcut is active
-3. **Release** and Parler processes your speech using Whisper
+3. **Release** and Parley processes your speech using Whisper
 4. **Get** your transcribed text pasted directly into whatever app you're using
 
 The process is entirely local:
@@ -48,7 +48,7 @@ The process is entirely local:
 1. Download the latest release from the [releases page](https://github.com/Melvynx/Parler/releases) or the [website](https://handy.computer)
    - **macOS**: Also available via [Homebrew cask](https://formulae.brew.sh/cask/handy): `brew install --cask handy`
 2. Install the application
-3. Launch Parler and grant necessary system permissions (microphone, accessibility)
+3. Launch Parley and grant necessary system permissions (microphone, accessibility)
 4. Configure your preferred keyboard shortcuts in Settings
 5. Start transcribing!
 

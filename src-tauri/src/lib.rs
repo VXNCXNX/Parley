@@ -387,7 +387,7 @@ pub fn run(cli_args: CliArgs) {
                     }),
                     // File logs respect the user's settings (stored in FILE_LOG_LEVEL atomic)
                     Target::new(TargetKind::LogDir {
-                        file_name: Some("parler".into()),
+                        file_name: Some("parley".into()),
                     })
                     .filter(|metadata| {
                         let file_level = FILE_LOG_LEVEL.load(Ordering::Relaxed);
