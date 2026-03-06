@@ -114,6 +114,7 @@ gtk = "0.18"
 tauri-runtime = { git = "https://github.com/cjpais/tauri.git", rev = "8ba98c7b543ec155961e1840641b1f28c548b8dd" }
 tauri-runtime-wry = { git = "https://github.com/cjpais/tauri.git", rev = "8ba98c7b543ec155961e1840641b1f28c548b8dd" }
 tauri-utils = { git = "https://github.com/cjpais/tauri.git", rev = "8ba98c7b543ec155961e1840641b1f28c548b8dd" }
+transcribe-rs = { path = "transcribe-rs-patched" }
 
 [dev-dependencies]
 tempfile = "3"
