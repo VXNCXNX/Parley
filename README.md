@@ -56,6 +56,32 @@ The process is entirely local:
 
 For detailed build instructions including platform-specific requirements, see [BUILD.md](BUILD.md).
 
+#### Building on macOS (this fork)
+
+This fork was developed and optimized on Windows with Nvidia GPU. To build on macOS:
+
+```bash
+git clone https://github.com/VXNCXNX/Parley.git
+cd Parley
+bun install
+
+# Required: download VAD model
+mkdir -p src-tauri/resources/models
+curl -o src-tauri/resources/models/silero_vad_v4.onnx \
+  https://blob.handy.computer/silero_vad_v4.onnx
+
+# Build (cmake fix for recent macOS)
+CMAKE_POLICY_VERSION_MINIMUM=3.5 bun run tauri build
+```
+
+After install, grant **Microphone** and **Accessibility** permissions.
+
+**macOS limitations of this fork**:
+
+- Auto app detection (Glaido-style mappings) is Windows-only - `get_active_window_title()` returns `None` on macOS. NSWorkspace integration is TODO.
+- CUDA acceleration is Windows-only; macOS uses Metal automatically.
+- All other features (Chirp 3 STT, presets, custom dictionary, post-process actions, paste) work identically.
+
 ## Architecture
 
 Parler is built as a Tauri application combining:
