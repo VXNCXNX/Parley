@@ -473,14 +473,44 @@ impl TranscriptionManager {
                     .ok_or_else(|| anyhow::anyhow!("Gemini API key not configured"))?;
                 let gemini_model = settings.gemini_model.clone();
 
+                let is_chirp = gemini_model.starts_with("chirp");
+
                 // Use block_in_place to safely run async code from a tokio worker thread.
                 // Handle::block_on() panics if called directly from an async context,
                 // so block_in_place tells tokio to move its work off this thread first.
-                let result = tokio::task::block_in_place(|| {
-                    tokio::runtime::Handle::current().block_on(
-                        crate::gemini_client::transcribe_audio(&api_key, &gemini_model, &audio),
-                    )
-                })?;
+                let result = if is_chirp {
+                    let sa_json = settings
+                        .get_decrypted_chirp_service_account()
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Chirp 3 requires a Google Cloud service account JSON (paste it in Gemini settings)"
+                            )
+                        })?;
+                    let location = settings.gemini_location.clone();
+                    let language = if settings.selected_language == "auto" {
+                        "auto".to_string()
+                    } else {
+                        settings.selected_language.clone()
+                    };
+                    let custom_words = settings.custom_words.clone();
+                    tokio::task::block_in_place(|| {
+                        tokio::runtime::Handle::current().block_on(
+                            crate::chirp_client::transcribe_audio(
+                                &sa_json,
+                                &location,
+                                &language,
+                                &custom_words,
+                                &audio,
+                            ),
+                        )
+                    })?
+                } else {
+                    tokio::task::block_in_place(|| {
+                        tokio::runtime::Handle::current().block_on(
+                            crate::gemini_client::transcribe_audio(&api_key, &gemini_model, &audio),
+                        )
+                    })?
+                };
 
                 let corrected = if !settings.custom_words.is_empty() {
                     apply_custom_words(

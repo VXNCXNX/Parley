@@ -1130,6 +1130,114 @@ pub fn delete_post_process_action(app: AppHandle, key: u8) -> Result<(), String>
 
 #[tauri::command]
 #[specta::specta]
+pub fn set_app_prompt_mappings(
+    app: AppHandle,
+    mappings: Vec<settings::AppPromptMapping>,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.app_prompt_mappings = mappings;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+/// Seed the user's settings with sensible defaults: standard post-process
+/// actions + window-title -> action mappings for common apps. Existing actions
+/// keyed 1-5 and existing mappings are preserved (we only add what's missing).
+#[tauri::command]
+#[specta::specta]
+pub fn apply_default_app_presets(app: AppHandle) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+
+    let preset_actions = [
+        (
+            1u8,
+            "Casual reply",
+            "Rewrite as a casual, friendly chat reply. Keep it short and natural. Remove filler words. No greetings or sign-offs.",
+        ),
+        (
+            2u8,
+            "Formal email",
+            "Rewrite as a professional, polite email body. Proper sentences, paragraphs, and punctuation. Remove filler words. Do not add subject line, greeting, or sign-off.",
+        ),
+        (
+            3u8,
+            "Code comment",
+            "Rewrite as a concise technical comment for code. One short paragraph or bullet list. Keep technical terms exact. No fluff.",
+        ),
+        (
+            4u8,
+            "Document prose",
+            "Rewrite as clean structured prose for a document. Proper paragraphs, sentences, punctuation. Remove filler words and self-corrections. Keep meaning intact.",
+        ),
+        (
+            5u8,
+            "AI prompt",
+            "Rewrite as a clear, direct instruction for an AI assistant. Keep it concise and specific. Remove filler words.",
+        ),
+    ];
+
+    for (key, name, prompt) in preset_actions.iter() {
+        if !settings.post_process_actions.iter().any(|a| a.key == *key) {
+            settings.post_process_actions.push(settings::PostProcessAction {
+                key: *key,
+                name: name.to_string(),
+                prompt: prompt.to_string(),
+                model: None,
+                provider_id: None,
+            });
+        }
+    }
+
+    let preset_mappings = [
+        ("Slack", 1u8),
+        ("Discord", 1),
+        ("Microsoft Teams", 1),
+        ("WhatsApp", 1),
+        ("Telegram", 1),
+        ("Messenger", 1),
+        ("Gmail", 2),
+        ("Outlook", 2),
+        ("Mail -", 2),
+        ("Spark", 2),
+        ("Cursor", 3),
+        ("Visual Studio Code", 3),
+        ("VS Code", 3),
+        ("JetBrains", 3),
+        ("WebStorm", 3),
+        ("PyCharm", 3),
+        ("IntelliJ", 3),
+        ("Claude Code", 3),
+        ("GitHub", 3),
+        ("Notion", 4),
+        ("Google Docs", 4),
+        ("Microsoft Word", 4),
+        ("Obsidian", 4),
+        ("Linear", 4),
+        ("Claude", 5),
+        ("ChatGPT", 5),
+        ("Gemini", 5),
+        ("Perplexity", 5),
+    ];
+
+    for (pattern, action_key) in preset_mappings.iter() {
+        if !settings
+            .app_prompt_mappings
+            .iter()
+            .any(|m| m.pattern.eq_ignore_ascii_case(pattern))
+        {
+            settings.app_prompt_mappings.push(settings::AppPromptMapping {
+                pattern: pattern.to_string(),
+                action_key: *action_key,
+            });
+        }
+    }
+
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn add_saved_processing_model(
     app: AppHandle,
     provider_id: String,

@@ -7,7 +7,6 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import { ProgressBar } from "../shared";
 import { useSettings } from "../../hooks/useSettings";
-import { commands } from "../../bindings";
 
 interface UpdateCheckerProps {
   className?: string;
@@ -177,12 +176,6 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
     if (!updateChecksEnabled) return;
 
     try {
-      const portable = await commands.isPortable();
-      if (portable) {
-        setShowPortableUpdateDialog(true);
-        return;
-      }
-
       setUpdatePhase("checking");
       resetInstallState();
       const update = await check();

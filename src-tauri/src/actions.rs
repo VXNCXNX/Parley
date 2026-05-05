@@ -485,7 +485,7 @@ impl ShortcutAction for TranscribeAction {
                 let app_clone = app.clone();
                 let rm_clone = Arc::clone(&rm);
                 std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_millis(100));
+                    std::thread::sleep(std::time::Duration::from_millis(30));
                     debug!("Handling delayed audio feedback/mute sequence");
                     // Helper handles disabled audio feedback by returning early, so we reuse it
                     // to keep mute sequencing consistent in every mode.
@@ -536,7 +536,7 @@ impl ShortcutAction for TranscribeAction {
         let post_process = self.post_process;
 
         // Read and clear the selected action before spawning the async task
-        let selected_action_key =
+        let mut selected_action_key =
             app.try_state::<ActiveActionState>()
                 .and_then(|s| match s.0.lock() {
                     Ok(mut guard) => guard.take(),
@@ -545,6 +545,26 @@ impl ShortcutAction for TranscribeAction {
                         poisoned.into_inner().take()
                     }
                 });
+
+        // Glaido-style auto app detection: if no manual action key was selected,
+        // check the active window title against user-configured app->action mappings.
+        if selected_action_key.is_none() {
+            let settings = crate::settings::get_settings(&app);
+            if !settings.app_prompt_mappings.is_empty() {
+                if let Some(title) = crate::active_app::get_active_window_title() {
+                    if let Some(action_key) = crate::active_app::match_app_action(
+                        &title,
+                        &settings.app_prompt_mappings,
+                    ) {
+                        debug!(
+                            "Auto-selected post-process action {} for active window '{}'",
+                            action_key, title
+                        );
+                        selected_action_key = Some(action_key);
+                    }
+                }
+            }
+        }
 
         tauri::async_runtime::spawn(async move {
             let _guard = FinishGuard(ah.clone());

@@ -1,4 +1,5 @@
 mod actions;
+mod active_app;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod apple_intelligence;
 mod audio_feedback;
@@ -6,6 +7,7 @@ pub mod audio_toolkit;
 pub mod cli;
 mod clipboard;
 mod commands;
+pub mod chirp_client;
 pub mod gemini_client;
 mod helpers;
 mod input;
@@ -294,6 +296,8 @@ pub fn run(cli_args: CliArgs) {
         shortcut::add_post_process_action,
         shortcut::update_post_process_action,
         shortcut::delete_post_process_action,
+        shortcut::set_app_prompt_mappings,
+        shortcut::apply_default_app_presets,
         shortcut::add_saved_processing_model,
         shortcut::delete_saved_processing_model,
         shortcut::update_custom_words,
@@ -359,6 +363,9 @@ pub fn run(cli_args: CliArgs) {
         commands::history::reprocess_history_entry,
         commands::gemini::change_gemini_api_key_setting,
         commands::gemini::change_gemini_model_setting,
+        commands::gemini::change_gemini_project_id_setting,
+        commands::gemini::change_gemini_location_setting,
+        commands::gemini::change_chirp_service_account_setting,
         helpers::clamshell::is_laptop,
     ]);
 

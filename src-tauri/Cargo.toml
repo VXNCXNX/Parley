@@ -1,6 +1,6 @@
 [package]
 name = "parley"
-version = "0.7.15"
+version = "0.7.19"
 description = "Parley"
 authors = ["cjpais"]
 edition = "2021"
@@ -53,6 +53,7 @@ anyhow = "1.0.95"
 rubato = "0.16.2"
 hound = "3.5.1"
 base64 = "0.22"
+jsonwebtoken = "9"
 log = "0.4.25"
 env_filter = "0.1.0"
 tokio = "1.43.0"

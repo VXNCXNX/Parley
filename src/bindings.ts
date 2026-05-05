@@ -272,6 +272,22 @@ async deletePostProcessAction(key: number) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async setAppPromptMappings(mappings: AppPromptMapping[]) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_app_prompt_mappings", { mappings }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async applyDefaultAppPresets() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("apply_default_app_presets") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async addSavedProcessingModel(providerId: string, modelId: string, label: string) : Promise<Result<SavedProcessingModel, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("add_saved_processing_model", { providerId, modelId, label }) };
@@ -792,6 +808,30 @@ async changeGeminiModelSetting(model: string) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async changeGeminiProjectIdSetting(projectId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_gemini_project_id_setting", { projectId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeGeminiLocationSetting(location: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_gemini_location_setting", { location }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeChirpServiceAccountSetting(serviceAccountJson: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_chirp_service_account_setting", { serviceAccountJson }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Stub implementation for non-macOS platforms
  * Always returns false since laptop detection is macOS-specific
@@ -828,7 +868,7 @@ post_process_api_keys_set: Partial<{ [key in string]: boolean }>; post_process_m
 /**
  * true if gemini_api_key is configured (non-empty)
  */
-gemini_api_key_set: boolean; gemini_model: string; post_process_actions: PostProcessAction[]; saved_processing_models: SavedProcessingModel[] }
+gemini_api_key_set: boolean; gemini_model: string; gemini_project_id: string | null; gemini_location: string; chirp_service_account_set: boolean; app_prompt_mappings: AppPromptMapping[]; post_process_actions: PostProcessAction[]; saved_processing_models: SavedProcessingModel[] }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type AutoSubmitKey = "enter" | "ctrl_enter" | "cmd_enter"
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
@@ -846,6 +886,7 @@ export type ImplementationChangeResult = { success: boolean;
 reset_bindings: string[] }
 export type KeyboardImplementation = "tauri" | "handy_keys"
 export type LLMPrompt = { id: string; name: string; prompt: string }
+export type AppPromptMapping = { pattern: string; action_key: number }
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
 export type ModelInfo = { id: string; name: string; description: string; filename: string; url: string | null; size_mb: number; is_downloaded: boolean; is_downloading: boolean; partial_size: number; is_directory: boolean; engine_type: EngineType; accuracy_score: number; speed_score: number; supports_translation: boolean; is_recommended: boolean; supported_languages: string[]; is_custom: boolean; sha256?: string | null }
 export type ModelLoadStatus = { is_loaded: boolean; current_model: string | null }

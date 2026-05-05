@@ -93,6 +93,15 @@ pub struct LLMPrompt {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Type)]
+pub struct AppPromptMapping {
+    /// Substring (case-insensitive) matched against the active window title.
+    /// e.g. "Slack", "Gmail", "Cursor", "Claude Code".
+    pub pattern: String,
+    /// Post-process action key (1-9) to auto-trigger when this pattern matches.
+    pub action_key: u8,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Type)]
 pub struct PostProcessAction {
     pub key: u8,
     pub name: String,
@@ -363,6 +372,8 @@ pub struct AppSettings {
     #[serde(default)]
     pub post_process_selected_prompt_id: Option<String>,
     #[serde(default)]
+    pub app_prompt_mappings: Vec<AppPromptMapping>,
+    #[serde(default)]
     pub mute_while_recording: bool,
     #[serde(default)]
     pub append_trailing_space: bool,
@@ -387,6 +398,12 @@ pub struct AppSettings {
     pub gemini_api_key: Option<String>,
     #[serde(default = "default_gemini_model")]
     pub gemini_model: String,
+    #[serde(default)]
+    pub gemini_project_id: Option<String>,
+    #[serde(default = "default_gemini_location")]
+    pub gemini_location: String,
+    #[serde(default)]
+    pub chirp_service_account: Option<String>,
     #[serde(default)]
     pub post_process_actions: Vec<PostProcessAction>,
     #[serde(default)]
@@ -432,6 +449,7 @@ pub struct AppSettingsResponse {
     pub post_process_models: HashMap<String, String>,
     pub post_process_prompts: Vec<LLMPrompt>,
     pub post_process_selected_prompt_id: Option<String>,
+    pub app_prompt_mappings: Vec<AppPromptMapping>,
     pub mute_while_recording: bool,
     pub append_trailing_space: bool,
     pub app_language: String,
@@ -446,6 +464,9 @@ pub struct AppSettingsResponse {
     /// true if gemini_api_key is configured (non-empty)
     pub gemini_api_key_set: bool,
     pub gemini_model: String,
+    pub gemini_project_id: Option<String>,
+    pub gemini_location: String,
+    pub chirp_service_account_set: bool,
     pub post_process_actions: Vec<PostProcessAction>,
     pub saved_processing_models: Vec<SavedProcessingModel>,
 }
@@ -465,6 +486,11 @@ impl AppSettings {
 
         let gemini_api_key_set = self
             .gemini_api_key
+            .as_ref()
+            .is_some_and(|k| !k.is_empty());
+
+        let chirp_service_account_set = self
+            .chirp_service_account
             .as_ref()
             .is_some_and(|k| !k.is_empty());
 
@@ -503,6 +529,7 @@ impl AppSettings {
             post_process_models: self.post_process_models.clone(),
             post_process_prompts: self.post_process_prompts.clone(),
             post_process_selected_prompt_id: self.post_process_selected_prompt_id.clone(),
+            app_prompt_mappings: self.app_prompt_mappings.clone(),
             mute_while_recording: self.mute_while_recording,
             append_trailing_space: self.append_trailing_space,
             app_language: self.app_language.clone(),
@@ -516,6 +543,9 @@ impl AppSettings {
             long_audio_threshold_seconds: self.long_audio_threshold_seconds,
             gemini_api_key_set,
             gemini_model: self.gemini_model.clone(),
+            gemini_project_id: self.gemini_project_id.clone(),
+            gemini_location: self.gemini_location.clone(),
+            chirp_service_account_set,
             post_process_actions: self.post_process_actions.clone(),
             saved_processing_models: self.saved_processing_models.clone(),
         }
@@ -747,6 +777,10 @@ fn default_gemini_model() -> String {
     "gemini-2.5-flash".to_string()
 }
 
+fn default_gemini_location() -> String {
+    "europe-west2".to_string()
+}
+
 fn ensure_post_process_defaults(settings: &mut AppSettings) -> bool {
     let mut changed = false;
     for provider in default_post_process_providers() {
@@ -922,6 +956,7 @@ pub fn get_default_settings() -> AppSettings {
         post_process_models: default_post_process_models(),
         post_process_prompts: default_post_process_prompts(),
         post_process_selected_prompt_id: None,
+        app_prompt_mappings: Vec::new(),
         mute_while_recording: false,
         append_trailing_space: false,
         app_language: default_app_language(),
@@ -935,6 +970,9 @@ pub fn get_default_settings() -> AppSettings {
         long_audio_threshold_seconds: default_long_audio_threshold_seconds(),
         gemini_api_key: None,
         gemini_model: default_gemini_model(),
+        gemini_project_id: None,
+        gemini_location: default_gemini_location(),
+        chirp_service_account: None,
         post_process_actions: Vec::new(),
         saved_processing_models: Vec::new(),
     }
@@ -973,6 +1011,14 @@ impl AppSettings {
     /// Get decrypted Gemini API key.
     pub fn get_decrypted_gemini_api_key(&self) -> Option<String> {
         self.gemini_api_key
+            .as_ref()
+            .filter(|k| !k.is_empty())
+            .map(|k| crate::secret_store::decrypt_api_key(k))
+    }
+
+    /// Get decrypted Chirp service account JSON.
+    pub fn get_decrypted_chirp_service_account(&self) -> Option<String> {
+        self.chirp_service_account
             .as_ref()
             .filter(|k| !k.is_empty())
             .map(|k| crate::secret_store::decrypt_api_key(k))
@@ -1057,6 +1103,13 @@ fn encrypt_plaintext_api_keys(settings: &mut AppSettings) -> bool {
     if let Some(ref key) = settings.gemini_api_key {
         if !key.is_empty() && !secret_store::is_encrypted(key) {
             settings.gemini_api_key = Some(secret_store::encrypt_api_key(key));
+            changed = true;
+        }
+    }
+
+    if let Some(ref key) = settings.chirp_service_account {
+        if !key.is_empty() && !secret_store::is_encrypted(key) {
+            settings.chirp_service_account = Some(secret_store::encrypt_api_key(key));
             changed = true;
         }
     }

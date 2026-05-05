@@ -11,6 +11,7 @@ import {
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
 import { useSettings } from "../../../hooks/useSettings";
+import { AppPromptMappings } from "./AppPromptMappings";
 
 const PostProcessingActionsComponent: React.FC = () => {
   const { t } = useTranslation();
@@ -309,6 +310,9 @@ export const PostProcessingSettings: React.FC = () => {
     <div className="max-w-3xl w-full mx-auto space-y-6">
       <SettingsGroup title={t("settings.postProcessing.actions.title")}>
         <PostProcessingActions />
+      </SettingsGroup>
+      <SettingsGroup title="Auto app -> action">
+        <AppPromptMappings />
       </SettingsGroup>
     </div>
   );

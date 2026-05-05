@@ -1,0 +1,7 @@
+export CMAKE_BUILD_PARALLEL_LEVEL=16
+export CL=/MP16
+export CUDAARCHS=native
+export CMAKE_CUDA_STANDARD=17
+export CMAKE_CXX_STANDARD=17
+export CXXFLAGS=/std:c++17
+export CUDAFLAGS=-std=c++17
