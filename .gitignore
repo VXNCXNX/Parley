@@ -38,3 +38,4 @@ blob-report/
 .direnv
 .envrc
 .worktrees/
+migrate-identifier.sh

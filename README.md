@@ -1,9 +1,22 @@
 # Parley
 
-> **This is a personal fork of [cjpais/Handy](https://github.com/cjpais/Handy)** by Melvyn.
-> It adds custom features on top of the original Handy app while keeping full compatibility with upstream.
+> **A speech-to-text app with sub-second cloud transcription, multi-language code-switching, and Glaido-style auto formatting per app.**
+> Fork of [Melvynx/Parler](https://github.com/Melvynx/Parler), itself a fork of [cjpais/Handy](https://github.com/cjpais/Handy).
 
-## Custom Additions
+## Why this fork?
+
+- **Sub-second transcription** via Google Chirp 3 (~800ms vs ~25s on Gemini)
+- **Multi-language code-switching** (FR + EN auto) - say "API", "AWS", "PostHog" mid-sentence without misrecognition
+- **Auto formatting per app** (Glaido-style): different post-processing for Slack vs Gmail vs Cursor vs your AI prompts, detected via active window title
+- **Smart presets**: 5 ready-to-use post-process actions (casual / email / code / doc / AI prompt) + ~28 app mappings, one click to load
+- **Long audio support**: silence-aware chunking past Chirp's 60s limit
+- **Resilient**: retry with backoff (429/503/504/502), 30s/10s timeouts
+- **Custom dictionary** with multi-word phrases (e.g. "Preuve AI") and phrase boost
+- **CUDA acceleration on Windows** for local model fallback
+
+Built to match Whisper Flow / Wispr Flow / Glaido without the $15-20/month subscription, using free Google Cloud credits.
+
+## Original Handy features
 
 - **Conditional model switching**: Automatically use a different (larger) model when audio recordings exceed a configurable duration threshold (default: 10 seconds). This lets you use a fast lightweight model for short recordings and a more accurate model for longer ones.
 
