@@ -145,9 +145,26 @@ fn build_apple_intelligence_bridge() {
         Path::new(&sdk_path).join("System/Library/Frameworks/FoundationModels.framework");
     let has_foundation_models = framework_path.exists();
 
-    let source_file = if has_foundation_models {
+    // The FoundationModelsMacros plugin (required by @Generable) ships only with full Xcode,
+    // not with the standalone Command Line Tools. Detect the active developer dir to know.
+    let developer_dir = String::from_utf8(
+        Command::new("xcode-select")
+            .arg("-p")
+            .output()
+            .map(|o| o.stdout)
+            .unwrap_or_default(),
+    )
+    .unwrap_or_default()
+    .trim()
+    .to_string();
+    let has_full_xcode = developer_dir.contains("Xcode.app");
+
+    let source_file = if has_foundation_models && has_full_xcode {
         println!("cargo:warning=Building with Apple Intelligence support.");
         REAL_SWIFT_FILE
+    } else if has_foundation_models {
+        println!("cargo:warning=FoundationModels framework found but full Xcode is not installed (Command Line Tools lacks Swift macro plugins). Building with stubs.");
+        STUB_SWIFT_FILE
     } else {
         println!("cargo:warning=Apple Intelligence SDK not found. Building with stubs.");
         STUB_SWIFT_FILE

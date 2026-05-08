@@ -18,6 +18,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tauri::AppHandle;
+use tauri::Emitter;
 use tauri::Manager;
 
 pub struct ActiveActionState(pub Mutex<Option<u8>>);
@@ -591,19 +592,40 @@ impl ShortcutAction for TranscribeAction {
                     if duration_seconds > settings_for_model.long_audio_threshold_seconds
                         && original_model.as_deref() != Some(long_model_id.as_str())
                     {
-                        debug!(
-                            "Audio duration {:.1}s exceeds threshold {:.1}s, switching to long audio model: {}",
-                            duration_seconds,
-                            settings_for_model.long_audio_threshold_seconds,
-                            long_model_id
-                        );
-                        if let Err(e) = tm.load_model(long_model_id) {
+                        // Pre-flight: don't switch to a cloud model the user hasn't configured.
+                        // Without this, we'd swap to gemini-api and fail at transcribe time
+                        // with a confusing error, leaving the overlay stuck.
+                        let is_gemini = long_model_id == "gemini-api";
+                        let needs_chirp_sa = settings_for_model.gemini_model.starts_with("chirp");
+                        let missing_credentials = if is_gemini {
+                            settings_for_model.get_decrypted_gemini_api_key().is_none()
+                                || (needs_chirp_sa
+                                    && settings_for_model
+                                        .get_decrypted_chirp_service_account()
+                                        .is_none())
+                        } else {
+                            false
+                        };
+                        if missing_credentials {
                             warn!(
-                                "Failed to load long audio model '{}': {}, using current model",
-                                long_model_id, e
+                                "Long audio model '{}' is not fully configured (missing API key or service account); staying on current model",
+                                long_model_id
                             );
                         } else {
-                            switched_model = true;
+                            debug!(
+                                "Audio duration {:.1}s exceeds threshold {:.1}s, switching to long audio model: {}",
+                                duration_seconds,
+                                settings_for_model.long_audio_threshold_seconds,
+                                long_model_id
+                            );
+                            if let Err(e) = tm.load_model(long_model_id) {
+                                warn!(
+                                    "Failed to load long audio model '{}': {}, using current model",
+                                    long_model_id, e
+                                );
+                            } else {
+                                switched_model = true;
+                            }
                         }
                     }
                 }
@@ -730,6 +752,7 @@ impl ShortcutAction for TranscribeAction {
                     }
                     Err(err) => {
                         debug!("Global Shortcut Transcription error: {}", err);
+                        let _ = ah.emit("transcription-error", err.to_string());
                         utils::hide_recording_overlay(&ah);
                         change_tray_icon(&ah, TrayIconState::Idle);
                     }

@@ -8,6 +8,7 @@ pub mod cli;
 mod clipboard;
 mod commands;
 pub mod chirp_client;
+mod crash_logging;
 pub mod gemini_client;
 mod helpers;
 mod input;
@@ -305,6 +306,7 @@ pub fn run(cli_args: CliArgs) {
         shortcut::resume_binding,
         shortcut::change_mute_while_recording_setting,
         shortcut::change_append_trailing_space_setting,
+        shortcut::change_lazy_stream_close_setting,
         shortcut::change_app_language_setting,
         shortcut::change_update_checks_setting,
         shortcut::change_keyboard_implementation_setting,
@@ -437,6 +439,12 @@ pub fn run(cli_args: CliArgs) {
         .manage(cli_args.clone())
         .setup(move |app| {
             let mut settings = get_settings(&app.handle());
+
+            if let Err(err) = crash_logging::install_panic_logging(&app.handle())
+                .map(|path| log::info!("Crash logs will be written to {}", path.display()))
+            {
+                log::warn!("Failed to initialize crash logging: {err}");
+            }
 
             // CLI --debug flag overrides debug_mode and log level (runtime-only, not persisted)
             if cli_args.debug {

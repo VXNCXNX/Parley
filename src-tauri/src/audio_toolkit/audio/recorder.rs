@@ -1,5 +1,6 @@
 use std::{
     io::Error,
+    panic::{self, AssertUnwindSafe},
     sync::{mpsc, Arc, Mutex},
     time::Duration,
 };
@@ -76,49 +77,86 @@ impl AudioRecorder {
         let level_cb = self.level_cb.clone();
 
         let worker = std::thread::spawn(move || {
-            let config = AudioRecorder::get_preferred_config(&thread_device)
-                .expect("failed to fetch preferred config");
+            let worker_result = panic::catch_unwind(AssertUnwindSafe(|| -> Result<(), String> {
+                let config = AudioRecorder::get_preferred_config(&thread_device)
+                    .map_err(|err| format!("failed to fetch preferred config: {err}"))?;
 
-            let sample_rate = config.sample_rate().0;
-            let channels = config.channels() as usize;
+                let sample_rate = config.sample_rate().0;
+                let channels = config.channels() as usize;
 
-            log::info!(
-                "Using device: {:?}\nSample rate: {}\nChannels: {}\nFormat: {:?}",
-                thread_device.name(),
-                sample_rate,
-                channels,
-                config.sample_format()
-            );
+                log::info!(
+                    "Using device: {:?}\nSample rate: {}\nChannels: {}\nFormat: {:?}",
+                    thread_device.name(),
+                    sample_rate,
+                    channels,
+                    config.sample_format()
+                );
 
-            let stream = match config.sample_format() {
-                cpal::SampleFormat::U8 => {
-                    AudioRecorder::build_stream::<u8>(&thread_device, &config, sample_tx, channels)
-                        .unwrap()
+                let stream = match config.sample_format() {
+                    cpal::SampleFormat::U8 => AudioRecorder::build_stream::<u8>(
+                        &thread_device,
+                        &config,
+                        sample_tx,
+                        channels,
+                    ),
+                    cpal::SampleFormat::I8 => AudioRecorder::build_stream::<i8>(
+                        &thread_device,
+                        &config,
+                        sample_tx,
+                        channels,
+                    ),
+                    cpal::SampleFormat::I16 => AudioRecorder::build_stream::<i16>(
+                        &thread_device,
+                        &config,
+                        sample_tx,
+                        channels,
+                    ),
+                    cpal::SampleFormat::I32 => AudioRecorder::build_stream::<i32>(
+                        &thread_device,
+                        &config,
+                        sample_tx,
+                        channels,
+                    ),
+                    cpal::SampleFormat::F32 => AudioRecorder::build_stream::<f32>(
+                        &thread_device,
+                        &config,
+                        sample_tx,
+                        channels,
+                    ),
+                    other => {
+                        return Err(format!("unsupported sample format: {other:?}"));
+                    }
                 }
-                cpal::SampleFormat::I8 => {
-                    AudioRecorder::build_stream::<i8>(&thread_device, &config, sample_tx, channels)
-                        .unwrap()
-                }
-                cpal::SampleFormat::I16 => {
-                    AudioRecorder::build_stream::<i16>(&thread_device, &config, sample_tx, channels)
-                        .unwrap()
-                }
-                cpal::SampleFormat::I32 => {
-                    AudioRecorder::build_stream::<i32>(&thread_device, &config, sample_tx, channels)
-                        .unwrap()
-                }
-                cpal::SampleFormat::F32 => {
-                    AudioRecorder::build_stream::<f32>(&thread_device, &config, sample_tx, channels)
-                        .unwrap()
-                }
-                _ => panic!("unsupported sample format"),
-            };
+                .map_err(|err| format!("failed to build input stream: {err}"))?;
 
-            stream.play().expect("failed to start stream");
+                stream
+                    .play()
+                    .map_err(|err| format!("failed to start input stream: {err}"))?;
 
-            // keep the stream alive while we process samples
-            run_consumer(sample_rate, vad, sample_rx, cmd_rx, level_cb);
-            // stream is dropped here, after run_consumer returns
+                // Keep the stream alive while we process samples.
+                run_consumer(sample_rate, vad, sample_rx, cmd_rx, level_cb);
+                Ok(())
+            }));
+
+            match worker_result {
+                Ok(Ok(())) => {
+                    log::debug!("Audio recorder worker exited cleanly");
+                }
+                Ok(Err(err)) => {
+                    log::error!("Audio recorder worker exited with error: {err}");
+                }
+                Err(panic_payload) => {
+                    let panic_message = if let Some(message) = panic_payload.downcast_ref::<&str>()
+                    {
+                        (*message).to_string()
+                    } else if let Some(message) = panic_payload.downcast_ref::<String>() {
+                        message.clone()
+                    } else {
+                        "non-string panic payload".to_string()
+                    };
+                    log::error!("Audio recorder worker panicked: {panic_message}");
+                }
+            }
         });
 
         self.device = Some(device);
@@ -203,13 +241,26 @@ impl AudioRecorder {
     fn get_preferred_config(
         device: &cpal::Device,
     ) -> Result<cpal::SupportedStreamConfig, Box<dyn std::error::Error>> {
-        let supported_configs = device.supported_input_configs()?;
+        // Use the device's native/default sample rate and let the FrameResampler
+        // in run_consumer() downsample to 16kHz. This avoids forcing hardware into
+        // a non-native rate which can cause issues on some devices (Bluetooth
+        // codecs, certain ALSA drivers, etc.).
+        let default_config = device.default_input_config()?;
+        let target_rate = default_config.sample_rate();
+
+        // Try to find the best sample format at the device's default rate
+        let supported_configs = match device.supported_input_configs() {
+            Ok(configs) => configs,
+            Err(e) => {
+                log::warn!("Could not enumerate input configs ({e}), using device default");
+                return Ok(default_config);
+            }
+        };
         let mut best_config: Option<cpal::SupportedStreamConfigRange> = None;
 
-        // Try to find a config that supports 16kHz, prioritizing better formats
         for config_range in supported_configs {
-            if config_range.min_sample_rate().0 <= constants::WHISPER_SAMPLE_RATE
-                && config_range.max_sample_rate().0 >= constants::WHISPER_SAMPLE_RATE
+            if config_range.min_sample_rate() <= target_rate
+                && config_range.max_sample_rate() >= target_rate
             {
                 match best_config {
                     None => best_config = Some(config_range),
@@ -231,11 +282,15 @@ impl AudioRecorder {
         }
 
         if let Some(config) = best_config {
-            return Ok(config.with_sample_rate(cpal::SampleRate(constants::WHISPER_SAMPLE_RATE)));
+            return Ok(config.with_sample_rate(target_rate));
         }
 
-        // If no config supports 16kHz, fall back to default
-        Ok(device.default_input_config()?)
+        // Fall back to device default if no config matched (exotic/virtual devices)
+        log::warn!(
+            "No supported config matched device default rate {:?}, using default config",
+            target_rate
+        );
+        Ok(default_config)
     }
 }
 
@@ -288,30 +343,15 @@ fn run_consumer(
     }
 
     loop {
-        let raw = match sample_rx.recv() {
-            Ok(s) => s,
-            Err(_) => break, // stream closed
-        };
-
-        // ---------- spectrum processing ---------------------------------- //
-        if let Some(buckets) = visualizer.feed(&raw) {
-            if let Some(cb) = &level_cb {
-                cb(buckets);
-            }
-        }
-
-        // ---------- existing pipeline ------------------------------------ //
-        frame_resampler.push(&raw, &mut |frame: &[f32]| {
-            handle_frame(frame, recording, &vad, &mut processed_samples)
-        });
-
-        // non-blocking check for a command
+        // Drain pending commands FIRST so a Stop/Shutdown sent while the
+        // sample channel is closed doesn't get lost (race that caused the
+        // cancel-recording crash on stream teardown).
         while let Ok(cmd) = cmd_rx.try_recv() {
             match cmd {
                 Cmd::Start => {
                     processed_samples.clear();
                     recording = true;
-                    visualizer.reset(); // Reset visualization buffer
+                    visualizer.reset();
                     if let Some(v) = &vad {
                         v.lock().unwrap().reset();
                     }
@@ -319,7 +359,6 @@ fn run_consumer(
                 Cmd::Stop(reply_tx) => {
                     recording = false;
 
-                    // Drain any audio chunks that were captured but not yet consumed
                     while let Ok(remaining) = sample_rx.try_recv() {
                         frame_resampler.push(&remaining, &mut |frame: &[f32]| {
                             handle_frame(frame, true, &vad, &mut processed_samples)
@@ -335,5 +374,25 @@ fn run_consumer(
                 Cmd::Shutdown => return,
             }
         }
+
+        // Block on next audio chunk with a short timeout so commands keep
+        // getting processed even if the audio stream stalls.
+        let raw = match sample_rx.recv_timeout(Duration::from_millis(100)) {
+            Ok(s) => s,
+            Err(mpsc::RecvTimeoutError::Timeout) => continue,
+            Err(mpsc::RecvTimeoutError::Disconnected) => break,
+        };
+
+        // ---------- spectrum processing ---------------------------------- //
+        if let Some(buckets) = visualizer.feed(&raw) {
+            if let Some(cb) = &level_cb {
+                cb(buckets);
+            }
+        }
+
+        // ---------- existing pipeline ------------------------------------ //
+        frame_resampler.push(&raw, &mut |frame: &[f32]| {
+            handle_frame(frame, recording, &vad, &mut processed_samples)
+        });
     }
 }

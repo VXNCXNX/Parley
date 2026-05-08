@@ -5,6 +5,7 @@ import { commands } from "@/bindings";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Dropdown } from "../../ui/Dropdown";
 import { Input } from "../../ui/Input";
+import { Button } from "../../ui/Button";
 
 const GEMINI_MODELS = [
   { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
@@ -15,6 +16,8 @@ const GEMINI_MODELS = [
 ];
 
 const CHIRP_LOCATIONS = [
+  { value: "eu", label: "eu (multi-region)" },
+  { value: "us", label: "us (multi-region)" },
   { value: "europe-west2", label: "europe-west2 (London)" },
   { value: "europe-west3", label: "europe-west3 (Frankfurt)" },
   { value: "northamerica-northeast1", label: "northamerica-northeast1 (Montreal)" },
@@ -31,10 +34,17 @@ export const GeminiSettings: React.FC = () => {
     | undefined);
   const currentModel =
     (getSetting("gemini_model") as string | undefined) ?? "gemini-2.5-flash";
-  const location =
+  const rawLocation =
     (getSetting("gemini_location") as string | undefined) ?? "europe-west2";
+  const location = CHIRP_LOCATIONS.some((l) => l.value === rawLocation)
+    ? rawLocation
+    : "europe-west2";
   const [localApiKey, setLocalApiKey] = useState("");
   const [localServiceAccount, setLocalServiceAccount] = useState("");
+  const [apiKeyStatus, setApiKeyStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const [apiKeyError, setApiKeyError] = useState<string>("");
   const [saStatus, setSaStatus] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
   );
@@ -42,11 +52,19 @@ export const GeminiSettings: React.FC = () => {
 
   const isChirp = currentModel.startsWith("chirp");
 
-  const handleApiKeyBlur = async () => {
-    if (localApiKey) {
+  const saveApiKey = async () => {
+    if (!localApiKey) return;
+    setApiKeyStatus("saving");
+    setApiKeyError("");
+    try {
       await commands.changeGeminiApiKeySetting(localApiKey);
       await refreshSettings();
       setLocalApiKey("");
+      setApiKeyStatus("saved");
+      setTimeout(() => setApiKeyStatus("idle"), 2000);
+    } catch (e) {
+      setApiKeyStatus("error");
+      setApiKeyError(String(e));
     }
   };
 
@@ -74,19 +92,45 @@ export const GeminiSettings: React.FC = () => {
         title={t("settings.gemini.apiKey")}
         description={t("settings.gemini.description")}
         descriptionMode="tooltip"
-        layout="horizontal"
+        layout="stacked"
         grouped={true}
       >
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex flex-col gap-2 w-full">
           <Input
             type="password"
             value={localApiKey}
             onChange={(e) => setLocalApiKey(e.target.value)}
-            onBlur={handleApiKeyBlur}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                saveApiKey();
+              }
+            }}
             placeholder={hasApiKey ? "********" : t("settings.gemini.apiKeyPlaceholder")}
             variant="compact"
-            className="flex-1 w-[280px]"
+            className="w-full"
           />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={saveApiKey}
+              disabled={!localApiKey || apiKeyStatus === "saving"}
+            >
+              {apiKeyStatus === "saving" ? "Saving..." : "Save API key"}
+            </Button>
+            {apiKeyStatus === "saved" && (
+              <span className="text-sm text-green-500">Saved ✓</span>
+            )}
+            {apiKeyStatus === "error" && (
+              <span className="text-sm text-red-500">{apiKeyError}</span>
+            )}
+            {hasApiKey && apiKeyStatus === "idle" && (
+              <span className="text-sm text-muted-foreground">
+                API key configured ✓
+              </span>
+            )}
+          </div>
         </div>
       </SettingContainer>
 
@@ -129,13 +173,14 @@ export const GeminiSettings: React.FC = () => {
                 className="w-full text-xs font-mono bg-input border border-border rounded p-2 resize-y"
               />
               <div className="flex items-center gap-2">
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={saveServiceAccount}
                   disabled={!localServiceAccount || saStatus === "saving"}
-                  className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
                   {saStatus === "saving" ? "Saving..." : "Save Service Account"}
-                </button>
+                </Button>
                 {saStatus === "saved" && (
                   <span className="text-sm text-green-500">Saved ✓</span>
                 )}

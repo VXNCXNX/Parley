@@ -233,6 +233,10 @@
         "label": "Fonctionnalités Expérimentales",
         "description": "Activer les fonctionnalités expérimentales encore en développement."
       },
+      "lazyStreamClose": {
+        "label": "Garder le microphone ouvert entre les enregistrements",
+        "description": "Garder le flux du microphone ouvert pendant 30s après l'arrêt de l'enregistrement pour réduire la latence des micros Bluetooth. Peut dégrader la qualité audio Bluetooth sur macOS pendant l'inactivité."
+      },
       "startHidden": {
         "label": "Démarrer masqué",
         "description": "Lancer dans la barre système sans ouvrir la fenêtre."
@@ -540,7 +544,14 @@
     "dismiss": "Ignorer"
   },
   "errors": {
-    "loadDirectory": "Erreur lors du chargement du répertoire : {{error}}"
+    "loadDirectory": "Erreur lors du chargement du répertoire : {{error}}",
+    "noInputDeviceTitle": "Aucun microphone trouvé",
+    "noInputDevice": "Aucun périphérique d'entrée audio n'a été détecté. Veuillez connecter un microphone ou un casque et réessayer.",
+    "micPermissionDeniedTitle": "Accès au microphone refusé",
+    "micPermissionDenied": {
+      "generic": "Accordez l'accès au microphone dans les paramètres système et réessayez."
+    },
+    "recordingFailed": "Échec du démarrage de l'enregistrement : {{error}}"
   },
   "appLanguage": {
     "title": "Langue de l'application",

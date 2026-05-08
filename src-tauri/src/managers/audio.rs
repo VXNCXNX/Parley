@@ -3,9 +3,12 @@ use crate::helpers::clamshell;
 use crate::settings::{get_settings, AppSettings};
 use crate::utils;
 use log::{debug, error, info};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
-use tauri::Manager;
+use std::time::{Duration, Instant};
+use tauri::{Emitter, Manager};
+
+const STREAM_IDLE_TIMEOUT: Duration = Duration::from_secs(30);
 
 fn set_mute(mute: bool) {
     // Expected behavior:
@@ -149,6 +152,7 @@ pub struct AudioRecordingManager {
     is_open: Arc<Mutex<bool>>,
     is_recording: Arc<Mutex<bool>>,
     did_mute: Arc<Mutex<bool>>,
+    close_generation: Arc<AtomicU64>,
 }
 
 impl AudioRecordingManager {
@@ -171,6 +175,7 @@ impl AudioRecordingManager {
             is_open: Arc::new(Mutex::new(false)),
             is_recording: Arc::new(Mutex::new(false)),
             did_mute: Arc::new(Mutex::new(false)),
+            close_generation: Arc::new(AtomicU64::new(0)),
         };
 
         // Always-on?  Open immediately.
@@ -179,6 +184,28 @@ impl AudioRecordingManager {
         }
 
         Ok(manager)
+    }
+
+    fn schedule_lazy_close(&self) {
+        let gen = self.close_generation.fetch_add(1, Ordering::SeqCst) + 1;
+        let app = self.app_handle.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(STREAM_IDLE_TIMEOUT);
+            let rm = app.state::<Arc<AudioRecordingManager>>();
+            // Hold state lock across the check AND close to serialize against
+            // try_start_recording, preventing a race where the stream is closed
+            // under an active recording.
+            let state = rm.state.lock().unwrap();
+            if rm.close_generation.load(Ordering::SeqCst) == gen
+                && matches!(*state, RecordingState::Idle)
+            {
+                info!(
+                    "Closing idle microphone stream after {:?}",
+                    STREAM_IDLE_TIMEOUT
+                );
+                rm.stop_microphone_stream();
+            }
+        });
     }
 
     /* ---------- helper methods --------------------------------------------- */
@@ -268,6 +295,17 @@ impl AudioRecordingManager {
         let settings = get_settings(&self.app_handle);
         let selected_device = self.get_effective_microphone_device(&settings);
 
+        // Pre-flight: if no device is selected/configured AND no devices exist,
+        // surface a clear error instead of a cryptic backend message.
+        if selected_device.is_none() {
+            let has_any_device = list_input_devices()
+                .map(|devices| !devices.is_empty())
+                .unwrap_or(false);
+            if !has_any_device {
+                return Err(anyhow::anyhow!("No input device found"));
+            }
+        }
+
         if let Some(rec) = recorder_opt.as_mut() {
             rec.open(selected_device)
                 .map_err(|e| anyhow::anyhow!("Failed to open recorder: {}", e))?;
@@ -309,18 +347,17 @@ impl AudioRecordingManager {
     /* ---------- mode switching --------------------------------------------- */
 
     pub fn update_mode(&self, new_mode: MicrophoneMode) -> Result<(), anyhow::Error> {
-        let mode_guard = self.mode.lock().unwrap();
-        let cur_mode = mode_guard.clone();
+        let cur_mode = self.mode.lock().unwrap().clone();
 
         match (cur_mode, &new_mode) {
             (MicrophoneMode::AlwaysOn, MicrophoneMode::OnDemand) => {
                 if matches!(*self.state.lock().unwrap(), RecordingState::Idle) {
-                    drop(mode_guard);
+                    self.close_generation.fetch_add(1, Ordering::SeqCst);
                     self.stop_microphone_stream();
                 }
             }
             (MicrophoneMode::OnDemand, MicrophoneMode::AlwaysOn) => {
-                drop(mode_guard);
+                self.close_generation.fetch_add(1, Ordering::SeqCst);
                 self.start_microphone_stream()?;
             }
             _ => {}
@@ -338,8 +375,25 @@ impl AudioRecordingManager {
         if let RecordingState::Idle = *state {
             // Ensure microphone is open in on-demand mode
             if matches!(*self.mode.lock().unwrap(), MicrophoneMode::OnDemand) {
+                // Cancel any pending lazy close
+                self.close_generation.fetch_add(1, Ordering::SeqCst);
                 if let Err(e) = self.start_microphone_stream() {
                     error!("Failed to open microphone stream: {e}");
+                    let msg = e.to_string();
+                    let kind = if msg.to_lowercase().contains("no input device") {
+                        "no_input_device"
+                    } else if msg.to_lowercase().contains("permission")
+                        || msg.to_lowercase().contains("not permitted")
+                        || msg.to_lowercase().contains("access")
+                    {
+                        "microphone_permission_denied"
+                    } else {
+                        "unknown"
+                    };
+                    let _ = self.app_handle.emit(
+                        "recording-error",
+                        serde_json::json!({ "kind": kind, "detail": msg }),
+                    );
                     return false;
                 }
             }
@@ -364,6 +418,7 @@ impl AudioRecordingManager {
     pub fn update_selected_device(&self) -> Result<(), anyhow::Error> {
         // If currently open, restart the microphone stream to use the new device
         if *self.is_open.lock().unwrap() {
+            self.close_generation.fetch_add(1, Ordering::SeqCst);
             self.stop_microphone_stream();
             self.start_microphone_stream()?;
         }
@@ -395,9 +450,13 @@ impl AudioRecordingManager {
 
                 *self.is_recording.lock().unwrap() = false;
 
-                // In on-demand mode turn the mic off again
+                // In on-demand mode, close the mic (lazily if the setting is enabled)
                 if matches!(*self.mode.lock().unwrap(), MicrophoneMode::OnDemand) {
-                    self.stop_microphone_stream();
+                    if get_settings(&self.app_handle).lazy_stream_close {
+                        self.schedule_lazy_close();
+                    } else {
+                        self.stop_microphone_stream();
+                    }
                 }
 
                 // Pad if very short
@@ -435,10 +494,27 @@ impl AudioRecordingManager {
 
             *self.is_recording.lock().unwrap() = false;
 
-            // In on-demand mode turn the mic off again
+            // In on-demand mode, close the mic (lazily if the setting is enabled)
             if matches!(*self.mode.lock().unwrap(), MicrophoneMode::OnDemand) {
-                self.stop_microphone_stream();
+                if get_settings(&self.app_handle).lazy_stream_close {
+                    self.schedule_lazy_close();
+                } else {
+                    self.stop_microphone_stream();
+                }
             }
         }
+    }
+
+    pub fn shutdown(&self) {
+        debug!("Shutting down AudioRecordingManager");
+        self.cancel_recording();
+        self.stop_microphone_stream();
+        self.remove_mute();
+    }
+}
+
+impl Drop for AudioRecordingManager {
+    fn drop(&mut self) {
+        self.shutdown();
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "parley"
-version = "0.7.19"
+version = "0.8.0"
 description = "Parley"
 authors = ["cjpais"]
 edition = "2021"
@@ -71,7 +71,6 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 tar = "0.4.44"
 flate2 = "1.0"
 transcribe-rs = { version = "0.2.5", features = ["whisper", "parakeet", "moonshine", "sense_voice"] }
-whisper-rs = { version = "0.13.2", features = ["cuda"] }
 handy-keys = "0.2.1"
 ferrous-opencc = "0.2.3"
 clap = { version = "4", features = ["derive"] }
@@ -103,13 +102,16 @@ windows = { version = "0.61.3", features = [
   "Win32_Foundation",
   "Win32_UI_WindowsAndMessaging",
 ] }
+whisper-rs = { version = "0.13.2", features = ["cuda"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", rev = "da9c9a8d4eb7f0524a2508988df1a7d9585b4904" }
+whisper-rs = { version = "0.13.2", features = ["metal"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 gtk-layer-shell = { version = "0.8", features = ["v0_6"] }
 gtk = "0.18"
+whisper-rs = { version = "0.13.2", features = ["cuda"] }
 
 [patch.crates-io]
 tauri-runtime = { git = "https://github.com/cjpais/tauri.git", rev = "8ba98c7b543ec155961e1840641b1f28c548b8dd" }

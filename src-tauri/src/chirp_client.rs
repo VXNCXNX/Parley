@@ -351,16 +351,22 @@ async fn transcribe_chunk(
 
     let access_token = get_access_token(&sa).await?;
     let normalized_lang = normalize_language(language);
+    let is_auto = normalized_lang == "auto";
     // Add en-US for code-switching (English terms in FR/ES/etc speech).
-    let language_codes: Vec<String> = if normalized_lang.starts_with("en")
-        || normalized_lang == "auto"
-    {
+    let language_codes: Vec<String> = if normalized_lang.starts_with("en") || is_auto {
         vec![normalized_lang]
     } else {
         vec![normalized_lang, "en-US".to_string()]
     };
 
-    let adaptation = if custom_words.is_empty() {
+    // Chirp 3 returns 404 NOT_FOUND when phrase-set adaptation is combined with
+    // languageCodes=["auto"]. Skip adaptation in that case to keep auto-detect working.
+    let adaptation = if custom_words.is_empty() || is_auto {
+        if is_auto && !custom_words.is_empty() {
+            debug!(
+                "Chirp: skipping phrase-set adaptation because language=auto (incompatible)"
+            );
+        }
         None
     } else {
         Some(SpeechAdaptation {

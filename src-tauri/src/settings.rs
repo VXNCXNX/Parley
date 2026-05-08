@@ -3,6 +3,7 @@ use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use specta::Type;
 use std::collections::HashMap;
+use std::fmt;
 use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 
@@ -303,6 +304,34 @@ impl Default for TypingTool {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize, Type)]
+#[serde(transparent)]
+pub(crate) struct SecretMap(HashMap<String, String>);
+
+impl fmt::Debug for SecretMap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let redacted: HashMap<&String, &str> = self
+            .0
+            .iter()
+            .map(|(k, v)| (k, if v.is_empty() { "" } else { "[REDACTED]" }))
+            .collect();
+        redacted.fmt(f)
+    }
+}
+
+impl std::ops::Deref for SecretMap {
+    type Target = HashMap<String, String>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for SecretMap {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 /* still handy for composing the initial JSON in the store ------------- */
 #[derive(Serialize, Deserialize, Debug, Clone, Type)]
 pub struct AppSettings {
@@ -364,7 +393,7 @@ pub struct AppSettings {
     #[serde(default = "default_post_process_providers")]
     pub post_process_providers: Vec<PostProcessProvider>,
     #[serde(default = "default_post_process_api_keys")]
-    pub post_process_api_keys: HashMap<String, String>,
+    pub post_process_api_keys: SecretMap,
     #[serde(default = "default_post_process_models")]
     pub post_process_models: HashMap<String, String>,
     #[serde(default = "default_post_process_prompts")]
@@ -382,6 +411,8 @@ pub struct AppSettings {
     #[serde(default)]
     pub experimental_enabled: bool,
     #[serde(default)]
+    pub lazy_stream_close: bool,
+    #[serde(default)]
     pub keyboard_implementation: KeyboardImplementation,
     #[serde(default = "default_show_tray_icon")]
     pub show_tray_icon: bool,
@@ -390,6 +421,8 @@ pub struct AppSettings {
     #[serde(default = "default_typing_tool")]
     pub typing_tool: TypingTool,
     pub external_script_path: Option<String>,
+    #[serde(default)]
+    pub custom_filler_words: Option<Vec<String>>,
     #[serde(default)]
     pub long_audio_model: Option<String>,
     #[serde(default = "default_long_audio_threshold_seconds")]
@@ -454,11 +487,13 @@ pub struct AppSettingsResponse {
     pub append_trailing_space: bool,
     pub app_language: String,
     pub experimental_enabled: bool,
+    pub lazy_stream_close: bool,
     pub keyboard_implementation: KeyboardImplementation,
     pub show_tray_icon: bool,
     pub paste_delay_ms: u64,
     pub typing_tool: TypingTool,
     pub external_script_path: Option<String>,
+    pub custom_filler_words: Option<Vec<String>>,
     pub long_audio_model: Option<String>,
     pub long_audio_threshold_seconds: f32,
     /// true if gemini_api_key is configured (non-empty)
@@ -534,11 +569,13 @@ impl AppSettings {
             append_trailing_space: self.append_trailing_space,
             app_language: self.app_language.clone(),
             experimental_enabled: self.experimental_enabled,
+            lazy_stream_close: self.lazy_stream_close,
             keyboard_implementation: self.keyboard_implementation,
             show_tray_icon: self.show_tray_icon,
             paste_delay_ms: self.paste_delay_ms,
             typing_tool: self.typing_tool,
             external_script_path: self.external_script_path.clone(),
+            custom_filler_words: self.custom_filler_words.clone(),
             long_audio_model: self.long_audio_model.clone(),
             long_audio_threshold_seconds: self.long_audio_threshold_seconds,
             gemini_api_key_set,
@@ -731,12 +768,12 @@ fn default_post_process_providers() -> Vec<PostProcessProvider> {
     providers
 }
 
-fn default_post_process_api_keys() -> HashMap<String, String> {
+fn default_post_process_api_keys() -> SecretMap {
     let mut map = HashMap::new();
     for provider in default_post_process_providers() {
         map.insert(provider.id, String::new());
     }
-    map
+    SecretMap(map)
 }
 
 fn default_model_for_provider(provider_id: &str) -> String {
@@ -961,11 +998,13 @@ pub fn get_default_settings() -> AppSettings {
         append_trailing_space: false,
         app_language: default_app_language(),
         experimental_enabled: false,
+        lazy_stream_close: false,
         keyboard_implementation: KeyboardImplementation::default(),
         show_tray_icon: default_show_tray_icon(),
         paste_delay_ms: default_paste_delay_ms(),
         typing_tool: default_typing_tool(),
         external_script_path: None,
+        custom_filler_words: None,
         long_audio_model: None,
         long_audio_threshold_seconds: default_long_audio_threshold_seconds(),
         gemini_api_key: None,

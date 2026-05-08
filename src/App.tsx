@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
+import { listen } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
 import { platform } from "@tauri-apps/plugin-os";
 import { getIdentifier } from "@tauri-apps/api/app";
@@ -26,7 +27,7 @@ const renderSettingsContent = (section: SidebarSection) => {
 };
 
 function App() {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep | null>(
     null,
   );
@@ -48,6 +49,40 @@ function App() {
   useEffect(() => {
     checkOnboardingStatus();
   }, []);
+
+  useEffect(() => {
+    const unlisten = listen<string>("transcription-error", (event) => {
+      toast.error(event.payload || "Transcription failed");
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen<{ kind: string; detail?: string }>(
+      "recording-error",
+      (event) => {
+        const { kind, detail } = event.payload ?? { kind: "unknown" };
+        if (kind === "no_input_device") {
+          toast.error(t("errors.noInputDeviceTitle"), {
+            description: t("errors.noInputDevice"),
+          });
+        } else if (kind === "microphone_permission_denied") {
+          toast.error(t("errors.micPermissionDeniedTitle"), {
+            description: t("errors.micPermissionDenied.generic"),
+          });
+        } else {
+          toast.error(
+            t("errors.recordingFailed", { error: detail ?? "Unknown error" }),
+          );
+        }
+      },
+    );
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [t]);
 
   // Initialize RTL direction when language changes
   useEffect(() => {

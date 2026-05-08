@@ -1,4 +1,5 @@
 use crate::audio_toolkit::{apply_custom_words, filter_transcription_output};
+use crate::managers::audio::AudioRecordingManager;
 use crate::managers::model::{EngineType, ModelManager};
 use crate::settings::{get_settings, ModelUnloadTimeout};
 use anyhow::Result;
@@ -9,7 +10,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::thread;
 use std::time::{Duration, SystemTime};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use transcribe_rs::{
     engines::{
         moonshine::{
@@ -92,19 +93,28 @@ impl TranscriptionManager {
                     }
 
                     let settings = get_settings(&app_handle_cloned);
-                    let timeout_seconds = settings.model_unload_timeout.to_seconds();
+                    let timeout = settings.model_unload_timeout;
 
-                    if let Some(limit_seconds) = timeout_seconds {
-                        // Skip polling-based unloading for immediate timeout since it's handled directly in transcribe()
-                        if settings.model_unload_timeout == ModelUnloadTimeout::Immediately {
-                            continue;
-                        }
+                    // Skip Immediately - that variant is handled by
+                    // maybe_unload_immediately() after each transcription.
+                    // Treating it as 0s here would unload the model mid-recording.
+                    if timeout == ModelUnloadTimeout::Immediately {
+                        continue;
+                    }
 
+                    // While recording, keep the idle timer fresh so the
+                    // model is never unloaded mid-session.
+                    let is_recording = app_handle_cloned
+                        .try_state::<Arc<AudioRecordingManager>>()
+                        .map_or(false, |a| a.is_recording());
+                    if is_recording {
+                        manager_cloned.touch_activity();
+                        continue;
+                    }
+
+                    if let Some(limit_seconds) = timeout.to_seconds() {
                         let last = manager_cloned.last_activity.load(Ordering::Relaxed);
-                        let now_ms = SystemTime::now()
-                            .duration_since(SystemTime::UNIX_EPOCH)
-                            .unwrap()
-                            .as_millis() as u64;
+                        let now_ms = TranscriptionManager::now_ms();
 
                         if now_ms.saturating_sub(last) > limit_seconds * 1000 {
                             // idle -> unload
@@ -193,6 +203,18 @@ impl TranscriptionManager {
             unload_duration.as_millis()
         );
         Ok(())
+    }
+
+    fn now_ms() -> u64 {
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+    }
+
+    /// Reset the idle timer to now.
+    fn touch_activity(&self) {
+        self.last_activity.store(Self::now_ms(), Ordering::Relaxed);
     }
 
     /// Unloads the model immediately if the setting is enabled and the model is loaded
@@ -381,6 +403,9 @@ impl TranscriptionManager {
             *current_model = Some(model_id.to_string());
         }
 
+        // Reset idle timer so the watcher doesn't immediately unload a just-loaded model
+        self.touch_activity();
+
         // Emit loading completed event
         let _ = self.app_handle.emit(
             "model-state-changed",
@@ -428,13 +453,7 @@ impl TranscriptionManager {
 
     pub fn transcribe(&self, audio: Vec<f32>) -> Result<String> {
         // Update last activity timestamp
-        self.last_activity.store(
-            SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64,
-            Ordering::Relaxed,
-        );
+        self.touch_activity();
 
         let st = std::time::Instant::now();
 
@@ -521,7 +540,11 @@ impl TranscriptionManager {
                 } else {
                     result
                 };
-                let final_result = filter_transcription_output(&corrected);
+                let final_result = filter_transcription_output(
+                    &corrected,
+                    &settings.app_language,
+                    &settings.custom_filler_words,
+                );
 
                 let et = std::time::Instant::now();
                 info!(
@@ -688,7 +711,11 @@ impl TranscriptionManager {
         };
 
         // Filter out filler words and hallucinations
-        let filtered_result = filter_transcription_output(&corrected_result);
+        let filtered_result = filter_transcription_output(
+            &corrected_result,
+            &settings.app_language,
+            &settings.custom_filler_words,
+        );
 
         let et = std::time::Instant::now();
         let translation_note = if settings.translate_to_english {

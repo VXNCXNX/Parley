@@ -351,6 +351,14 @@ async changeAppendTrailingSpaceSetting(enabled: boolean) : Promise<Result<null, 
     else return { status: "error", error: e  as any };
 }
 },
+async changeLazyStreamCloseSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_lazy_stream_close_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async changeAppLanguageSetting(language: string) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_app_language_setting", { language }) };
@@ -864,7 +872,7 @@ export type AppSettingsResponse = { bindings: Partial<{ [key in string]: Shortcu
 /**
  * Maps provider_id -> true if API key is configured (non-empty)
  */
-post_process_api_keys_set: Partial<{ [key in string]: boolean }>; post_process_models: Partial<{ [key in string]: string }>; post_process_prompts: LLMPrompt[]; post_process_selected_prompt_id: string | null; mute_while_recording: boolean; append_trailing_space: boolean; app_language: string; experimental_enabled: boolean; keyboard_implementation: KeyboardImplementation; show_tray_icon: boolean; paste_delay_ms: number; typing_tool: TypingTool; external_script_path: string | null; long_audio_model: string | null; long_audio_threshold_seconds: number; 
+post_process_api_keys_set: Partial<{ [key in string]: boolean }>; post_process_models: Partial<{ [key in string]: string }>; post_process_prompts: LLMPrompt[]; post_process_selected_prompt_id: string | null; mute_while_recording: boolean; append_trailing_space: boolean; app_language: string; experimental_enabled: boolean; lazy_stream_close: boolean; keyboard_implementation: KeyboardImplementation; show_tray_icon: boolean; paste_delay_ms: number; typing_tool: TypingTool; external_script_path: string | null; long_audio_model: string | null; long_audio_threshold_seconds: number; 
 /**
  * true if gemini_api_key is configured (non-empty)
  */

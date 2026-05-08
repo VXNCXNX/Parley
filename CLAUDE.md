@@ -157,3 +157,15 @@ Access debug features: `Cmd+Shift+D` (macOS) or `Ctrl+Shift+D` (Windows/Linux)
 - **macOS**: Metal acceleration, accessibility permissions required
 - **Windows**: Vulkan acceleration, code signing
 - **Linux**: OpenBLAS + Vulkan, limited Wayland support, overlay disabled by default
+
+## Cloud transcription (Gemini / Chirp 3)
+
+- Configured in Settings → Advanced → Gemini.
+- Two modes share the same `gemini_model` setting:
+  - `gemini-*` models: use the Gemini API key (`gemini_api_key`).
+  - `chirp_3`: dedicated STT, requires a GCP service account JSON (`chirp_service_account`) with the `roles/speech.client` role.
+- Region (`gemini_location`) is sent in the URL `https://{location}-speech.googleapis.com/v2/projects/{project}/locations/{location}/recognizers/_:recognize`. Empirically Chirp 3 works in `eu`, `us`, `europe-west2`, `europe-west3`, `northamerica-northeast1`, `asia-south1`. The Google docs only list `eu`/`us` officially.
+- Implementation: `src-tauri/src/chirp_client.rs`. Service account JSON is encrypted at rest via `secret_store.rs` (AES-256-GCM, machine-bound).
+- **Known constraint**: Chirp 3 returns 404 NOT_FOUND when phrase-set adaptation (`custom_words`) is combined with `languageCodes=["auto"]`. The client drops adaptation in that case. To get phrase boosts, set a specific language instead of auto-detect.
+- The "long audio" auto-switch in `actions.rs` (audio > `long_audio_threshold_seconds` swaps to `long_audio_model`) does a pre-flight credentials check; it stays on the local model when Gemini/Chirp credentials are missing.
+- Errors during transcription are emitted as a Tauri `transcription-error` event and surfaced as a sonner toast in `App.tsx`.
