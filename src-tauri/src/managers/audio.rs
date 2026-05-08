@@ -1,4 +1,6 @@
 use crate::audio_toolkit::{list_input_devices, vad::SmoothedVad, AudioRecorder, SileroVad};
+#[cfg(target_os = "macos")]
+use crate::audio_toolkit::audio::macos_audio;
 use crate::helpers::clamshell;
 use crate::settings::{get_settings, AppSettings};
 use crate::utils;
@@ -210,6 +212,49 @@ impl AudioRecordingManager {
 
     /* ---------- helper methods --------------------------------------------- */
 
+    #[cfg(target_os = "macos")]
+    fn maybe_switch_output_to_game_sibling(&self) {
+        let settings = get_settings(&self.app_handle);
+        let Some(input_name) = settings.selected_microphone.as_ref() else {
+            return;
+        };
+        // Heuristic: name like "<Base> - Chat" — strip the suffix and look for
+        // a sibling output named "<Base> - Game".
+        let base = input_name
+            .strip_suffix(" - Chat")
+            .or_else(|| input_name.strip_suffix(" — Chat"))
+            .or_else(|| input_name.strip_suffix(" Chat"));
+        let Some(base) = base else {
+            return;
+        };
+        let game_target = format!("{base} - Game");
+
+        let outputs = macos_audio::list_output_device_names();
+        if !outputs.iter().any(|n| n == &game_target) {
+            return; // no Game sibling available, nothing to do
+        }
+        let current = macos_audio::get_default_output_device_name().unwrap_or_default();
+        if current == game_target {
+            return; // already on Game
+        }
+        match macos_audio::set_default_output_device_by_name(&game_target) {
+            Ok(()) => {
+                info!("Auto-switched system output: '{current}' -> '{game_target}' (BT Chat input freeze mitigation)");
+                let _ = self.app_handle.emit(
+                    "audio-output-auto-switched",
+                    serde_json::json!({
+                        "from": current,
+                        "to": game_target,
+                        "reason": "bt_chat_freeze_mitigation",
+                    }),
+                );
+            }
+            Err(e) => {
+                debug!("Could not auto-switch output to '{game_target}': {e}");
+            }
+        }
+    }
+
     fn get_effective_microphone_device(&self, settings: &AppSettings) -> Option<cpal::Device> {
         // Check if we're in clamshell mode and have a clamshell microphone configured
         let use_clamshell_mic = if let Ok(is_clamshell) = clamshell::is_clamshell() {
@@ -267,6 +312,15 @@ impl AudioRecordingManager {
             debug!("Microphone stream already active");
             return Ok(());
         }
+
+        // macOS: if the selected mic is a Bluetooth/USB headset whose name ends
+        // in "Chat" (low-quality SCO/HFP profile), proactively switch the system
+        // output to the matching "Game" sibling. This avoids forcing the headset
+        // into bidirectional SCO mode, which on some devices triggers a
+        // CoreAudio hang that can freeze the entire OS (see panic dump
+        // 2026-05-08 / forceReset btn_rst).
+        #[cfg(target_os = "macos")]
+        self.maybe_switch_output_to_game_sibling();
 
         let start_time = Instant::now();
 

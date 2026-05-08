@@ -62,6 +62,7 @@ impl AudioRecorder {
 
         let (sample_tx, sample_rx) = mpsc::channel::<Vec<f32>>();
         let (cmd_tx, cmd_rx) = mpsc::channel::<Cmd>();
+        let (init_tx, init_rx) = mpsc::sync_channel::<Result<(), String>>(1);
 
         let host = crate::audio_toolkit::get_cpal_host();
         let device = match device {
@@ -133,17 +134,25 @@ impl AudioRecorder {
                     .play()
                     .map_err(|err| format!("failed to start input stream: {err}"))?;
 
+                // Signal to the caller that init is done — the cpal stream is
+                // playing and we're about to enter the consumer loop. If the
+                // caller has timed out by now (CoreAudio hang), this send is a
+                // no-op because the receiver was dropped.
+                let _ = init_tx.send(Ok(()));
+
                 // Keep the stream alive while we process samples.
                 run_consumer(sample_rate, vad, sample_rx, cmd_rx, level_cb);
                 Ok(())
             }));
 
-            match worker_result {
+            match &worker_result {
                 Ok(Ok(())) => {
                     log::debug!("Audio recorder worker exited cleanly");
                 }
                 Ok(Err(err)) => {
                     log::error!("Audio recorder worker exited with error: {err}");
+                    // Surface the init failure if we never sent Ok above.
+                    let _ = init_tx.send(Err(err.clone()));
                 }
                 Err(panic_payload) => {
                     let panic_message = if let Some(message) = panic_payload.downcast_ref::<&str>()
@@ -155,15 +164,54 @@ impl AudioRecorder {
                         "non-string panic payload".to_string()
                     };
                     log::error!("Audio recorder worker panicked: {panic_message}");
+                    let _ = init_tx.send(Err(format!("audio worker panicked: {panic_message}")));
                 }
             }
         });
 
-        self.device = Some(device);
-        self.cmd_tx = Some(cmd_tx);
-        self.worker_handle = Some(worker);
-
-        Ok(())
+        // Wait for the worker to confirm the cpal stream is up. If CoreAudio
+        // hangs (e.g. on Bluetooth profile renegotiation), bail out instead of
+        // blocking forever — the worker thread keeps the cpal call frame on
+        // its stack and will be leaked, but at least the caller (and the rest
+        // of the app) is not stuck.
+        const INIT_TIMEOUT: Duration = Duration::from_secs(4);
+        match init_rx.recv_timeout(INIT_TIMEOUT) {
+            Ok(Ok(())) => {
+                self.device = Some(device);
+                self.cmd_tx = Some(cmd_tx);
+                self.worker_handle = Some(worker);
+                Ok(())
+            }
+            Ok(Err(error_message)) => {
+                let _ = worker.join();
+                let kind = if is_microphone_access_denied(&error_message) {
+                    std::io::ErrorKind::PermissionDenied
+                } else {
+                    std::io::ErrorKind::Other
+                };
+                Err(Box::new(Error::new(kind, error_message)))
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                log::error!(
+                    "audio device init timed out after {:?} (likely CoreAudio/Bluetooth hang)",
+                    INIT_TIMEOUT
+                );
+                // Do NOT join the worker — it is stuck in CoreAudio XPC and
+                // joining would block us indefinitely too. Drop our side of
+                // the cmd channel so a future caller can re-open.
+                Err(Box::new(Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    "audio device did not become ready (CoreAudio hang)".to_string(),
+                )))
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                let _ = worker.join();
+                Err(Box::new(Error::new(
+                    std::io::ErrorKind::Other,
+                    "audio worker exited before initialization".to_string(),
+                )))
+            }
+        }
     }
 
     pub fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -292,6 +340,14 @@ impl AudioRecorder {
         );
         Ok(default_config)
     }
+}
+
+pub fn is_microphone_access_denied(error_message: &str) -> bool {
+    let normalized = error_message.to_lowercase();
+    normalized.contains("access is denied")
+        || normalized.contains("permission denied")
+        || normalized.contains("not permitted")
+        || normalized.contains("0x80070005")
 }
 
 fn run_consumer(
