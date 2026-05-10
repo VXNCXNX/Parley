@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.1] - 2026-05-10
+
+### Fixed
+
+- Respect the post-processing toggle for app-to-action mappings and manual action shortcuts.
+- Stabilize local macOS builds with a reusable development signing identity so Accessibility permissions survive rebuilds.
+
+### Changed
+
+- Added `bun run install:local:macos` for local macOS build, signing, install, and launch.
+- Documented the macOS Accessibility permission and code-signing requirement for local development.
+
 ## [0.3.0] - 2025-07-11
 
 ### Added

@@ -67,3 +67,22 @@ bun install
 ```bash
 bun tauri dev
 ```
+
+## Local macOS Install Notes
+
+For local macOS testing, prefer:
+
+```bash
+bun run install:local:macos
+```
+
+This builds Parley, signs it with a stable local `Parley Local Development`
+code-signing identity, installs it to `/Applications/Parley.app`, and launches it.
+Using a stable signing identity matters because macOS ties Accessibility permission
+to the app's code-signing requirement. Repeated ad-hoc signing can make System
+Settings treat every rebuild as a different app and ask for Accessibility again.
+
+The first run after creating the local signing identity can still require granting
+Accessibility once in **System Settings > Privacy & Security > Accessibility**.
+After that, local installs through `bun run install:local:macos` should keep the
+same permission identity.

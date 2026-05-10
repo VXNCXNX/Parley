@@ -83,15 +83,26 @@ mkdir -p src-tauri/resources/models
 curl -o src-tauri/resources/models/silero_vad_v4.onnx \
   https://blob.handy.computer/silero_vad_v4.onnx
 
-# Build (cmake fix for recent macOS)
-CMAKE_POLICY_VERSION_MINIMUM=3.5 bun run tauri build
+# Build, sign with a stable local certificate, install to /Applications, and launch
+bun run install:local:macos
 ```
 
 After install, grant **Microphone** and **Accessibility** permissions.
 
+The local installer intentionally signs the app with a stable `Parley Local Development`
+certificate instead of ad-hoc signing. macOS ties Accessibility permission to the app's
+code-signing requirement, so ad-hoc rebuilds can make System Settings forget that
+Parley was already authorized. The first run may still require granting Accessibility
+once, but subsequent local installs should keep the same permission identity.
+
+If you need only a raw build artifact without installing it:
+
+```bash
+CMAKE_POLICY_VERSION_MINIMUM=3.5 bun run tauri build
+```
+
 **macOS limitations of this fork**:
 
-- Auto app detection (Glaido-style mappings) is Windows-only - `get_active_window_title()` returns `None` on macOS. NSWorkspace integration is TODO.
 - CUDA acceleration is Windows-only; macOS uses Metal automatically.
 - All other features (Chirp 3 STT, presets, custom dictionary, post-process actions, paste) work identically.
 
