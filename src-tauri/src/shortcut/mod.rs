@@ -29,13 +29,14 @@ use crate::tray;
 // Note: Commands are accessed via shortcut::handy_keys:: in lib.rs
 
 /// Initialize shortcuts using the configured implementation
-pub fn init_shortcuts(app: &AppHandle) {
+pub fn init_shortcuts(app: &AppHandle) -> Result<(), String> {
     let user_settings = settings::load_or_create_app_settings(app);
 
     // Check which implementation to use
     match user_settings.keyboard_implementation {
         KeyboardImplementation::Tauri => {
             tauri_impl::init_shortcuts(app);
+            Ok(())
         }
         KeyboardImplementation::HandyKeys => {
             if let Err(e) = handy_keys::init_shortcuts(app) {
@@ -49,7 +50,12 @@ pub fn init_shortcuts(app: &AppHandle) {
                 settings::write_settings(app, settings);
 
                 tauri_impl::init_shortcuts(app);
+                return Err(format!(
+                    "Failed to initialize handy-keys shortcuts: {}. Fell back to Tauri.",
+                    e
+                ));
             }
+            Ok(())
         }
     }
 }
@@ -946,7 +952,9 @@ pub fn change_post_process_api_key_setting(
     validate_provider_exists(&settings, &provider_id)?;
     // Encrypt the API key before storing
     let encrypted = crate::secret_store::encrypt_api_key(&api_key);
-    settings.post_process_api_keys.insert(provider_id, encrypted);
+    settings
+        .post_process_api_keys
+        .insert(provider_id, encrypted);
     settings::write_settings(&app, settings);
     Ok(())
 }
@@ -1178,13 +1186,15 @@ pub fn apply_default_app_presets(app: AppHandle) -> Result<(), String> {
 
     for (key, name, prompt) in preset_actions.iter() {
         if !settings.post_process_actions.iter().any(|a| a.key == *key) {
-            settings.post_process_actions.push(settings::PostProcessAction {
-                key: *key,
-                name: name.to_string(),
-                prompt: prompt.to_string(),
-                model: None,
-                provider_id: None,
-            });
+            settings
+                .post_process_actions
+                .push(settings::PostProcessAction {
+                    key: *key,
+                    name: name.to_string(),
+                    prompt: prompt.to_string(),
+                    model: None,
+                    provider_id: None,
+                });
         }
     }
 
@@ -1225,10 +1235,12 @@ pub fn apply_default_app_presets(app: AppHandle) -> Result<(), String> {
             .iter()
             .any(|m| m.pattern.eq_ignore_ascii_case(pattern))
         {
-            settings.app_prompt_mappings.push(settings::AppPromptMapping {
-                pattern: pattern.to_string(),
-                action_key: *action_key,
-            });
+            settings
+                .app_prompt_mappings
+                .push(settings::AppPromptMapping {
+                    pattern: pattern.to_string(),
+                    action_key: *action_key,
+                });
         }
     }
 

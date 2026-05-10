@@ -427,6 +427,7 @@ pub fn init_shortcuts(app: &AppHandle) -> Result<(), String> {
 
     let default_bindings = settings::get_default_settings().bindings;
     let user_settings = settings::load_or_create_app_settings(app);
+    let mut registration_errors = Vec::new();
 
     // Register all bindings except cancel (which is dynamic)
     for (id, default_binding) in default_bindings {
@@ -449,7 +450,15 @@ pub fn init_shortcuts(app: &AppHandle) -> Result<(), String> {
                 "Failed to register handy-keys shortcut {} during init: {}",
                 id, e
             );
+            registration_errors.push(format!("{}: {}", id, e));
         }
+    }
+
+    if !registration_errors.is_empty() {
+        return Err(format!(
+            "Failed to register handy-keys shortcuts: {}",
+            registration_errors.join("; ")
+        ));
     }
 
     app.manage(state);
