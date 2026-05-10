@@ -357,6 +357,10 @@ fn run_consumer(
     cmd_rx: mpsc::Receiver<Cmd>,
     level_cb: Option<Arc<dyn Fn(Vec<f32>) + Send + Sync + 'static>>,
 ) {
+    const MIN_VAD_OUTPUT_SAMPLES: usize = constants::WHISPER_SAMPLE_RATE as usize / 2;
+    const MIN_RAW_FALLBACK_SAMPLES: usize = constants::WHISPER_SAMPLE_RATE as usize / 4;
+    const MIN_RAW_FALLBACK_RMS: f32 = 0.0015;
+
     let mut frame_resampler = FrameResampler::new(
         in_sample_rate as usize,
         constants::WHISPER_SAMPLE_RATE as usize,
@@ -364,6 +368,7 @@ fn run_consumer(
     );
 
     let mut processed_samples = Vec::<f32>::new();
+    let mut raw_recording_samples = Vec::<f32>::new();
     let mut recording = false;
 
     // ---------- spectrum visualisation setup ---------------------------- //
@@ -382,10 +387,13 @@ fn run_consumer(
         recording: bool,
         vad: &Option<Arc<Mutex<Box<dyn vad::VoiceActivityDetector>>>>,
         out_buf: &mut Vec<f32>,
+        raw_buf: &mut Vec<f32>,
     ) {
         if !recording {
             return;
         }
+
+        raw_buf.extend_from_slice(samples);
 
         if let Some(vad_arc) = vad {
             let mut det = vad_arc.lock().unwrap();
@@ -398,6 +406,14 @@ fn run_consumer(
         }
     }
 
+    fn rms(samples: &[f32]) -> f32 {
+        if samples.is_empty() {
+            return 0.0;
+        }
+        let sum = samples.iter().map(|s| s * s).sum::<f32>();
+        (sum / samples.len() as f32).sqrt()
+    }
+
     loop {
         // Drain pending commands FIRST so a Stop/Shutdown sent while the
         // sample channel is closed doesn't get lost (race that caused the
@@ -406,6 +422,7 @@ fn run_consumer(
             match cmd {
                 Cmd::Start => {
                     processed_samples.clear();
+                    raw_recording_samples.clear();
                     recording = true;
                     visualizer.reset();
                     if let Some(v) = &vad {
@@ -417,15 +434,44 @@ fn run_consumer(
 
                     while let Ok(remaining) = sample_rx.try_recv() {
                         frame_resampler.push(&remaining, &mut |frame: &[f32]| {
-                            handle_frame(frame, true, &vad, &mut processed_samples)
+                            handle_frame(
+                                frame,
+                                true,
+                                &vad,
+                                &mut processed_samples,
+                                &mut raw_recording_samples,
+                            )
                         });
                     }
 
                     frame_resampler.finish(&mut |frame: &[f32]| {
-                        handle_frame(frame, true, &vad, &mut processed_samples)
+                        handle_frame(
+                            frame,
+                            true,
+                            &vad,
+                            &mut processed_samples,
+                            &mut raw_recording_samples,
+                        )
                     });
 
-                    let _ = reply_tx.send(std::mem::take(&mut processed_samples));
+                    let raw_len = raw_recording_samples.len();
+                    let raw_rms = rms(&raw_recording_samples);
+                    if processed_samples.len() < MIN_VAD_OUTPUT_SAMPLES
+                        && raw_len >= MIN_RAW_FALLBACK_SAMPLES
+                        && raw_rms >= MIN_RAW_FALLBACK_RMS
+                    {
+                        log::warn!(
+                            "VAD kept only {} samples from {} raw samples (raw RMS {:.5}); using raw recording fallback",
+                            processed_samples.len(),
+                            raw_len,
+                            raw_rms
+                        );
+                        let _ = reply_tx.send(std::mem::take(&mut raw_recording_samples));
+                        processed_samples.clear();
+                    } else {
+                        raw_recording_samples.clear();
+                        let _ = reply_tx.send(std::mem::take(&mut processed_samples));
+                    }
                 }
                 Cmd::Shutdown => return,
             }
@@ -448,7 +494,13 @@ fn run_consumer(
 
         // ---------- existing pipeline ------------------------------------ //
         frame_resampler.push(&raw, &mut |frame: &[f32]| {
-            handle_frame(frame, recording, &vad, &mut processed_samples)
+            handle_frame(
+                frame,
+                recording,
+                &vad,
+                &mut processed_samples,
+                &mut raw_recording_samples,
+            )
         });
     }
 }
