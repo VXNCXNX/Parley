@@ -1290,6 +1290,12 @@ pub fn add_saved_processing_model(
     label: String,
 ) -> Result<settings::SavedProcessingModel, String> {
     let mut settings = settings::get_settings(&app);
+    let model_id = normalize_processing_model_id(&provider_id, &model_id);
+    let label = if provider_id == "gemini" && label.ends_with("gemini-3.1-flash-lite") {
+        label.replace("gemini-3.1-flash-lite", &model_id)
+    } else {
+        label
+    };
     let id = format!("{}:{}", provider_id, model_id);
 
     if settings.saved_processing_models.iter().any(|m| m.id == id) {
@@ -1306,6 +1312,15 @@ pub fn add_saved_processing_model(
     settings.saved_processing_models.push(model.clone());
     settings::write_settings(&app, settings);
     Ok(model)
+}
+
+fn normalize_processing_model_id(provider_id: &str, model_id: &str) -> String {
+    let trimmed = model_id.trim();
+    if provider_id == "gemini" && trimmed == "gemini-3.1-flash-lite" {
+        "gemini-3.1-flash-lite-preview".to_string()
+    } else {
+        trimmed.to_string()
+    }
 }
 
 #[tauri::command]

@@ -270,7 +270,10 @@ async fn process_action(
     action_model: Option<&str>,
     action_provider_id: Option<&str>,
 ) -> Option<String> {
-    let provider = if let Some(pid) = action_provider_id.filter(|p| !p.is_empty()) {
+    let explicit_provider_id = action_provider_id.filter(|p| !p.trim().is_empty());
+    let explicit_model = action_model.filter(|m| !m.trim().is_empty());
+
+    let mut provider = if let Some(pid) = explicit_provider_id {
         match settings.post_process_provider(pid).cloned() {
             Some(p) => p,
             None => {
@@ -291,11 +294,33 @@ async fn process_action(
         }
     };
 
-    let model = action_model
-        .filter(|m| !m.trim().is_empty())
+    let mut model = explicit_model
         .map(|m| m.to_string())
         .or_else(|| settings.post_process_models.get(&provider.id).cloned())
         .unwrap_or_default();
+
+    if model.trim().is_empty() && explicit_model.is_none() {
+        let saved_model = explicit_provider_id
+            .and_then(|pid| {
+                settings
+                    .saved_processing_models
+                    .iter()
+                    .find(|m| m.provider_id == pid)
+            })
+            .or_else(|| settings.saved_processing_models.first());
+
+        if let Some(saved) = saved_model {
+            if let Some(saved_provider) = settings.post_process_provider(&saved.provider_id).cloned()
+            {
+                debug!(
+                    "Action processing using saved processing model '{}' for provider '{}'",
+                    saved.model_id, saved.provider_id
+                );
+                provider = saved_provider;
+                model = saved.model_id.clone();
+            }
+        }
+    }
 
     let full_prompt = if prompt.contains("${output}") {
         prompt.replace("${output}", transcription)
