@@ -136,13 +136,24 @@ impl TranscriptionCoordinator {
                                 ..
                             } = stage
                             {
+                                let settings = get_settings(&app);
+                                if !settings.post_process_enabled {
+                                    if selected_action.take().is_some() {
+                                        emit_action_deselected(&app);
+                                    }
+                                    debug!(
+                                        "Action {} selection ignored: post-processing is disabled",
+                                        key
+                                    );
+                                    continue;
+                                }
+
                                 if *selected_action == Some(key) {
                                     *selected_action = None;
                                     emit_action_deselected(&app);
                                     debug!("Action {} deselected during recording", key);
                                 } else {
                                     *selected_action = Some(key);
-                                    let settings = get_settings(&app);
                                     if let Some(action) =
                                         settings.post_process_actions.iter().find(|a| a.key == key)
                                     {

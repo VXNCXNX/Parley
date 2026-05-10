@@ -3,7 +3,7 @@
 //! This module contains the common logic for handling shortcut events,
 //! used by both the Tauri and handy-keys implementations.
 
-use log::warn;
+use log::{debug, warn};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
@@ -48,6 +48,14 @@ pub fn handle_shortcut_event(
 
     // Action bindings (1-9): only fires when recording and key is pressed
     if is_action_binding(binding_id) {
+        if !settings.post_process_enabled {
+            debug!(
+                "Ignoring action shortcut '{}' because post-processing is disabled",
+                binding_id
+            );
+            return;
+        }
+
         if is_pressed {
             if let Some(key) = parse_action_key(binding_id) {
                 if let Some(coordinator) = app.try_state::<TranscriptionCoordinator>() {

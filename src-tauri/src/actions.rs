@@ -310,7 +310,8 @@ async fn process_action(
             .or_else(|| settings.saved_processing_models.first());
 
         if let Some(saved) = saved_model {
-            if let Some(saved_provider) = settings.post_process_provider(&saved.provider_id).cloned()
+            if let Some(saved_provider) =
+                settings.post_process_provider(&saved.provider_id).cloned()
             {
                 debug!(
                     "Action processing using saved processing model '{}' for provider '{}'",
@@ -559,7 +560,8 @@ impl ShortcutAction for TranscribeAction {
         play_feedback_sound(app, SoundType::Stop);
 
         let binding_id = binding_id.to_string(); // Clone binding_id for the async task
-        let post_process = self.post_process;
+        let settings = crate::settings::get_settings(app);
+        let post_process = self.post_process && settings.post_process_enabled;
 
         // Read and clear the selected action before spawning the async task
         let mut selected_action_key =
@@ -572,16 +574,18 @@ impl ShortcutAction for TranscribeAction {
                     }
                 });
 
-        // Glaido-style auto app detection: if no manual action key was selected,
-        // check the active window title against user-configured app->action mappings.
-        if selected_action_key.is_none() {
-            let settings = crate::settings::get_settings(&app);
+        if !settings.post_process_enabled {
+            if selected_action_key.take().is_some() {
+                debug!("Cleared selected post-process action because post-processing is disabled");
+            }
+        } else if selected_action_key.is_none() {
+            // Glaido-style auto app detection: if no manual action key was selected,
+            // check the active window title against user-configured app->action mappings.
             if !settings.app_prompt_mappings.is_empty() {
                 if let Some(title) = crate::active_app::get_active_window_title() {
-                    if let Some(action_key) = crate::active_app::match_app_action(
-                        &title,
-                        &settings.app_prompt_mappings,
-                    ) {
+                    if let Some(action_key) =
+                        crate::active_app::match_app_action(&title, &settings.app_prompt_mappings)
+                    {
                         debug!(
                             "Auto-selected post-process action {} for active window '{}'",
                             action_key, title

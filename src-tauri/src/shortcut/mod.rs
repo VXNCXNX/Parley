@@ -79,6 +79,11 @@ pub fn unregister_cancel_shortcut(app: &AppHandle) {
 /// Register action shortcuts for configured actions (called when recording starts)
 pub fn register_action_shortcuts(app: &AppHandle) {
     let settings = get_settings(app);
+    if !settings.post_process_enabled {
+        info!("Skipping action shortcuts because post-processing is disabled");
+        return;
+    }
+
     for action in &settings.post_process_actions {
         if action.key < 1 || action.key > 9 {
             continue;
