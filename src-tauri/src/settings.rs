@@ -1035,10 +1035,17 @@ impl AppSettings {
 
     /// Get decrypted post-process API key for a provider.
     pub fn get_decrypted_api_key(&self, provider_id: &str) -> String {
-        self.post_process_api_keys
+        let key = self
+            .post_process_api_keys
             .get(provider_id)
             .map(|k| crate::secret_store::decrypt_api_key(k))
-            .unwrap_or_default()
+            .unwrap_or_default();
+
+        if key.trim().is_empty() && provider_id == "gemini" {
+            return self.get_decrypted_gemini_api_key().unwrap_or_default();
+        }
+
+        key
     }
 
     /// Get decrypted Gemini API key.
