@@ -513,21 +513,15 @@ impl AppSettings {
             .post_process_api_keys
             .iter()
             .map(|(k, v)| {
-                // Encrypted keys are always non-empty (enc: prefix + ciphertext).
+                // Encrypted keys are always non-empty (marker + ciphertext).
                 // Plaintext keys just need a non-empty check. No need to decrypt.
                 (k.clone(), !v.is_empty())
             })
             .collect();
 
-        let gemini_api_key_set = self
-            .gemini_api_key
-            .as_ref()
-            .is_some_and(|k| !k.is_empty());
+        let gemini_api_key_set = self.get_decrypted_gemini_api_key().is_some();
 
-        let chirp_service_account_set = self
-            .chirp_service_account
-            .as_ref()
-            .is_some_and(|k| !k.is_empty());
+        let chirp_service_account_set = self.get_decrypted_chirp_service_account().is_some();
 
         AppSettingsResponse {
             bindings: self.bindings.clone(),
@@ -1052,7 +1046,7 @@ impl AppSettings {
         self.gemini_api_key
             .as_ref()
             .filter(|k| !k.is_empty())
-            .map(|k| crate::secret_store::decrypt_api_key(k))
+            .and_then(|k| non_empty_decrypted_secret(k))
     }
 
     /// Get decrypted Chirp service account JSON.
@@ -1060,7 +1054,16 @@ impl AppSettings {
         self.chirp_service_account
             .as_ref()
             .filter(|k| !k.is_empty())
-            .map(|k| crate::secret_store::decrypt_api_key(k))
+            .and_then(|k| non_empty_decrypted_secret(k))
+    }
+}
+
+fn non_empty_decrypted_secret(value: &str) -> Option<String> {
+    let decrypted = crate::secret_store::decrypt_api_key(value);
+    if decrypted.trim().is_empty() {
+        None
+    } else {
+        Some(decrypted)
     }
 }
 
@@ -1117,43 +1120,58 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
         store.set("settings", serde_json::to_value(&settings).unwrap());
     }
 
-    // Migrate plaintext API keys to encrypted form
-    if encrypt_plaintext_api_keys(&mut settings) {
+    // Migrate plaintext API keys and old hostname-derived secrets to enc2.
+    if normalize_secret_encryption(&mut settings) {
         store.set("settings", serde_json::to_value(&settings).unwrap());
-        debug!("Migrated plaintext API keys to encrypted storage");
+        debug!("Migrated API keys to current encrypted storage");
     }
 
     settings
 }
 
-/// Encrypt any plaintext (non-prefixed) API keys in-place. Returns true if any were migrated.
-fn encrypt_plaintext_api_keys(settings: &mut AppSettings) -> bool {
-    use crate::secret_store;
-
+/// Encrypt plaintext secrets and migrate legacy encrypted values in-place.
+/// Returns true if any value changed.
+fn normalize_secret_encryption(settings: &mut AppSettings) -> bool {
     let mut changed = false;
 
     for value in settings.post_process_api_keys.values_mut() {
-        if !value.is_empty() && !secret_store::is_encrypted(value) {
-            *value = secret_store::encrypt_api_key(value);
-            changed = true;
-        }
+        changed |= normalize_secret_value(value);
     }
 
-    if let Some(ref key) = settings.gemini_api_key {
-        if !key.is_empty() && !secret_store::is_encrypted(key) {
-            settings.gemini_api_key = Some(secret_store::encrypt_api_key(key));
-            changed = true;
-        }
+    if let Some(ref mut key) = settings.gemini_api_key {
+        changed |= normalize_secret_value(key);
     }
 
-    if let Some(ref key) = settings.chirp_service_account {
-        if !key.is_empty() && !secret_store::is_encrypted(key) {
-            settings.chirp_service_account = Some(secret_store::encrypt_api_key(key));
-            changed = true;
-        }
+    if let Some(ref mut key) = settings.chirp_service_account {
+        changed |= normalize_secret_value(key);
     }
 
     changed
+}
+
+fn normalize_secret_value(value: &mut String) -> bool {
+    use crate::secret_store;
+
+    if value.is_empty() {
+        return false;
+    }
+
+    if !secret_store::is_encrypted(value) {
+        *value = secret_store::encrypt_api_key(value);
+        return true;
+    }
+
+    if secret_store::uses_legacy_encryption(value) {
+        let decrypted = secret_store::decrypt_api_key(value);
+        if decrypted.trim().is_empty() {
+            warn!("Failed to migrate legacy encrypted secret because it could not be decrypted");
+            return false;
+        }
+        *value = secret_store::encrypt_api_key(&decrypted);
+        return true;
+    }
+
+    false
 }
 
 pub fn get_settings(app: &AppHandle) -> AppSettings {
