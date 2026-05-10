@@ -1193,27 +1193,27 @@ pub fn apply_default_app_presets(app: AppHandle) -> Result<(), String> {
         (
             1u8,
             "Casual reply",
-            "Rewrite as a casual, friendly chat reply. Keep it short and natural. Remove filler words. No greetings or sign-offs.",
+            "Rewrite as a casual, friendly chat reply. Keep the same language as the transcript. Keep it short and natural. Remove filler words. No greetings or sign-offs. Do not add facts or infer errors that were not said.",
         ),
         (
             2u8,
             "Formal email",
-            "Rewrite as a professional, polite email body. Proper sentences, paragraphs, and punctuation. Remove filler words. Do not add subject line, greeting, or sign-off.",
+            "Rewrite as a professional, polite email body. Keep the same language as the transcript. Use proper sentences, paragraphs, and punctuation. Remove filler words. Do not add a subject line, greeting, sign-off, facts, or inferred errors.",
         ),
         (
             3u8,
             "Code comment",
-            "Rewrite as a concise technical comment for code. One short paragraph or bullet list. Keep technical terms exact. No fluff.",
+            "Rewrite as a concise technical note only if the transcript is clearly about code, a bug, or implementation. Keep the same language as the transcript. Keep technical terms exact. Do not translate to English unless the transcript is English. Do not invent diagnostics, failures, causes, or next steps.",
         ),
         (
             4u8,
             "Document prose",
-            "Rewrite as clean structured prose for a document. Proper paragraphs, sentences, punctuation. Remove filler words and self-corrections. Keep meaning intact.",
+            "Rewrite as clean structured prose for a document. Keep the same language as the transcript. Use proper paragraphs, sentences, and punctuation. Remove filler words and self-corrections. Keep meaning intact and do not add facts.",
         ),
         (
             5u8,
             "AI prompt",
-            "Rewrite as a clear, direct instruction for an AI assistant. Keep it concise and specific. Remove filler words.",
+            "Rewrite as a clear, direct instruction for an AI assistant. Keep the same language as the transcript. Keep it concise and specific. Remove filler words. Do not translate to English unless the transcript is English. Do not add requirements that were not spoken.",
         ),
     ];
 
@@ -1249,7 +1249,8 @@ pub fn apply_default_app_presets(app: AppHandle) -> Result<(), String> {
         ("WebStorm", 3),
         ("PyCharm", 3),
         ("IntelliJ", 3),
-        ("Claude Code", 3),
+        ("Claude Code", 5),
+        ("Codex", 5),
         ("GitHub", 3),
         ("Notion", 4),
         ("Google Docs", 4),
