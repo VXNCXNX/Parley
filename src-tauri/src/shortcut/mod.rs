@@ -41,19 +41,17 @@ pub fn init_shortcuts(app: &AppHandle) -> Result<(), String> {
         KeyboardImplementation::HandyKeys => {
             if let Err(e) = handy_keys::init_shortcuts(app) {
                 error!("Failed to initialize handy-keys shortcuts: {}", e);
-                // Fall back to Tauri implementation and persist this fallback
-                warn!("Falling back to Tauri global shortcut implementation and saving fallback to settings");
+                if is_accessibility_permission_error(&e) {
+                    return Err(format!(
+                        "Accessibility permission is required to initialize handy-keys shortcuts: {}",
+                        e
+                    ));
+                }
 
-                // Update settings to persist the fallback so we don't retry HandyKeys on next launch
-                let mut settings = settings::get_settings(app);
-                settings.keyboard_implementation = KeyboardImplementation::Tauri;
-                settings::write_settings(app, settings);
-
+                // Fall back for this session, but keep the user's configured implementation.
+                warn!("Falling back to Tauri global shortcut implementation for this session");
                 tauri_impl::init_shortcuts(app);
-                return Err(format!(
-                    "Failed to initialize handy-keys shortcuts: {}. Fell back to Tauri.",
-                    e
-                ));
+                return Ok(());
             }
             Ok(())
         }
@@ -421,6 +419,11 @@ fn parse_keyboard_implementation(s: &str) -> KeyboardImplementation {
     }
 }
 
+fn is_accessibility_permission_error(error: &str) -> bool {
+    let lower = error.to_lowercase();
+    lower.contains("accessibility") && lower.contains("permission")
+}
+
 /// Unregister all shortcuts for the current implementation
 fn unregister_all_shortcuts(app: &AppHandle, implementation: KeyboardImplementation) {
     let bindings = settings::get_bindings(app);
@@ -529,6 +532,13 @@ fn initialize_handy_keys_with_rollback(app: &AppHandle) -> Result<bool, String> 
 
     if let Err(e) = handy_keys::init_shortcuts(app) {
         error!("Failed to initialize HandyKeys: {}", e);
+        if is_accessibility_permission_error(&e) {
+            return Err(format!(
+                "Accessibility permission is required to initialize HandyKeys: {}",
+                e
+            ));
+        }
+
         // Rollback to Tauri
         let mut settings = settings::get_settings(app);
         settings.keyboard_implementation = KeyboardImplementation::Tauri;

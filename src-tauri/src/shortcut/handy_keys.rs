@@ -36,6 +36,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::settings::{self, get_settings, ShortcutBinding};
@@ -89,12 +90,24 @@ impl HandyKeysState {
     /// Create a new HandyKeysState
     pub fn new(app: AppHandle) -> Result<Self, String> {
         let (cmd_tx, cmd_rx) = mpsc::channel::<ManagerCommand>();
+        let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
 
         // Start the manager thread
         let app_clone = app.clone();
         let thread_handle = thread::spawn(move || {
-            Self::manager_thread(cmd_rx, app_clone);
+            Self::manager_thread(cmd_rx, app_clone, ready_tx);
         });
+
+        match ready_rx.recv_timeout(Duration::from_secs(2)) {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => {
+                let _ = thread_handle.join();
+                return Err(e);
+            }
+            Err(e) => {
+                return Err(format!("Timed out waiting for HandyKeys manager startup: {}", e));
+            }
+        }
 
         Ok(Self {
             command_sender: Mutex::new(cmd_tx),
@@ -107,14 +120,23 @@ impl HandyKeysState {
     }
 
     /// The main manager thread - owns the HotkeyManager and processes commands
-    fn manager_thread(cmd_rx: Receiver<ManagerCommand>, app: AppHandle) {
+    fn manager_thread(
+        cmd_rx: Receiver<ManagerCommand>,
+        app: AppHandle,
+        ready: Sender<Result<(), String>>,
+    ) {
         info!("handy-keys manager thread started");
 
         // Create the HotkeyManager in this thread
         let manager = match HotkeyManager::new_with_blocking() {
-            Ok(m) => m,
+            Ok(m) => {
+                let _ = ready.send(Ok(()));
+                m
+            }
             Err(e) => {
-                error!("Failed to create HotkeyManager: {}", e);
+                let message = e.to_string();
+                error!("Failed to create HotkeyManager: {}", message);
+                let _ = ready.send(Err(message));
                 return;
             }
         };
