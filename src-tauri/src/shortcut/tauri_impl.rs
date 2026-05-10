@@ -31,6 +31,11 @@ pub fn init_shortcuts(app: &AppHandle) {
             .cloned()
             .unwrap_or(default_binding);
 
+        if binding.current_binding.trim().is_empty() {
+            log::debug!("Skipping disabled Tauri shortcut: {}", id);
+            continue;
+        }
+
         if let Err(e) = register_shortcut(app, binding) {
             error!("Failed to register shortcut {} during init: {}", id, e);
         }

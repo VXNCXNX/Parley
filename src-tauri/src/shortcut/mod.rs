@@ -163,11 +163,6 @@ pub fn change_binding(
     id: String,
     binding: String,
 ) -> Result<BindingResponse, String> {
-    // Reject empty bindings — every shortcut should have a value
-    if binding.trim().is_empty() {
-        return Err("Binding cannot be empty".to_string());
-    }
-
     let mut settings = settings::get_settings(&app);
 
     // Get the binding to modify, or create it from defaults if it doesn't exist
@@ -200,6 +195,9 @@ pub fn change_binding(
     // If this is the cancel binding, just update the settings and return
     // It's managed dynamically, so we don't register/unregister here
     if id == "cancel" {
+        if binding.trim().is_empty() {
+            return Err("Cancel binding cannot be empty".to_string());
+        }
         if let Some(mut b) = settings.bindings.get(&id).cloned() {
             b.current_binding = binding;
             settings.bindings.insert(id.clone(), b.clone());
@@ -212,10 +210,24 @@ pub fn change_binding(
         }
     }
 
-    // Unregister the existing binding
-    if let Err(e) = unregister_shortcut(&app, binding_to_modify.clone()) {
-        let error_msg = format!("Failed to unregister shortcut: {}", e);
-        error!("change_binding error: {}", error_msg);
+    // Unregister the existing binding if it is currently enabled.
+    if !binding_to_modify.current_binding.trim().is_empty() {
+        if let Err(e) = unregister_shortcut(&app, binding_to_modify.clone()) {
+            let error_msg = format!("Failed to unregister shortcut: {}", e);
+            error!("change_binding error: {}", error_msg);
+        }
+    }
+
+    if binding.trim().is_empty() {
+        let mut updated_binding = binding_to_modify;
+        updated_binding.current_binding = binding;
+        settings.bindings.insert(id, updated_binding.clone());
+        settings::write_settings(&app, settings);
+        return Ok(BindingResponse {
+            success: true,
+            binding: Some(updated_binding),
+            error: None,
+        });
     }
 
     // Validate the new shortcut for the current keyboard implementation
@@ -418,6 +430,9 @@ fn unregister_all_shortcuts(app: &AppHandle, implementation: KeyboardImplementat
         if id == "cancel" {
             continue;
         }
+        if binding.current_binding.trim().is_empty() {
+            continue;
+        }
 
         let result = match implementation {
             KeyboardImplementation::Tauri => tauri_impl::unregister_shortcut(app, binding),
@@ -458,6 +473,14 @@ fn register_all_shortcuts_for_implementation(
             .get(id)
             .cloned()
             .unwrap_or_else(|| default_binding.clone());
+
+        if binding.current_binding.trim().is_empty() {
+            info!(
+                "Skipping disabled shortcut '{}' for {:?}",
+                id, implementation
+            );
+            continue;
+        }
 
         // Validate the shortcut for the target implementation
         if let Err(e) =
