@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 use tauri::{Emitter, Manager};
 
 const STREAM_STALE_REFRESH: Duration = Duration::from_secs(5 * 60);
+const SHARED_OUTPUT_IDLE_CLOSE_RETRY: Duration = Duration::from_secs(60);
 
 fn set_mute(mute: bool) {
     // Expected behavior:
@@ -122,6 +123,33 @@ fn should_refresh_stale_stream(opened_at: Option<Instant>, now: Instant) -> bool
         .unwrap_or(false)
 }
 
+fn normalize_audio_route_name(name: &str) -> String {
+    let mut normalized = name.trim().to_lowercase();
+    for suffix in [" - chat", " - game", " chat", " game"] {
+        if let Some(base) = normalized.strip_suffix(suffix) {
+            normalized = base.trim().to_string();
+            break;
+        }
+    }
+    normalized
+}
+
+fn route_names_share_headset(input_name: &str, output_name: &str) -> bool {
+    let input_base = normalize_audio_route_name(input_name);
+    let output_base = normalize_audio_route_name(output_name);
+    !input_base.is_empty() && input_base == output_base
+}
+
+fn should_keep_idle_stream_for_shared_output(
+    input_name: Option<&str>,
+    output_name: Option<&str>,
+) -> bool {
+    match (input_name, output_name) {
+        (Some(input_name), Some(output_name)) => route_names_share_headset(input_name, output_name),
+        _ => false,
+    }
+}
+
 /* ──────────────────────────────────────────────────────────────── */
 
 #[derive(Clone, Debug)]
@@ -224,6 +252,11 @@ impl AudioRecordingManager {
             if rm.close_generation.load(Ordering::SeqCst) == gen
                 && matches!(*state, RecordingState::Idle)
             {
+                if rm.should_defer_idle_close_for_shared_output() {
+                    drop(state);
+                    rm.schedule_lazy_close(SHARED_OUTPUT_IDLE_CLOSE_RETRY);
+                    return;
+                }
                 info!("Closing idle microphone stream after {:?}", timeout);
                 rm.stop_microphone_stream();
             }
@@ -273,6 +306,43 @@ impl AudioRecordingManager {
                 debug!("Could not auto-switch output to '{game_target}': {e}");
             }
         }
+    }
+
+    fn current_stream_shares_current_output_route(&self) -> bool {
+        let input_name = self.current_stream_device_name();
+
+        #[cfg(target_os = "macos")]
+        let output_name = macos_audio::get_default_output_device_name();
+
+        #[cfg(not(target_os = "macos"))]
+        let output_name: Option<String> = None;
+
+        should_keep_idle_stream_for_shared_output(input_name.as_deref(), output_name.as_deref())
+    }
+
+    fn should_defer_idle_close_for_shared_output(&self) -> bool {
+        let input_name = self.current_stream_device_name();
+
+        #[cfg(target_os = "macos")]
+        let output_name = macos_audio::get_default_output_device_name();
+
+        #[cfg(not(target_os = "macos"))]
+        let output_name: Option<String> = None;
+
+        let should_defer = should_keep_idle_stream_for_shared_output(
+            input_name.as_deref(),
+            output_name.as_deref(),
+        );
+
+        if should_defer {
+            info!(
+                "Keeping idle microphone stream open because input '{}' shares the current output '{}'; closing it would trigger a headset audio route change",
+                input_name.as_deref().unwrap_or("unknown"),
+                output_name.as_deref().unwrap_or("unknown")
+            );
+        }
+
+        should_defer
     }
 
     fn configured_microphone_name<'a>(&self, settings: &'a AppSettings) -> Option<&'a String> {
@@ -385,7 +455,8 @@ impl AudioRecordingManager {
         let desired_device = self.resolve_effective_microphone_device(&settings);
         let current_device_name = self.current_stream_device_name();
         let stale_stream =
-            should_refresh_stale_stream(*self.stream_opened_at.lock().unwrap(), Instant::now());
+            should_refresh_stale_stream(*self.stream_opened_at.lock().unwrap(), Instant::now())
+                && !self.current_stream_shares_current_output_route();
 
         if should_reopen_microphone_stream(
             current_device_name.as_deref(),
@@ -537,7 +608,11 @@ impl AudioRecordingManager {
             (MicrophoneMode::AlwaysOn, MicrophoneMode::OnDemand) => {
                 if matches!(*self.state.lock().unwrap(), RecordingState::Idle) {
                     self.close_generation.fetch_add(1, Ordering::SeqCst);
-                    self.stop_microphone_stream();
+                    if self.should_defer_idle_close_for_shared_output() {
+                        self.schedule_lazy_close(SHARED_OUTPUT_IDLE_CLOSE_RETRY);
+                    } else {
+                        self.stop_microphone_stream();
+                    }
                 }
             }
             (MicrophoneMode::OnDemand, MicrophoneMode::AlwaysOn) => {
@@ -718,6 +793,7 @@ impl Drop for AudioRecordingManager {
 #[cfg(test)]
 mod tests {
     use super::{
+        route_names_share_headset, should_keep_idle_stream_for_shared_output,
         should_refresh_stale_stream, should_reopen_microphone_stream, STREAM_STALE_REFRESH,
     };
     use std::time::{Duration, Instant};
@@ -761,6 +837,42 @@ mod tests {
         assert!(!should_refresh_stale_stream(
             Some(now - STREAM_STALE_REFRESH + Duration::from_secs(1)),
             now
+        ));
+    }
+
+    #[test]
+    fn detects_same_headset_input_and_output_route() {
+        assert!(route_names_share_headset(
+            "AirPods Max de Vincent",
+            "AirPods Max de Vincent"
+        ));
+        assert!(route_names_share_headset(
+            "INZONE Buds - Chat",
+            "INZONE Buds - Game"
+        ));
+    }
+
+    #[test]
+    fn does_not_treat_unrelated_routes_as_shared_headset() {
+        assert!(!route_names_share_headset(
+            "AirPods Max de Vincent",
+            "MacBook Pro Speakers"
+        ));
+        assert!(!should_keep_idle_stream_for_shared_output(
+            None,
+            Some("AirPods Max de Vincent")
+        ));
+    }
+
+    #[test]
+    fn keeps_idle_stream_for_shared_output_route() {
+        assert!(should_keep_idle_stream_for_shared_output(
+            Some("AirPods Max de Vincent"),
+            Some("AirPods Max de Vincent")
+        ));
+        assert!(!should_keep_idle_stream_for_shared_output(
+            Some("MacBook Pro Microphone"),
+            Some("MacBook Pro Speakers")
         ));
     }
 }
