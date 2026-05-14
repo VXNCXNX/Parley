@@ -11,6 +11,7 @@ import { VolumeSlider } from "../VolumeSlider";
 import { MuteWhileRecording } from "../MuteWhileRecording";
 import { ModelSettingsCard } from "./ModelSettingsCard";
 import { LongAudioModelSettings } from "./LongAudioModelSettings";
+import { LazyStreamClose } from "../LazyStreamClose";
 
 export const GeneralSettings: React.FC = () => {
   const { t } = useTranslation();
@@ -25,6 +26,7 @@ export const GeneralSettings: React.FC = () => {
       <LongAudioModelSettings />
       <SettingsGroup title={t("settings.sound.title")}>
         <MicrophoneSelector descriptionMode="tooltip" grouped={true} />
+        <LazyStreamClose descriptionMode="tooltip" grouped={true} />
         <MuteWhileRecording descriptionMode="tooltip" grouped={true} />
         <AudioFeedback descriptionMode="tooltip" grouped={true} />
         <OutputDeviceSelector

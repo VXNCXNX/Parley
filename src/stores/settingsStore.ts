@@ -133,6 +133,10 @@ const settingUpdaters: {
   app_language: (value) => commands.changeAppLanguageSetting(value as string),
   experimental_enabled: (value) =>
     commands.changeExperimentalEnabledSetting(value as boolean),
+  lazy_stream_close: (value) =>
+    commands.changeLazyStreamCloseSetting(value as boolean),
+  lazy_stream_close_timeout_seconds: (value) =>
+    commands.changeLazyStreamCloseTimeoutSetting(value as number),
   show_tray_icon: (value) =>
     commands.changeShowTrayIconSetting(value as boolean),
   long_audio_model: (value) =>
@@ -180,6 +184,9 @@ export const useSettingsStore = create<SettingsStore>()(
           const normalizedSettings: Settings = {
             ...settings,
             always_on_microphone: settings.always_on_microphone ?? false,
+            lazy_stream_close: settings.lazy_stream_close ?? false,
+            lazy_stream_close_timeout_seconds:
+              settings.lazy_stream_close_timeout_seconds ?? 300,
             selected_microphone: settings.selected_microphone ?? "Default",
             clamshell_microphone: settings.clamshell_microphone ?? "Default",
             selected_output_device:

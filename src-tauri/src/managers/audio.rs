@@ -1,16 +1,16 @@
-use crate::audio_toolkit::{list_input_devices, vad::SmoothedVad, AudioRecorder, SileroVad};
 #[cfg(target_os = "macos")]
 use crate::audio_toolkit::audio::macos_audio;
+use crate::audio_toolkit::{list_input_devices, vad::SmoothedVad, AudioRecorder, SileroVad};
 use crate::helpers::clamshell;
 use crate::settings::{get_settings, AppSettings};
 use crate::utils;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::{Emitter, Manager};
 
-const STREAM_IDLE_TIMEOUT: Duration = Duration::from_secs(30);
+const STREAM_STALE_REFRESH: Duration = Duration::from_secs(5 * 60);
 
 fn set_mute(mute: bool) {
     // Expected behavior:
@@ -103,6 +103,25 @@ fn set_mute(mute: bool) {
 
 const WHISPER_SAMPLE_RATE: usize = 16000;
 
+struct ResolvedMicrophoneDevice {
+    device: Option<cpal::Device>,
+    name: Option<String>,
+}
+
+fn should_reopen_microphone_stream(current_name: Option<&str>, desired_name: Option<&str>) -> bool {
+    match (current_name, desired_name) {
+        (Some(current), Some(desired)) => current != desired,
+        (None, Some(_)) => true,
+        _ => false,
+    }
+}
+
+fn should_refresh_stale_stream(opened_at: Option<Instant>, now: Instant) -> bool {
+    opened_at
+        .map(|opened_at| now.duration_since(opened_at) >= STREAM_STALE_REFRESH)
+        .unwrap_or(false)
+}
+
 /* ──────────────────────────────────────────────────────────────── */
 
 #[derive(Clone, Debug)]
@@ -154,6 +173,7 @@ pub struct AudioRecordingManager {
     is_open: Arc<Mutex<bool>>,
     is_recording: Arc<Mutex<bool>>,
     did_mute: Arc<Mutex<bool>>,
+    stream_opened_at: Arc<Mutex<Option<Instant>>>,
     close_generation: Arc<AtomicU64>,
 }
 
@@ -177,6 +197,7 @@ impl AudioRecordingManager {
             is_open: Arc::new(Mutex::new(false)),
             is_recording: Arc::new(Mutex::new(false)),
             did_mute: Arc::new(Mutex::new(false)),
+            stream_opened_at: Arc::new(Mutex::new(None)),
             close_generation: Arc::new(AtomicU64::new(0)),
         };
 
@@ -188,11 +209,11 @@ impl AudioRecordingManager {
         Ok(manager)
     }
 
-    fn schedule_lazy_close(&self) {
+    fn schedule_lazy_close(&self, timeout: Duration) {
         let gen = self.close_generation.fetch_add(1, Ordering::SeqCst) + 1;
         let app = self.app_handle.clone();
         std::thread::spawn(move || {
-            std::thread::sleep(STREAM_IDLE_TIMEOUT);
+            std::thread::sleep(timeout);
             let rm = app.state::<Arc<AudioRecordingManager>>();
             // Hold state lock across the check AND close to serialize against
             // try_start_recording, preventing a race where the stream is closed
@@ -201,10 +222,7 @@ impl AudioRecordingManager {
             if rm.close_generation.load(Ordering::SeqCst) == gen
                 && matches!(*state, RecordingState::Idle)
             {
-                info!(
-                    "Closing idle microphone stream after {:?}",
-                    STREAM_IDLE_TIMEOUT
-                );
+                info!("Closing idle microphone stream after {:?}", timeout);
                 rm.stop_microphone_stream();
             }
         });
@@ -255,7 +273,7 @@ impl AudioRecordingManager {
         }
     }
 
-    fn get_effective_microphone_device(&self, settings: &AppSettings) -> Option<cpal::Device> {
+    fn configured_microphone_name<'a>(&self, settings: &'a AppSettings) -> Option<&'a String> {
         // Check if we're in clamshell mode and have a clamshell microphone configured
         let use_clamshell_mic = if let Ok(is_clamshell) = clamshell::is_clamshell() {
             is_clamshell && settings.clamshell_microphone.is_some()
@@ -263,23 +281,98 @@ impl AudioRecordingManager {
             false
         };
 
-        let device_name = if use_clamshell_mic {
-            settings.clamshell_microphone.as_ref().unwrap()
+        if use_clamshell_mic {
+            settings.clamshell_microphone.as_ref()
         } else {
-            settings.selected_microphone.as_ref()?
-        };
+            settings.selected_microphone.as_ref()
+        }
+    }
 
-        // Find the device by name
+    fn resolve_effective_microphone_device(
+        &self,
+        settings: &AppSettings,
+    ) -> ResolvedMicrophoneDevice {
+        let configured_name = self.configured_microphone_name(settings).cloned();
+
         match list_input_devices() {
-            Ok(devices) => devices
-                .into_iter()
-                .find(|d| d.name == *device_name)
-                .map(|d| d.device),
+            Ok(devices) => {
+                if let Some(device_name) = configured_name.as_ref() {
+                    if let Some(device) = devices.iter().find(|d| d.name == *device_name) {
+                        return ResolvedMicrophoneDevice {
+                            device: Some(device.device.clone()),
+                            name: Some(device.name.clone()),
+                        };
+                    }
+
+                    warn!(
+                        "Configured microphone '{}' was not found; falling back to system default",
+                        device_name
+                    );
+                }
+
+                if let Some(device) = devices.into_iter().find(|d| d.is_default) {
+                    return ResolvedMicrophoneDevice {
+                        name: Some(device.name.clone()),
+                        device: Some(device.device),
+                    };
+                }
+
+                ResolvedMicrophoneDevice {
+                    device: None,
+                    name: None,
+                }
+            }
             Err(e) => {
                 debug!("Failed to list devices, using default: {}", e);
-                None
+                ResolvedMicrophoneDevice {
+                    device: None,
+                    name: None,
+                }
             }
         }
+    }
+
+    fn current_stream_device_name(&self) -> Option<String> {
+        self.recorder
+            .lock()
+            .unwrap()
+            .as_ref()
+            .and_then(|recorder| recorder.device_name())
+    }
+
+    fn ensure_microphone_stream_ready(&self) -> Result<(), anyhow::Error> {
+        if !*self.is_open.lock().unwrap() {
+            self.start_microphone_stream()?;
+            return Ok(());
+        }
+
+        let settings = get_settings(&self.app_handle);
+        let desired_device = self.resolve_effective_microphone_device(&settings);
+        let current_device_name = self.current_stream_device_name();
+        let stale_stream =
+            should_refresh_stale_stream(*self.stream_opened_at.lock().unwrap(), Instant::now());
+
+        if should_reopen_microphone_stream(
+            current_device_name.as_deref(),
+            desired_device.name.as_deref(),
+        ) || stale_stream
+        {
+            let reason = if stale_stream {
+                "stream is stale"
+            } else {
+                "effective device changed"
+            };
+            info!(
+                "Refreshing microphone stream before recording ({reason}): '{}' -> '{}'",
+                current_device_name.as_deref().unwrap_or("unknown"),
+                desired_device.name.as_deref().unwrap_or("unknown")
+            );
+            self.close_generation.fetch_add(1, Ordering::SeqCst);
+            self.stop_microphone_stream();
+            self.start_microphone_stream()?;
+        }
+
+        Ok(())
     }
 
     /* ---------- microphone life-cycle -------------------------------------- */
@@ -347,11 +440,11 @@ impl AudioRecordingManager {
 
         // Get the selected device from settings, considering clamshell mode
         let settings = get_settings(&self.app_handle);
-        let selected_device = self.get_effective_microphone_device(&settings);
+        let selected_device = self.resolve_effective_microphone_device(&settings);
 
         // Pre-flight: if no device is selected/configured AND no devices exist,
         // surface a clear error instead of a cryptic backend message.
-        if selected_device.is_none() {
+        if selected_device.device.is_none() {
             let has_any_device = list_input_devices()
                 .map(|devices| !devices.is_empty())
                 .unwrap_or(false);
@@ -361,11 +454,12 @@ impl AudioRecordingManager {
         }
 
         if let Some(rec) = recorder_opt.as_mut() {
-            rec.open(selected_device)
+            rec.open(selected_device.device)
                 .map_err(|e| anyhow::anyhow!("Failed to open recorder: {}", e))?;
         }
 
         *open_flag = true;
+        *self.stream_opened_at.lock().unwrap() = Some(Instant::now());
         info!(
             "Microphone stream initialized in {:?}",
             start_time.elapsed()
@@ -395,6 +489,7 @@ impl AudioRecordingManager {
         }
 
         *open_flag = false;
+        *self.stream_opened_at.lock().unwrap() = None;
         debug!("Microphone stream stopped");
     }
 
@@ -427,29 +522,28 @@ impl AudioRecordingManager {
         let mut state = self.state.lock().unwrap();
 
         if let RecordingState::Idle = *state {
-            // Ensure microphone is open in on-demand mode
-            if matches!(*self.mode.lock().unwrap(), MicrophoneMode::OnDemand) {
-                // Cancel any pending lazy close
-                self.close_generation.fetch_add(1, Ordering::SeqCst);
-                if let Err(e) = self.start_microphone_stream() {
-                    error!("Failed to open microphone stream: {e}");
-                    let msg = e.to_string();
-                    let kind = if msg.to_lowercase().contains("no input device") {
-                        "no_input_device"
-                    } else if msg.to_lowercase().contains("permission")
-                        || msg.to_lowercase().contains("not permitted")
-                        || msg.to_lowercase().contains("access")
-                    {
-                        "microphone_permission_denied"
-                    } else {
-                        "unknown"
-                    };
-                    let _ = self.app_handle.emit(
-                        "recording-error",
-                        serde_json::json!({ "kind": kind, "detail": msg }),
-                    );
-                    return false;
-                }
+            // Cancel any pending lazy close and ensure the open stream still
+            // points at the current effective device. This matters for the
+            // "Default" mic because macOS can change it after app startup.
+            self.close_generation.fetch_add(1, Ordering::SeqCst);
+            if let Err(e) = self.ensure_microphone_stream_ready() {
+                error!("Failed to open microphone stream: {e}");
+                let msg = e.to_string();
+                let kind = if msg.to_lowercase().contains("no input device") {
+                    "no_input_device"
+                } else if msg.to_lowercase().contains("permission")
+                    || msg.to_lowercase().contains("not permitted")
+                    || msg.to_lowercase().contains("access")
+                {
+                    "microphone_permission_denied"
+                } else {
+                    "unknown"
+                };
+                let _ = self.app_handle.emit(
+                    "recording-error",
+                    serde_json::json!({ "kind": kind, "detail": msg }),
+                );
+                return false;
             }
 
             if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
@@ -506,8 +600,11 @@ impl AudioRecordingManager {
 
                 // In on-demand mode, close the mic (lazily if the setting is enabled)
                 if matches!(*self.mode.lock().unwrap(), MicrophoneMode::OnDemand) {
-                    if get_settings(&self.app_handle).lazy_stream_close {
-                        self.schedule_lazy_close();
+                    let settings = get_settings(&self.app_handle);
+                    if settings.lazy_stream_close {
+                        self.schedule_lazy_close(Duration::from_secs(
+                            settings.lazy_stream_close_timeout_seconds,
+                        ));
                     } else {
                         self.stop_microphone_stream();
                     }
@@ -550,8 +647,11 @@ impl AudioRecordingManager {
 
             // In on-demand mode, close the mic (lazily if the setting is enabled)
             if matches!(*self.mode.lock().unwrap(), MicrophoneMode::OnDemand) {
-                if get_settings(&self.app_handle).lazy_stream_close {
-                    self.schedule_lazy_close();
+                let settings = get_settings(&self.app_handle);
+                if settings.lazy_stream_close {
+                    self.schedule_lazy_close(Duration::from_secs(
+                        settings.lazy_stream_close_timeout_seconds,
+                    ));
                 } else {
                     self.stop_microphone_stream();
                 }
@@ -570,5 +670,55 @@ impl AudioRecordingManager {
 impl Drop for AudioRecordingManager {
     fn drop(&mut self) {
         self.shutdown();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        should_refresh_stale_stream, should_reopen_microphone_stream, STREAM_STALE_REFRESH,
+    };
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn reopens_when_current_device_differs_from_desired_device() {
+        assert!(should_reopen_microphone_stream(
+            Some("Built-in Microphone"),
+            Some("AirPods Max de Vincent")
+        ));
+    }
+
+    #[test]
+    fn keeps_stream_when_device_matches() {
+        assert!(!should_reopen_microphone_stream(
+            Some("AirPods Max de Vincent"),
+            Some("AirPods Max de Vincent")
+        ));
+    }
+
+    #[test]
+    fn does_not_reopen_when_desired_device_is_unknown() {
+        assert!(!should_reopen_microphone_stream(
+            Some("AirPods Max de Vincent"),
+            None
+        ));
+    }
+
+    #[test]
+    fn refreshes_stream_after_stale_interval() {
+        let now = Instant::now();
+        assert!(should_refresh_stale_stream(
+            Some(now - STREAM_STALE_REFRESH - Duration::from_secs(1)),
+            now
+        ));
+    }
+
+    #[test]
+    fn keeps_recent_stream_open() {
+        let now = Instant::now();
+        assert!(!should_refresh_stale_stream(
+            Some(now - STREAM_STALE_REFRESH + Duration::from_secs(1)),
+            now
+        ));
     }
 }

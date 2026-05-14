@@ -268,8 +268,12 @@
         "description": "Enable experimental features that are still in development."
       },
       "lazyStreamClose": {
-        "label": "Keep microphone open between recordings",
-        "description": "Keep the microphone stream open for 30s after recording stops to reduce latency on Bluetooth mics. May degrade Bluetooth audio quality on macOS while idle."
+        "label": "Microphone Mode",
+        "description": "Choose whether Parley keeps the microphone warm briefly after recording or keeps it always open. macOS shows the microphone indicator while the stream is open.",
+        "modes": {
+          "warm": "Warm",
+          "always": "Always"
+        }
       },
       "startHidden": {
         "label": "Start Hidden",

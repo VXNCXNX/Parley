@@ -412,6 +412,8 @@ pub struct AppSettings {
     pub experimental_enabled: bool,
     #[serde(default)]
     pub lazy_stream_close: bool,
+    #[serde(default = "default_lazy_stream_close_timeout_seconds")]
+    pub lazy_stream_close_timeout_seconds: u64,
     #[serde(default)]
     pub keyboard_implementation: KeyboardImplementation,
     #[serde(default = "default_show_tray_icon")]
@@ -488,6 +490,7 @@ pub struct AppSettingsResponse {
     pub app_language: String,
     pub experimental_enabled: bool,
     pub lazy_stream_close: bool,
+    pub lazy_stream_close_timeout_seconds: u64,
     pub keyboard_implementation: KeyboardImplementation,
     pub show_tray_icon: bool,
     pub paste_delay_ms: u64,
@@ -564,6 +567,7 @@ impl AppSettings {
             app_language: self.app_language.clone(),
             experimental_enabled: self.experimental_enabled,
             lazy_stream_close: self.lazy_stream_close,
+            lazy_stream_close_timeout_seconds: self.lazy_stream_close_timeout_seconds,
             keyboard_implementation: self.keyboard_implementation,
             show_tray_icon: self.show_tray_icon,
             paste_delay_ms: self.paste_delay_ms,
@@ -589,6 +593,10 @@ fn default_model() -> String {
 
 fn default_always_on_microphone() -> bool {
     false
+}
+
+pub fn default_lazy_stream_close_timeout_seconds() -> u64 {
+    300
 }
 
 fn default_translate_to_english() -> bool {
@@ -993,6 +1001,7 @@ pub fn get_default_settings() -> AppSettings {
         app_language: default_app_language(),
         experimental_enabled: false,
         lazy_stream_close: false,
+        lazy_stream_close_timeout_seconds: default_lazy_stream_close_timeout_seconds(),
         keyboard_implementation: KeyboardImplementation::default(),
         show_tray_icon: default_show_tray_icon(),
         paste_delay_ms: default_paste_delay_ms(),

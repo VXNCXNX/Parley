@@ -221,6 +221,10 @@ impl AudioRecorder {
         Ok(())
     }
 
+    pub fn device_name(&self) -> Option<String> {
+        self.device.as_ref().and_then(|device| device.name().ok())
+    }
+
     pub fn stop(&self) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
         let (resp_tx, resp_rx) = mpsc::channel();
         if let Some(tx) = &self.cmd_tx {
