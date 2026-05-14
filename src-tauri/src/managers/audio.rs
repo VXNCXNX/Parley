@@ -2,7 +2,7 @@
 use crate::audio_toolkit::audio::macos_audio;
 use crate::audio_toolkit::{list_input_devices, vad::SmoothedVad, AudioRecorder, SileroVad};
 use crate::helpers::clamshell;
-use crate::settings::{get_settings, AppSettings};
+use crate::settings::{get_settings, write_settings, AppSettings};
 use crate::utils;
 use log::{debug, error, info, warn};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -174,6 +174,7 @@ pub struct AudioRecordingManager {
     is_recording: Arc<Mutex<bool>>,
     did_mute: Arc<Mutex<bool>>,
     stream_opened_at: Arc<Mutex<Option<Instant>>>,
+    last_working_default_microphone: Arc<Mutex<Option<String>>>,
     close_generation: Arc<AtomicU64>,
 }
 
@@ -198,6 +199,7 @@ impl AudioRecordingManager {
             is_recording: Arc::new(Mutex::new(false)),
             did_mute: Arc::new(Mutex::new(false)),
             stream_opened_at: Arc::new(Mutex::new(None)),
+            last_working_default_microphone: Arc::new(Mutex::new(None)),
             close_generation: Arc::new(AtomicU64::new(0)),
         };
 
@@ -310,6 +312,25 @@ impl AudioRecordingManager {
                     );
                 }
 
+                if configured_name.is_none() {
+                    let sticky_name = self
+                        .last_working_default_microphone
+                        .lock()
+                        .unwrap()
+                        .clone()
+                        .or_else(|| settings.last_working_default_microphone.clone());
+
+                    if let Some(sticky_name) = sticky_name {
+                        if let Some(device) = devices.iter().find(|d| d.name == sticky_name) {
+                            debug!("Using last working default microphone: {sticky_name}");
+                            return ResolvedMicrophoneDevice {
+                                device: Some(device.device.clone()),
+                                name: Some(device.name.clone()),
+                            };
+                        }
+                    }
+                }
+
                 if let Some(device) = devices.into_iter().find(|d| d.is_default) {
                     return ResolvedMicrophoneDevice {
                         name: Some(device.name.clone()),
@@ -338,6 +359,20 @@ impl AudioRecordingManager {
             .unwrap()
             .as_ref()
             .and_then(|recorder| recorder.device_name())
+    }
+
+    fn remember_working_default_microphone(&self, settings: &AppSettings, sample_count: usize) {
+        if sample_count == 0 || self.configured_microphone_name(settings).is_some() {
+            return;
+        }
+
+        if let Some(device_name) = self.current_stream_device_name() {
+            *self.last_working_default_microphone.lock().unwrap() = Some(device_name.clone());
+            let mut updated_settings = settings.clone();
+            updated_settings.last_working_default_microphone = Some(device_name.clone());
+            write_settings(&self.app_handle, updated_settings);
+            debug!("Remembered working default microphone: {device_name}");
+        }
     }
 
     fn ensure_microphone_stream_ready(&self) -> Result<(), anyhow::Error> {
@@ -564,6 +599,11 @@ impl AudioRecordingManager {
     }
 
     pub fn update_selected_device(&self) -> Result<(), anyhow::Error> {
+        *self.last_working_default_microphone.lock().unwrap() = None;
+        let mut settings = get_settings(&self.app_handle);
+        settings.last_working_default_microphone = None;
+        write_settings(&self.app_handle, settings);
+
         // If currently open, restart the microphone stream to use the new device
         if *self.is_open.lock().unwrap() {
             self.close_generation.fetch_add(1, Ordering::SeqCst);
@@ -598,9 +638,11 @@ impl AudioRecordingManager {
 
                 *self.is_recording.lock().unwrap() = false;
 
+                let settings = get_settings(&self.app_handle);
+                self.remember_working_default_microphone(&settings, samples.len());
+
                 // In on-demand mode, close the mic (lazily if the setting is enabled)
                 if matches!(*self.mode.lock().unwrap(), MicrophoneMode::OnDemand) {
-                    let settings = get_settings(&self.app_handle);
                     if settings.lazy_stream_close {
                         self.schedule_lazy_close(Duration::from_secs(
                             settings.lazy_stream_close_timeout_seconds,
