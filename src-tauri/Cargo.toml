@@ -71,7 +71,6 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 tar = "0.4.44"
 flate2 = "1.0"
 transcribe-rs = { version = "0.2.5", features = ["whisper", "parakeet", "moonshine", "sense_voice"] }
-handy-keys = "0.2.1"
 ferrous-opencc = "0.2.3"
 clap = { version = "4", features = ["derive"] }
 specta = "=2.0.0-rc.22"
@@ -105,8 +104,14 @@ windows = { version = "0.61.3", features = [
 whisper-rs = { version = "0.13.2", features = ["cuda"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
+handy-keys = "=0.3.4"
 tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", rev = "da9c9a8d4eb7f0524a2508988df1a7d9585b4904" }
 whisper-rs = { version = "0.13.2", features = ["metal"] }
+
+# handy-keys 0.3.x fixes macOS CGEventTap recovery, but also replaces the
+# Linux keyboard backend. Keep the existing backend outside macOS.
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+handy-keys = "=0.2.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 gtk-layer-shell = { version = "0.8", features = ["v0_6"] }
