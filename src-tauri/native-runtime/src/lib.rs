@@ -161,7 +161,8 @@ fn run_worker(model: Model, language: Option<String>, streaming: bool, rx: Recei
         while let Ok(cmd) = rx.recv() {
             match cmd {
                 WorkerCmd::Feed(frame, reply) => {
-                    let result = stream.feed(&frame).map(|_| {
+                    let result = stream.feed(&frame).map(|update| {
+                        if !(update.committed_changed || update.tentative_changed) { return None; }
                         let text = stream.text();
                         Some((text.committed, text.tentative))
                     }).map_err(|error| error.to_string());

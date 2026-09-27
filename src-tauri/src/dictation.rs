@@ -114,19 +114,29 @@ fn dictation_worker(generation: u64, model_path: PathBuf, language: Option<Strin
             return;
         }
     };
+    let mut feed_error: Option<String> = None;
     while let Ok(cmd) = rx.recv() {
         match cmd {
             DictationCmd::Barrier(reply) => { let _ = reply.send(()); }
             DictationCmd::Feed(frame) => {
+                if feed_error.is_some() { continue; }
                 if let Some(dictation) = dictation.as_ref() {
-                    if let Ok(Some((committed, tentative))) = dictation.feed(&frame) {
-                        if let Some(preview_tx) = &preview_tx {
-                            let _ = preview_tx.send(DictationPreview { generation, committed, tentative });
+                    match dictation.feed(&frame) {
+                        Ok(Some((committed, tentative))) => {
+                            if let Some(preview_tx) = &preview_tx {
+                                let _ = preview_tx.send(DictationPreview { generation, committed, tentative });
+                            }
                         }
+                        Ok(None) => {}
+                        Err(error) => feed_error = Some(error.to_string()),
                     }
                 }
             }
             DictationCmd::Finalize(reply) => {
+                if let Some(error) = feed_error {
+                    let _ = reply.send(DictationOutcome::Failed(error));
+                    break;
+                }
                 let outcome = match dictation.as_mut() {
                     Some(dictation) => match dictation.finalize() {
                         Ok(text) if text.trim().is_empty() => DictationOutcome::Empty,
