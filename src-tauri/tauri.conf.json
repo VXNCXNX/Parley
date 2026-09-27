@@ -52,7 +52,9 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "files": {},
+      "files": {
+        "Frameworks/": "native-runtime-libs/"
+      },
       "hardenedRuntime": true,
       "minimumSystemVersion": "10.13",
       "signingIdentity": "-",

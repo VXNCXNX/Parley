@@ -486,6 +486,9 @@ impl ShortcutAction for TranscribeAction {
         debug!("Microphone mode - always_on: {}", is_always_on);
 
         let mut recording_started = false;
+        if let Some(feed) = tm.begin_dictation() {
+            rm.set_dictation_feed(Some(feed));
+        }
         if is_always_on {
             // Always-on mode: Play audio feedback immediately, then apply mute after sound finishes
             debug!("Always-on mode: Playing audio feedback immediately");
@@ -605,6 +608,7 @@ impl ShortcutAction for TranscribeAction {
             );
 
             let stop_recording_time = Instant::now();
+            rm.set_dictation_feed(None);
             if let Some(samples) = rm.stop_recording(&binding_id) {
                 debug!(
                     "Recording stopped and samples retrieved in {:?}, sample count: {}",
@@ -661,7 +665,15 @@ impl ShortcutAction for TranscribeAction {
 
                 let transcription_time = Instant::now();
                 let samples_clone = samples.clone(); // Clone for history saving
-                match tm.transcribe(samples) {
+                let transcription_result = if switched_model {
+                    tm.cancel_dictation();
+                    tm.transcribe(samples)
+                } else if let Some(result) = tm.finish_dictation() {
+                    result
+                } else {
+                    tm.transcribe(samples)
+                };
+                match transcription_result {
                     Ok(transcription) => {
                         debug!(
                             "Transcription completed in {:?}: '{}'",

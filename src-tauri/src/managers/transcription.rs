@@ -1,4 +1,5 @@
 use crate::audio_toolkit::{apply_custom_words, filter_transcription_output};
+use crate::dictation::{DictationOutcome, DictationPreview, DictationSlot};
 use crate::native_runtime::{native_language_hint, transcribe_native_batch};
 use crate::managers::audio::AudioRecordingManager;
 use crate::managers::model::{EngineType, ModelManager};
@@ -59,6 +60,7 @@ pub struct TranscriptionManager {
     watcher_handle: Arc<Mutex<Option<thread::JoinHandle<()>>>>,
     is_loading: Arc<Mutex<bool>>,
     loading_condvar: Arc<Condvar>,
+    dictation: Arc<Mutex<DictationSlot>>,
 }
 
 impl TranscriptionManager {
@@ -78,6 +80,7 @@ impl TranscriptionManager {
             watcher_handle: Arc::new(Mutex::new(None)),
             is_loading: Arc::new(Mutex::new(false)),
             loading_condvar: Arc::new(Condvar::new()),
+            dictation: Arc::new(Mutex::new(DictationSlot::new())),
         };
 
         // Start the idle watcher
@@ -453,6 +456,52 @@ impl TranscriptionManager {
     pub fn get_current_model(&self) -> Option<String> {
         let current_model = self.current_model_id.lock().unwrap();
         current_model.clone()
+    }
+
+
+    pub fn begin_dictation(&self) -> Option<std::sync::mpsc::Sender<Vec<f32>>> {
+        let settings = get_settings(&self.app_handle);
+        let model_id = settings.selected_model.clone();
+        let info = self.model_manager.get_model_info(&model_id)?;
+        if !matches!(info.engine_type, EngineType::TranscribeCpp) {
+            return None;
+        }
+        let path = self.model_manager.get_model_path(&model_id).ok()?;
+        let language = native_language_hint(&settings.selected_language, &info.supported_languages);
+        let (preview_tx, preview_rx) = std::sync::mpsc::channel();
+        let app = self.app_handle.clone();
+        thread::spawn(move || {
+            while let Ok(preview) = preview_rx.recv() {
+                let _ = app.emit("dictation-preview", &preview);
+            }
+        });
+        let (feed_tx, feed_rx) = std::sync::mpsc::channel::<Vec<f32>>();
+        let slot = Arc::clone(&self.dictation);
+        let generation = slot.lock().unwrap().begin(path, language, info.filename.starts_with("nemotron-"), Some(preview_tx));
+        thread::spawn(move || {
+            while let Ok(frame) = feed_rx.recv() {
+                let _ = slot.lock().unwrap().feed(generation, &frame);
+            }
+        });
+        Some(feed_tx)
+    }
+
+    pub fn finish_dictation(&self) -> Option<Result<String>> {
+        let mut slot = self.dictation.lock().unwrap();
+        let generation = slot.generation();
+        if generation == 0 {
+            return None;
+        }
+        Some(match slot.finalize(generation) {
+            DictationOutcome::Final(text) => Ok(text),
+            DictationOutcome::Empty => Err(anyhow::anyhow!("native dictation returned empty text")),
+            DictationOutcome::Failed(error) => Err(anyhow::anyhow!(error)),
+            DictationOutcome::Stale => Err(anyhow::anyhow!("stale dictation result")),
+        })
+    }
+
+    pub fn cancel_dictation(&self) {
+        self.dictation.lock().unwrap().cancel();
     }
 
     pub fn transcribe(&self, audio: Vec<f32>) -> Result<String> {

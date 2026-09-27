@@ -13,6 +13,7 @@ pub mod gemini_client;
 mod helpers;
 mod input;
 mod llm_client;
+mod dictation;
 mod managers;
 mod native_runtime;
 mod overlay;

@@ -5,7 +5,12 @@ use std::os::raw::{c_char, c_int};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+#[cfg(target_os = "windows")]
+const NATIVE_LIBRARY_NAME: &str = "parley_native_runtime.dll";
+#[cfg(target_os = "macos")]
 const NATIVE_LIBRARY_NAME: &str = "libparley_native_runtime.dylib";
+#[cfg(all(unix, not(target_os = "macos")))]
+const NATIVE_LIBRARY_NAME: &str = "libparley_native_runtime.so";
 
 type TranscribeBatch = unsafe extern "C" fn(
     *const c_char,
@@ -16,21 +21,38 @@ type TranscribeBatch = unsafe extern "C" fn(
     *mut *mut c_char,
     *mut *mut c_char,
 ) -> c_int;
+type WorkerBegin = unsafe extern "C" fn(*const c_char, *const c_char, c_int, *mut *mut std::ffi::c_void, *mut *mut c_char) -> c_int;
+type WorkerFeed = unsafe extern "C" fn(*mut std::ffi::c_void, *const f32, usize, *mut *mut c_char, *mut *mut c_char, *mut *mut c_char) -> c_int;
+type WorkerFinalize = unsafe extern "C" fn(*mut std::ffi::c_void, *mut *mut c_char, *mut *mut c_char) -> c_int;
+type WorkerCancel = unsafe extern "C" fn(*mut std::ffi::c_void);
 type StringFree = unsafe extern "C" fn(*mut c_char);
 
 struct NativeApi {
     _library: Library,
     transcribe_batch: TranscribeBatch,
     string_free: StringFree,
+    worker_begin: WorkerBegin,
+    worker_feed: WorkerFeed,
+    worker_finalize: WorkerFinalize,
+    worker_cancel: WorkerCancel,
 }
 
 fn library_path() -> PathBuf {
     if let Some(path) = std::env::var_os("PARLEY_NATIVE_RUNTIME_PATH") {
         return PathBuf::from(path);
     }
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("native-runtime/target/release")
-        .join(NATIVE_LIBRARY_NAME)
+    let mut candidates = Vec::new();
+    if let Ok(executable) = std::env::current_exe() {
+        if let Some(dir) = executable.parent() {
+            candidates.push(dir.join(NATIVE_LIBRARY_NAME));
+            candidates.push(dir.join("../Frameworks").join(NATIVE_LIBRARY_NAME));
+            candidates.push(dir.join("../Resources").join(NATIVE_LIBRARY_NAME));
+            candidates.push(dir.join("../lib/Parley").join(NATIVE_LIBRARY_NAME));
+            candidates.push(dir.join("../lib").join(NATIVE_LIBRARY_NAME));
+        }
+    }
+    candidates.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("native-runtime/target/release").join(NATIVE_LIBRARY_NAME));
+    candidates.into_iter().find(|path| path.is_file()).unwrap_or_else(|| PathBuf::from(NATIVE_LIBRARY_NAME))
 }
 
 fn api() -> Result<&'static NativeApi> {
@@ -43,14 +65,12 @@ fn api() -> Result<&'static NativeApi> {
     let transcribe_batch = *unsafe {
         library.get::<TranscribeBatch>(b"parley_native_transcribe_batch\x00")
     }.map_err(|error| anyhow!("native batch symbol: {error}"))?;
-    let string_free = *unsafe {
-        library.get::<StringFree>(b"parley_native_string_free\x00")
-    }.map_err(|error| anyhow!("native free symbol: {error}"))?;
-    let _ = API.set(NativeApi {
-        _library: library,
-        transcribe_batch,
-        string_free,
-    });
+    let string_free = *unsafe { library.get::<StringFree>(b"parley_native_string_free\x00") }.map_err(|error| anyhow!("native free symbol: {error}"))?;
+    let worker_begin = *unsafe { library.get::<WorkerBegin>(b"parley_native_worker_begin\x00") }.map_err(|error| anyhow!("native begin symbol: {error}"))?;
+    let worker_feed = *unsafe { library.get::<WorkerFeed>(b"parley_native_worker_feed\x00") }.map_err(|error| anyhow!("native feed symbol: {error}"))?;
+    let worker_finalize = *unsafe { library.get::<WorkerFinalize>(b"parley_native_worker_finalize\x00") }.map_err(|error| anyhow!("native finalize symbol: {error}"))?;
+    let worker_cancel = *unsafe { library.get::<WorkerCancel>(b"parley_native_worker_cancel\x00") }.map_err(|error| anyhow!("native cancel symbol: {error}"))?;
+    let _ = API.set(NativeApi { _library: library, transcribe_batch, string_free, worker_begin, worker_feed, worker_finalize, worker_cancel });
     Ok(API.get().unwrap())
 }
 
@@ -155,3 +175,48 @@ mod tests {
         assert!(text.split_whitespace().count() > 8, "{text}");
     }
 }
+
+pub struct NativeDictation { worker: *mut std::ffi::c_void, closed: bool }
+unsafe impl Send for NativeDictation {}
+impl NativeDictation {
+    pub fn begin(path: &Path, language: Option<&str>, live: bool) -> Result<Self> {
+        let api = api()?;
+        let path = CString::new(path.to_string_lossy().as_bytes()).map_err(|_| anyhow!("model path contains nul"))?;
+        let language = language.map(CString::new).transpose().map_err(|_| anyhow!("language contains nul"))?;
+        let mut worker = std::ptr::null_mut();
+        let mut error_out = std::ptr::null_mut();
+        let status = unsafe { (api.worker_begin)(path.as_ptr(), language.as_ref().map_or(std::ptr::null(), |value| value.as_ptr()), c_int::from(live), &mut worker, &mut error_out) };
+        let error = take_string(api, error_out);
+        if status != 0 || worker.is_null() { return Err(anyhow!(error.unwrap_or_else(|| "native session failed".to_string()))); }
+        Ok(Self { worker, closed: false })
+    }
+    pub fn feed(&self, pcm: &[f32]) -> Result<Option<(String, String)>> {
+        let api = api()?;
+        let mut committed = std::ptr::null_mut();
+        let mut tentative = std::ptr::null_mut();
+        let mut error_out = std::ptr::null_mut();
+        let status = unsafe { (api.worker_feed)(self.worker, pcm.as_ptr(), pcm.len(), &mut committed, &mut tentative, &mut error_out) };
+        let committed = take_string(api, committed);
+        let tentative = take_string(api, tentative);
+        let error = take_string(api, error_out);
+        if status != 0 { return Err(anyhow!(error.unwrap_or_else(|| "native feed failed".to_string()))); }
+        Ok(match (committed, tentative) { (Some(a), Some(b)) => Some((a, b)), _ => None })
+    }
+    pub fn finalize(&mut self) -> Result<String> {
+        let api = api()?;
+        let mut text_out = std::ptr::null_mut();
+        let mut error_out = std::ptr::null_mut();
+        let status = unsafe { (api.worker_finalize)(self.worker, &mut text_out, &mut error_out) };
+        let text = take_string(api, text_out);
+        let error = take_string(api, error_out);
+        self.close();
+        if status != 0 { return Err(anyhow!(error.unwrap_or_else(|| "native finalize failed".to_string()))); }
+        text.ok_or_else(|| anyhow!("native finalize returned no text"))
+    }
+    fn close(&mut self) {
+        if self.closed { return; }
+        if let Ok(api) = api() { unsafe { (api.worker_cancel)(self.worker) }; }
+        self.closed = true;
+    }
+}
+impl Drop for NativeDictation { fn drop(&mut self) { self.close(); } }

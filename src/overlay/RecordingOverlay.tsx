@@ -153,7 +153,14 @@ const RecordingOverlay: React.FC = () => {
         }
       });
 
+      const unlistenPreview = await listen("dictation-preview", (event) => {
+        const preview = event.payload as { committed?: string; tentative?: string };
+        const text = `${preview.committed ?? ""}${preview.tentative ?? ""}`.trim();
+        if (text) setPreview(text);
+      });
+
       const unlistenHide = await listen("hide-overlay", () => {
+        setPreview("");
         setIsVisible(false);
         setSelectedAction(null);
       });
@@ -171,6 +178,7 @@ const RecordingOverlay: React.FC = () => {
 
       if (!isMounted) {
         unlistenShow();
+        unlistenPreview();
         unlistenHide();
         unlistenAction();
         unlistenDeselect();
@@ -179,6 +187,7 @@ const RecordingOverlay: React.FC = () => {
 
       cleanupListeners = () => {
         unlistenShow();
+        unlistenPreview();
         unlistenHide();
         unlistenAction();
         unlistenDeselect();
@@ -213,7 +222,7 @@ const RecordingOverlay: React.FC = () => {
           </>
         )}
         {state === "transcribing" && (
-          <div className="transcribing-text">{t("overlay.transcribing")}</div>
+          <div className="transcribing-text">{preview || t("overlay.transcribing")}</div>
         )}
         {state === "processing" && (
           <div className="transcribing-text">{t("overlay.processing")}</div>

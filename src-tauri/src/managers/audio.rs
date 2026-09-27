@@ -198,6 +198,7 @@ pub struct AudioRecordingManager {
     app_handle: tauri::AppHandle,
 
     recorder: Arc<Mutex<Option<AudioRecorder>>>,
+    dictation_feed: Arc<Mutex<Option<std::sync::mpsc::Sender<Vec<f32>>>>>,
     is_open: Arc<Mutex<bool>>,
     is_recording: Arc<Mutex<bool>>,
     did_mute: Arc<Mutex<bool>>,
@@ -223,6 +224,7 @@ impl AudioRecordingManager {
             app_handle: app.clone(),
 
             recorder: Arc::new(Mutex::new(None)),
+            dictation_feed: Arc::new(Mutex::new(None)),
             is_open: Arc::new(Mutex::new(false)),
             is_recording: Arc::new(Mutex::new(false)),
             did_mute: Arc::new(Mutex::new(false)),
@@ -657,6 +659,7 @@ impl AudioRecordingManager {
             }
 
             if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
+                let _ = rec.set_feed(self.dictation_feed.lock().unwrap().clone());
                 if rec.start().is_ok() {
                     *self.is_recording.lock().unwrap() = true;
                     *state = RecordingState::Recording {
@@ -686,6 +689,13 @@ impl AudioRecordingManager {
             self.start_microphone_stream()?;
         }
         Ok(())
+    }
+
+    pub fn set_dictation_feed(&self, feed: Option<std::sync::mpsc::Sender<Vec<f32>>>) {
+        *self.dictation_feed.lock().unwrap() = feed.clone();
+        if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
+            let _ = rec.set_feed(feed);
+        }
     }
 
     pub fn stop_recording(&self, binding_id: &str) -> Option<Vec<f32>> {
