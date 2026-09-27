@@ -216,7 +216,7 @@ const RecordingOverlay: React.FC = () => {
       )}
 
       <div className="overlay-middle">
-        {state === "recording" && (
+        {state === "recording" && !preview && (
           <>
             <TimerDisplay startTime={timerStart} />
             <AudioBars />

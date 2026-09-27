@@ -528,6 +528,11 @@ impl ShortcutAction for TranscribeAction {
             }
         }
 
+        if !recording_started {
+            rm.set_dictation_feed(None);
+            tm.cancel_dictation();
+        }
+
         if recording_started {
             // Dynamically register the cancel shortcut in a separate task to avoid deadlock
             shortcut::register_cancel_shortcut(app);
