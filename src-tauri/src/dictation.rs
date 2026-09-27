@@ -148,9 +148,13 @@ fn dictation_worker(
         Ok(dictation) => Some(dictation),
         Err(error) => {
             while let Ok(cmd) = rx.recv() {
-                if let DictationCmd::Finalize(reply) = cmd {
-                    let _ = reply.send(DictationOutcome::Failed(error.to_string()));
-                    break;
+                match cmd {
+                    DictationCmd::Feed(_) => {}
+                    DictationCmd::Finalize(reply) => {
+                        let _ = reply.send(DictationOutcome::Failed(error.to_string()));
+                        break;
+                    }
+                    DictationCmd::Cancel => break,
                 }
             }
             return;
@@ -244,5 +248,41 @@ mod tests {
         let generation = slot.begin(PathBuf::from("missing.gguf"), None, false, None);
         slot.cancel();
         assert_eq!(slot.finalize(generation), DictationOutcome::Stale);
+    }
+
+    #[test]
+    fn cancel_after_native_start_failure_returns() {
+        let mut slot = DictationSlot::new();
+        let generation = slot.begin(PathBuf::from("invalid\0path"), None, false, None);
+        slot.cancel();
+        assert_eq!(slot.finalize(generation), DictationOutcome::Stale);
+    }
+
+    #[test]
+    fn nemotron_streams_french_fixture_to_a_full_final() {
+        let Some(root) = std::env::var_os("PARLEY_NATIVE_FIXTURE_DIR").map(PathBuf::from) else {
+            return;
+        };
+        let model = root.join("nemotron-3.5-asr-streaming-0.6b-Q8_0.gguf");
+        let mut reader = hound::WavReader::open(root.join("french-s16.wav")).unwrap();
+        let spec = reader.spec();
+        assert_eq!((spec.sample_rate, spec.channels), (16_000, 1));
+        let pcm: Vec<f32> = reader
+            .samples::<i16>()
+            .map(|sample| sample.unwrap() as f32 / 32768.0)
+            .collect();
+        let (preview_tx, preview_rx) = mpsc::channel();
+        let mut slot = DictationSlot::new();
+        let generation = slot.begin(model, Some("fr".to_string()), true, Some(preview_tx));
+        for frame in pcm.chunks(480) {
+            assert!(slot.feed(generation, frame));
+        }
+        let result = slot.finalize(generation);
+        let DictationOutcome::Final(text) = result else {
+            panic!("live transcription failed: {result:?}");
+        };
+        assert!(text.contains("Bonjour"), "{text}");
+        assert!(text.split_whitespace().count() > 8, "{text}");
+        assert!(preview_rx.try_iter().count() > 1, "no progressive text");
     }
 }

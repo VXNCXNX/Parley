@@ -13,7 +13,7 @@ Rigor: high. The native runtime and recording path affect all transcription. Ver
 - [x] Verify on the matching surface: signed Mac app bundle and real Nemotron fixture through its bundled library.
 - [x] Keep the implementation in small, ordered commits. No history rewrite.
 - [x] Compare the reverse migration proposed during implementation. Parley has 60 divergent commits across 180 files, including 80 files also changed by Handy; the cloud and app-action paths are absent upstream. A complete merge produces 66 conflicts. Reassess full migration as a separate project.
-- [ ] Run Opening a PR.
+- [x] Open a ready PR on the isolated branch: VXNCXNX/Parley#3.
 
 ### Throughput checkpoint
 

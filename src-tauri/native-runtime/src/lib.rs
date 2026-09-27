@@ -1,7 +1,6 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
 use std::path::Path;
-use std::ptr;
 use transcribe_cpp::{Backend, Model, ModelOptions, RunOptions};
 
 fn backend_for(path: &Path, live: bool) -> Backend {
@@ -17,6 +16,30 @@ fn backend_for(path: &Path, live: bool) -> Backend {
     } else {
         Backend::Auto
     }
+}
+
+fn advertised_language(requested: Option<&str>, available: &[String]) -> Option<String> {
+    let requested = requested?.trim();
+    if requested.is_empty() || requested.eq_ignore_ascii_case("auto") {
+        return None;
+    }
+    if let Some(exact) = available
+        .iter()
+        .find(|language| language.eq_ignore_ascii_case(requested))
+    {
+        return Some(exact.clone());
+    }
+    let requested_base = requested.split(['-', '_']).next().unwrap_or(requested);
+    available
+        .iter()
+        .find(|language| {
+            language
+                .split(['-', '_'])
+                .next()
+                .unwrap_or(language)
+                .eq_ignore_ascii_case(requested_base)
+        })
+        .cloned()
 }
 
 fn set_error(error_out: *mut *mut c_char, message: String) -> c_int {
@@ -71,14 +94,16 @@ pub unsafe extern "C" fn parley_native_transcribe_batch(
         Ok(session) => session,
         Err(error) => return set_error(error_out, error.to_string()),
     };
-    let mut options = RunOptions::default();
-    if !language.is_null() {
+    let requested_language = if language.is_null() {
+        None
+    } else {
         match CStr::from_ptr(language).to_str() {
-            Ok(language) if !language.is_empty() => options.language = Some(language.to_string()),
-            Ok(_) => {}
+            Ok(language) => Some(language),
             Err(_) => return set_error(error_out, "language is not utf-8".to_string()),
         }
-    }
+    };
+    let mut options = RunOptions::default();
+    options.language = advertised_language(requested_language, &model.capabilities().languages);
     let audio = std::slice::from_raw_parts(samples, sample_count);
     match session.run(audio, &options) {
         Ok(transcript) => match CString::new(transcript.text) {
@@ -100,11 +125,6 @@ pub unsafe extern "C" fn parley_native_string_free(value: *mut c_char) {
     if !value.is_null() {
         drop(CString::from_raw(value));
     }
-}
-
-#[allow(dead_code)]
-fn keep_ptr_import() {
-    let _ = ptr::null::<c_char>();
 }
 
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -167,6 +187,7 @@ fn worker_loop(
             return;
         }
     };
+    let language = advertised_language(language.as_deref(), &model.capabilities().languages);
     run_worker(model, language, streaming, rx);
 }
 
@@ -363,5 +384,26 @@ pub unsafe extern "C" fn parley_native_worker_cancel(worker: *mut NativeWorker) 
     let _ = worker.tx.send(WorkerCmd::Cancel);
     if let Some(handle) = worker.handle {
         let _ = handle.join();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::advertised_language;
+
+    #[test]
+    fn maps_requested_language_to_model_locale() {
+        let nemotron = vec!["en-US".to_string(), "fr-FR".to_string()];
+        let qwen = vec!["en".to_string(), "fr".to_string()];
+        assert_eq!(
+            advertised_language(Some("fr"), &nemotron).as_deref(),
+            Some("fr-FR")
+        );
+        assert_eq!(
+            advertised_language(Some("fr"), &qwen).as_deref(),
+            Some("fr")
+        );
+        assert_eq!(advertised_language(Some("auto"), &nemotron), None);
+        assert_eq!(advertised_language(Some("xx"), &nemotron), None);
     }
 }

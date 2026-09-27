@@ -51,20 +51,23 @@ struct NativeApi {
     worker_cancel: WorkerCancel,
 }
 
-fn library_path() -> PathBuf {
+fn library_path() -> Result<PathBuf> {
+    #[cfg(any(debug_assertions, test))]
     if let Some(path) = std::env::var_os("PARLEY_NATIVE_RUNTIME_PATH") {
-        return PathBuf::from(path);
+        return Ok(PathBuf::from(path));
     }
-    let mut candidates = Vec::new();
-    if let Ok(executable) = std::env::current_exe() {
-        if let Some(dir) = executable.parent() {
-            candidates.push(dir.join(NATIVE_LIBRARY_NAME));
-            candidates.push(dir.join("../Frameworks").join(NATIVE_LIBRARY_NAME));
-            candidates.push(dir.join("../Resources").join(NATIVE_LIBRARY_NAME));
-            candidates.push(dir.join("../lib/Parley").join(NATIVE_LIBRARY_NAME));
-            candidates.push(dir.join("../lib").join(NATIVE_LIBRARY_NAME));
-        }
-    }
+    let executable = std::env::current_exe()?;
+    let dir = executable
+        .parent()
+        .ok_or_else(|| anyhow!("native runtime executable has no parent directory"))?;
+    let mut candidates = vec![
+        dir.join(NATIVE_LIBRARY_NAME),
+        dir.join("../Frameworks").join(NATIVE_LIBRARY_NAME),
+        dir.join("../Resources").join(NATIVE_LIBRARY_NAME),
+        dir.join("../lib/Parley").join(NATIVE_LIBRARY_NAME),
+        dir.join("../lib").join(NATIVE_LIBRARY_NAME),
+    ];
+    #[cfg(any(debug_assertions, test))]
     candidates.push(
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("native-runtime/target/release")
@@ -73,7 +76,7 @@ fn library_path() -> PathBuf {
     candidates
         .into_iter()
         .find(|path| path.is_file())
-        .unwrap_or_else(|| PathBuf::from(NATIVE_LIBRARY_NAME))
+        .ok_or_else(|| anyhow!("native runtime library {NATIVE_LIBRARY_NAME} is missing"))
 }
 
 fn api() -> Result<&'static NativeApi> {
@@ -81,7 +84,7 @@ fn api() -> Result<&'static NativeApi> {
     if API.get().is_some() {
         return Ok(API.get().unwrap());
     }
-    let path = library_path();
+    let path = library_path()?;
     let library = unsafe { Library::new(&path) }
         .map_err(|error| anyhow!("load {}: {error}", path.display()))?;
     let transcribe_batch =
@@ -226,7 +229,7 @@ mod tests {
             .samples::<i16>()
             .map(|sample| sample.unwrap() as f32 / 32768.0)
             .collect();
-        let text = transcribe_native_batch(&model, &pcm, None, false).unwrap();
+        let text = transcribe_native_batch(&model, &pcm, Some("fr"), false).unwrap();
         assert!(text.contains("Bonjour"), "{text}");
         assert!(text.split_whitespace().count() > 8, "{text}");
     }

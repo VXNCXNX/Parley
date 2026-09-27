@@ -17,6 +17,9 @@ fn stage_native_runtime() {
 
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     let runtime_dir = manifest_dir.join("native-runtime");
+    let target_dir = runtime_dir.join("target");
+    let target = std::env::var("TARGET").expect("Cargo target triple");
+    let host = std::env::var("HOST").expect("Cargo host triple");
     println!(
         "cargo:rerun-if-changed={}",
         runtime_dir.join("src/lib.rs").display()
@@ -25,12 +28,16 @@ fn stage_native_runtime() {
         "cargo:rerun-if-changed={}",
         runtime_dir.join("Cargo.toml").display()
     );
-    let status = Command::new("cargo")
+    let mut command = Command::new("cargo");
+    command
+        .env("CARGO_TARGET_DIR", &target_dir)
         .args(["build", "--manifest-path"])
         .arg(runtime_dir.join("Cargo.toml"))
-        .args(["--release", "--locked"])
-        .status()
-        .expect("build native runtime library");
+        .args(["--release", "--locked"]);
+    if target != host {
+        command.args(["--target", &target]);
+    }
+    let status = command.status().expect("build native runtime library");
     if !status.success() {
         panic!("native runtime library build failed");
     }
@@ -41,7 +48,12 @@ fn stage_native_runtime() {
     } else {
         "libparley_native_runtime.so"
     };
-    let source = runtime_dir.join("target/release").join(filename);
+    let source_dir = if target == host {
+        target_dir.join("release")
+    } else {
+        target_dir.join(&target).join("release")
+    };
+    let source = source_dir.join(filename);
     let dest_dir = manifest_dir.join("native-runtime-libs");
     std::fs::create_dir_all(&dest_dir).expect("create native runtime staging dir");
     let staged = dest_dir.join(filename);
