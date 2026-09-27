@@ -5,16 +5,24 @@ use std::ptr;
 use transcribe_cpp::{Backend, Model, ModelOptions, RunOptions};
 
 fn backend_for(path: &Path, live: bool) -> Backend {
-    let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
+    let name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
     if live && cfg!(target_os = "macos") && name.starts_with("nemotron-") {
         return Backend::Cpu;
     }
-    if cfg!(target_os = "macos") { Backend::Metal } else { Backend::Auto }
+    if cfg!(target_os = "macos") {
+        Backend::Metal
+    } else {
+        Backend::Auto
+    }
 }
 
 fn set_error(error_out: *mut *mut c_char, message: String) -> c_int {
     if !error_out.is_null() {
-        let owned = CString::new(message).unwrap_or_else(|_| CString::new("native runtime error").unwrap());
+        let owned =
+            CString::new(message).unwrap_or_else(|_| CString::new("native runtime error").unwrap());
         unsafe { *error_out = owned.into_raw() };
     }
     1
@@ -38,12 +46,24 @@ pub unsafe extern "C" fn parley_native_transcribe_batch(
         Err(_) => return set_error(error_out, "model path is not utf-8".to_string()),
     };
     if transcribe_cpp::version() != "0.2.3" {
-        return set_error(error_out, format!("transcribe-cpp linked {}, expected 0.2.3", transcribe_cpp::version()));
+        return set_error(
+            error_out,
+            format!(
+                "transcribe-cpp linked {}, expected 0.2.3",
+                transcribe_cpp::version()
+            ),
+        );
     }
     if let Err(error) = transcribe_cpp::init_backends_default() {
         return set_error(error_out, error.to_string());
     }
-    let model = match Model::load_with(path, &ModelOptions { backend: backend_for(path, live_backend != 0), ..Default::default() }) {
+    let model = match Model::load_with(
+        path,
+        &ModelOptions {
+            backend: backend_for(path, live_backend != 0),
+            ..Default::default()
+        },
+    ) {
         Ok(model) => model,
         Err(error) => return set_error(error_out, error.to_string()),
     };
@@ -61,15 +81,16 @@ pub unsafe extern "C" fn parley_native_transcribe_batch(
     }
     let audio = std::slice::from_raw_parts(samples, sample_count);
     match session.run(audio, &options) {
-        Ok(transcript) => {
-            match CString::new(transcript.text) {
-                Ok(text) => {
-                    *text_out = text.into_raw();
-                    0
-                }
-                Err(_) => set_error(error_out, "native transcript contains an interior nul".to_string()),
+        Ok(transcript) => match CString::new(transcript.text) {
+            Ok(text) => {
+                *text_out = text.into_raw();
+                0
             }
-        }
+            Err(_) => set_error(
+                error_out,
+                "native transcript contains an interior nul".to_string(),
+            ),
+        },
         Err(error) => set_error(error_out, error.to_string()),
     }
 }
@@ -82,7 +103,9 @@ pub unsafe extern "C" fn parley_native_string_free(value: *mut c_char) {
 }
 
 #[allow(dead_code)]
-fn keep_ptr_import() { let _ = ptr::null::<c_char>(); }
+fn keep_ptr_import() {
+    let _ = ptr::null::<c_char>();
+}
 
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -102,13 +125,28 @@ fn start_worker(path: &Path, language: Option<String>, live: bool) -> Result<Nat
     let path = path.to_path_buf();
     let (tx, rx) = mpsc::channel();
     let handle = thread::spawn(move || worker_loop(path, language, live, rx));
-    Ok(NativeWorker { tx, handle: Some(handle) })
+    Ok(NativeWorker {
+        tx,
+        handle: Some(handle),
+    })
 }
 
-fn worker_loop(path: std::path::PathBuf, language: Option<String>, live: bool, rx: Receiver<WorkerCmd>) {
+fn worker_loop(
+    path: std::path::PathBuf,
+    language: Option<String>,
+    live: bool,
+    rx: Receiver<WorkerCmd>,
+) {
     let loaded = (|| -> Result<(Model, bool), String> {
         transcribe_cpp::init_backends_default().map_err(|error| error.to_string())?;
-        let model = Model::load_with(&path, &ModelOptions { backend: backend_for(&path, live), ..Default::default() }).map_err(|error| error.to_string())?;
+        let model = Model::load_with(
+            &path,
+            &ModelOptions {
+                backend: backend_for(&path, live),
+                ..Default::default()
+            },
+        )
+        .map_err(|error| error.to_string())?;
         let streaming = live && model.capabilities().supports_streaming;
         Ok((model, streaming))
     })();
@@ -117,8 +155,12 @@ fn worker_loop(path: std::path::PathBuf, language: Option<String>, live: bool, r
         Err(error) => {
             while let Ok(cmd) = rx.recv() {
                 match cmd {
-                    WorkerCmd::Feed(_, reply) => { let _ = reply.send(Err(error.clone())); }
-                    WorkerCmd::Finalize(reply) => { let _ = reply.send(Err(error.clone())); }
+                    WorkerCmd::Feed(_, reply) => {
+                        let _ = reply.send(Err(error.clone()));
+                    }
+                    WorkerCmd::Finalize(reply) => {
+                        let _ = reply.send(Err(error.clone()));
+                    }
                     WorkerCmd::Cancel => break,
                 }
             }
@@ -134,8 +176,12 @@ fn run_worker(model: Model, language: Option<String>, streaming: bool, rx: Recei
         Err(error) => {
             while let Ok(cmd) = rx.recv() {
                 match cmd {
-                    WorkerCmd::Feed(_, reply) => { let _ = reply.send(Err(error.to_string())); }
-                    WorkerCmd::Finalize(reply) => { let _ = reply.send(Err(error.to_string())); }
+                    WorkerCmd::Feed(_, reply) => {
+                        let _ = reply.send(Err(error.to_string()));
+                    }
+                    WorkerCmd::Finalize(reply) => {
+                        let _ = reply.send(Err(error.to_string()));
+                    }
                     WorkerCmd::Cancel => break,
                 }
             }
@@ -150,8 +196,12 @@ fn run_worker(model: Model, language: Option<String>, streaming: bool, rx: Recei
             Err(error) => {
                 while let Ok(cmd) = rx.recv() {
                     match cmd {
-                        WorkerCmd::Feed(_, reply) => { let _ = reply.send(Err(error.to_string())); }
-                        WorkerCmd::Finalize(reply) => { let _ = reply.send(Err(error.to_string())); }
+                        WorkerCmd::Feed(_, reply) => {
+                            let _ = reply.send(Err(error.to_string()));
+                        }
+                        WorkerCmd::Finalize(reply) => {
+                            let _ = reply.send(Err(error.to_string()));
+                        }
                         WorkerCmd::Cancel => break,
                     }
                 }
@@ -161,15 +211,23 @@ fn run_worker(model: Model, language: Option<String>, streaming: bool, rx: Recei
         while let Ok(cmd) = rx.recv() {
             match cmd {
                 WorkerCmd::Feed(frame, reply) => {
-                    let result = stream.feed(&frame).map(|update| {
-                        if !(update.committed_changed || update.tentative_changed) { return None; }
-                        let text = stream.text();
-                        Some((text.committed, text.tentative))
-                    }).map_err(|error| error.to_string());
+                    let result = stream
+                        .feed(&frame)
+                        .map(|update| {
+                            if !(update.committed_changed || update.tentative_changed) {
+                                return None;
+                            }
+                            let text = stream.text();
+                            Some((text.committed, text.tentative))
+                        })
+                        .map_err(|error| error.to_string());
                     let _ = reply.send(result);
                 }
                 WorkerCmd::Finalize(reply) => {
-                    let result = stream.finalize().map(|_| stream.text().full.clone()).map_err(|error| error.to_string());
+                    let result = stream
+                        .finalize()
+                        .map(|_| stream.text().full.clone())
+                        .map_err(|error| error.to_string());
                     let _ = reply.send(result);
                     break;
                 }
@@ -186,7 +244,10 @@ fn run_worker(model: Model, language: Option<String>, streaming: bool, rx: Recei
                 let _ = reply.send(Ok(None));
             }
             WorkerCmd::Finalize(reply) => {
-                let result = session.run(&audio, &options).map(|transcript| transcript.text).map_err(|error| error.to_string());
+                let result = session
+                    .run(&audio, &options)
+                    .map(|transcript| transcript.text)
+                    .map_err(|error| error.to_string());
                 let _ = reply.send(result);
                 break;
             }
@@ -248,10 +309,14 @@ pub unsafe extern "C" fn parley_native_worker_feed(
     match reply_rx.recv() {
         Ok(Ok(Some((committed, tentative)))) => {
             if !committed_out.is_null() {
-                *committed_out = CString::new(committed).unwrap_or_else(|_| CString::new("").unwrap()).into_raw();
+                *committed_out = CString::new(committed)
+                    .unwrap_or_else(|_| CString::new("").unwrap())
+                    .into_raw();
             }
             if !tentative_out.is_null() {
-                *tentative_out = CString::new(tentative).unwrap_or_else(|_| CString::new("").unwrap()).into_raw();
+                *tentative_out = CString::new(tentative)
+                    .unwrap_or_else(|_| CString::new("").unwrap())
+                    .into_raw();
             }
             0
         }
@@ -276,11 +341,16 @@ pub unsafe extern "C" fn parley_native_worker_finalize(
     }
     match reply_rx.recv() {
         Ok(Ok(text)) => {
-            *text_out = CString::new(text).unwrap_or_else(|_| CString::new("").unwrap()).into_raw();
+            *text_out = CString::new(text)
+                .unwrap_or_else(|_| CString::new("").unwrap())
+                .into_raw();
             0
         }
         Ok(Err(error)) => set_error(error_out, error),
-        Err(_) => set_error(error_out, "native worker stopped during finalize".to_string()),
+        Err(_) => set_error(
+            error_out,
+            "native worker stopped during finalize".to_string(),
+        ),
     }
 }
 

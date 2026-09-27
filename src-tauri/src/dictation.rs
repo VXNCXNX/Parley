@@ -10,7 +10,6 @@ pub struct DictationPreview {
     pub tentative: String,
 }
 
-
 pub enum RecorderFeed {
     Frame(Vec<f32>),
     Drained(std::sync::mpsc::Sender<()>),
@@ -32,7 +31,6 @@ where
 }
 enum DictationCmd {
     Feed(Vec<f32>),
-    Barrier(Sender<()>),
     Finalize(Sender<DictationOutcome>),
     Cancel,
 }
@@ -58,58 +56,102 @@ pub struct DictationSlot {
 }
 
 impl DictationSlot {
-    pub fn new() -> Self { Self { generation: 0, active: None } }
+    pub fn new() -> Self {
+        Self {
+            generation: 0,
+            active: None,
+        }
+    }
 
-    pub fn begin(&mut self, model_path: PathBuf, language: Option<String>, live: bool, preview_tx: Option<Sender<DictationPreview>>) -> u64 {
+    pub fn begin(
+        &mut self,
+        model_path: PathBuf,
+        language: Option<String>,
+        live: bool,
+        preview_tx: Option<Sender<DictationPreview>>,
+    ) -> u64 {
         self.cancel();
         self.generation += 1;
         let generation = self.generation;
         let (tx, rx) = mpsc::channel();
-        let handle = thread::spawn(move || dictation_worker(generation, model_path, language, live, rx, preview_tx));
-        self.active = Some(Slot { generation, tx, handle: Some(handle), finished: false });
+        let handle = thread::spawn(move || {
+            dictation_worker(generation, model_path, language, live, rx, preview_tx)
+        });
+        self.active = Some(Slot {
+            generation,
+            tx,
+            handle: Some(handle),
+            finished: false,
+        });
         generation
     }
 
-    pub fn wait_for_queued_audio(&self) {
-        let Some(slot) = &self.active else { return };
-        if slot.finished { return };
-        let (reply_tx, reply_rx) = mpsc::channel();
-        if slot.tx.send(DictationCmd::Barrier(reply_tx)).is_ok() { let _ = reply_rx.recv(); }
-    }
-
     pub fn feed(&self, generation: u64, pcm: &[f32]) -> bool {
-        let Some(slot) = &self.active else { return false };
-        if slot.generation != generation || slot.finished { return false; }
+        let Some(slot) = &self.active else {
+            return false;
+        };
+        if slot.generation != generation || slot.finished {
+            return false;
+        }
         slot.tx.send(DictationCmd::Feed(pcm.to_vec())).is_ok()
     }
 
     pub fn finalize(&mut self, generation: u64) -> DictationOutcome {
-        let Some(slot) = self.active.as_mut() else { return DictationOutcome::Stale };
-        if slot.generation != generation || slot.finished { return DictationOutcome::Stale; }
+        let Some(slot) = self.active.as_mut() else {
+            return DictationOutcome::Stale;
+        };
+        if slot.generation != generation || slot.finished {
+            return DictationOutcome::Stale;
+        }
         let (reply_tx, reply_rx) = mpsc::channel();
-        if slot.tx.send(DictationCmd::Finalize(reply_tx)).is_err() { return DictationOutcome::Failed("dictation worker stopped".to_string()); }
+        if slot.tx.send(DictationCmd::Finalize(reply_tx)).is_err() {
+            return DictationOutcome::Failed("dictation worker stopped".to_string());
+        }
         slot.finished = true;
-        reply_rx.recv().unwrap_or(DictationOutcome::Failed("dictation worker stopped during finalize".to_string()))
+        reply_rx.recv().unwrap_or(DictationOutcome::Failed(
+            "dictation worker stopped during finalize".to_string(),
+        ))
     }
 
-    pub fn generation(&self) -> u64 { self.active.as_ref().map(|slot| slot.generation).unwrap_or(0) }
+    pub fn generation(&self) -> u64 {
+        self.active
+            .as_ref()
+            .map(|slot| slot.generation)
+            .unwrap_or(0)
+    }
 
     pub fn cancel(&mut self) {
         if let Some(mut slot) = self.active.take() {
             let _ = slot.tx.send(DictationCmd::Cancel);
-            if let Some(handle) = slot.handle.take() { let _ = handle.join(); }
+            if let Some(handle) = slot.handle.take() {
+                let _ = handle.join();
+            }
         }
     }
 }
 
-impl Drop for DictationSlot { fn drop(&mut self) { self.cancel(); } }
+impl Drop for DictationSlot {
+    fn drop(&mut self) {
+        self.cancel();
+    }
+}
 
-fn dictation_worker(generation: u64, model_path: PathBuf, language: Option<String>, live: bool, rx: Receiver<DictationCmd>, preview_tx: Option<Sender<DictationPreview>>) {
+fn dictation_worker(
+    generation: u64,
+    model_path: PathBuf,
+    language: Option<String>,
+    live: bool,
+    rx: Receiver<DictationCmd>,
+    preview_tx: Option<Sender<DictationPreview>>,
+) {
     let mut dictation = match NativeDictation::begin(&model_path, language.as_deref(), live) {
         Ok(dictation) => Some(dictation),
         Err(error) => {
             while let Ok(cmd) = rx.recv() {
-                if let DictationCmd::Finalize(reply) = cmd { let _ = reply.send(DictationOutcome::Failed(error.to_string())); break; }
+                if let DictationCmd::Finalize(reply) = cmd {
+                    let _ = reply.send(DictationOutcome::Failed(error.to_string()));
+                    break;
+                }
             }
             return;
         }
@@ -117,14 +159,19 @@ fn dictation_worker(generation: u64, model_path: PathBuf, language: Option<Strin
     let mut feed_error: Option<String> = None;
     while let Ok(cmd) = rx.recv() {
         match cmd {
-            DictationCmd::Barrier(reply) => { let _ = reply.send(()); }
             DictationCmd::Feed(frame) => {
-                if feed_error.is_some() { continue; }
+                if feed_error.is_some() {
+                    continue;
+                }
                 if let Some(dictation) = dictation.as_ref() {
                     match dictation.feed(&frame) {
                         Ok(Some((committed, tentative))) => {
                             if let Some(preview_tx) = &preview_tx {
-                                let _ = preview_tx.send(DictationPreview { generation, committed, tentative });
+                                let _ = preview_tx.send(DictationPreview {
+                                    generation,
+                                    committed,
+                                    tentative,
+                                });
                             }
                         }
                         Ok(None) => {}
@@ -153,11 +200,6 @@ fn dictation_worker(generation: u64, model_path: PathBuf, language: Option<Strin
     }
 }
 
-pub fn stale_after_cancel(slot: &mut DictationSlot, generation: u64) -> DictationOutcome {
-    slot.cancel();
-    slot.finalize(generation)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -175,7 +217,9 @@ mod tests {
         let seen_thread = std::sync::Arc::clone(&seen);
         let handle = thread::spawn(move || {
             gate_thread.wait();
-            pump_recorder_feed(&rx, |frame| seen_thread.lock().unwrap().extend_from_slice(frame));
+            pump_recorder_feed(&rx, |frame| {
+                seen_thread.lock().unwrap().extend_from_slice(frame)
+            });
         });
         assert!(done_rx.try_recv().is_err());
         gate.wait();
@@ -198,6 +242,7 @@ mod tests {
     fn cancel_blocks_later_finalize() {
         let mut slot = DictationSlot::new();
         let generation = slot.begin(PathBuf::from("missing.gguf"), None, false, None);
-        assert_eq!(stale_after_cancel(&mut slot, generation), DictationOutcome::Stale);
+        slot.cancel();
+        assert_eq!(slot.finalize(generation), DictationOutcome::Stale);
     }
 }

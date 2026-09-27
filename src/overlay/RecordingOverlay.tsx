@@ -140,27 +140,36 @@ const RecordingOverlay: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
+    let acceptPreview = false;
     let cleanupListeners: (() => void) | undefined;
 
     const setupEventListeners = async () => {
       const unlistenShow = await listen("show-overlay", async (event) => {
         await syncLanguageFromSettings();
         const overlayState = event.payload as OverlayState;
+        acceptPreview = overlayState !== "processing";
         setState(overlayState);
         setIsVisible(true);
         if (overlayState === "recording") {
+          setPreview("");
           setTimerStart(Date.now());
           setSelectedAction(null);
         }
       });
 
       const unlistenPreview = await listen("dictation-preview", (event) => {
-        const preview = event.payload as { committed?: string; tentative?: string };
-        const text = `${preview.committed ?? ""}${preview.tentative ?? ""}`.trim();
+        if (!acceptPreview) return;
+        const preview = event.payload as {
+          committed?: string;
+          tentative?: string;
+        };
+        const text =
+          `${preview.committed ?? ""}${preview.tentative ?? ""}`.trim();
         if (text) setPreview(text);
       });
 
       const unlistenHide = await listen("hide-overlay", () => {
+        acceptPreview = false;
         setPreview("");
         setIsVisible(false);
         setSelectedAction(null);
@@ -226,7 +235,9 @@ const RecordingOverlay: React.FC = () => {
           <div className="transcribing-text">{preview}</div>
         )}
         {state === "transcribing" && (
-          <div className="transcribing-text">{preview || t("overlay.transcribing")}</div>
+          <div className="transcribing-text">
+            {preview || t("overlay.transcribing")}
+          </div>
         )}
         {state === "processing" && (
           <div className="transcribing-text">{t("overlay.processing")}</div>

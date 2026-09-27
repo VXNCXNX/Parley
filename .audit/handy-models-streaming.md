@@ -9,10 +9,10 @@ Rigor: high. The native runtime and recording path affect all transcription. Ver
 - [x] `how` over the affected subsystem. Previous investigation traced current and Handy pipelines; rechecked entry points in this worktree.
 - [x] `architect` for parallel design exploration.
 - [x] Write the throughput checkpoint as four todo items.
-- [ ] Delegate code-writing to a subagent with exclusive worktree ownership.
-- [ ] Verify on the matching surface.
-- [ ] Rebase into small, ordered commits.
-- [ ] If design is contested, `interrogate` before shipping.
+- [x] Delegate code-writing to a subagent with exclusive worktree ownership.
+- [x] Verify on the matching surface: signed Mac app bundle and real Nemotron fixture through its bundled library.
+- [x] Keep the implementation in small, ordered commits. No history rewrite.
+- [x] Compare the reverse migration proposed during implementation. Parley has 60 divergent commits across 180 files, including 80 files also changed by Handy; the cloud and app-action paths are absent upstream. A complete merge produces 66 conflicts. Reassess full migration as a separate project.
 - [ ] Run Opening a PR.
 
 ### Throughput checkpoint
@@ -27,8 +27,8 @@ Rigor: high. The native runtime and recording path affect all transcription. Ver
 - [x] Read poteto principles and frame the run.
 - [x] Frame. Scope is one native runtime, a catalog subset, live audio flow, frontend overlay, and selected audio fixes across roughly 15-25 files. Known blockers are native build packaging and preserving Parley behavior.
 - [x] Design the workflow and architecture.
-- [ ] Run the units, each with a check.
-- [ ] Keep the audit trail.
+- [x] Run the units, each with a check.
+- [x] Keep the audit trail.
 - [ ] Verify the whole and hand back.
 
 ### Architect phases
@@ -36,13 +36,13 @@ Rigor: high. The native runtime and recording path affect all transcription. Ver
 - [x] Ground
 - [x] Sketch
 - [x] Agree. Automatic, no user checkpoint requested.
-- [ ] Implement
+- [x] Implement
 - [ ] Scrap, only if implementation invalidates the architecture.
 
 ### Planned units
 
 - [x] Capture baseline build and existing tests.
-- [ ] Integrate transcribe-cpp, packaging, and focused model catalog without regressions.
-- [ ] Integrate live audio session with partial/final text and cancellation.
-- [ ] Port applicable upstream audio and shortcut fixes after comparing local implementations.
+- [x] Integrate transcribe-cpp, packaging, and focused model catalog without regressions on Mac.
+- [x] Integrate live audio session with partial/final text and cancellation.
+- [x] Port the applicable resampler tail/reset fix. Existing Parley headset and shortcut recovery remains.
 - [ ] Run real model transcription and app smoke, review diff, open ready PR.

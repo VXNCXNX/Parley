@@ -1399,6 +1399,7 @@ mod tests {
         assert!(models.iter().all(|model| !model.is_recommended));
     }
 
+    #[test]
     fn test_discover_custom_whisper_models() {
         let temp_dir = TempDir::new().unwrap();
         let models_dir = temp_dir.path().to_path_buf();
