@@ -19,7 +19,6 @@ CERT_DIR="$HOME/Library/Application Support/com.vxncxnx.parley/dev-signing"
 P12_PASS="${PARLEY_CODESIGN_P12_PASS:-parley-local}"
 
 APP_TEMPLATE="$PWD/src-tauri/target/release/bundle/macos/Parley.app"
-FRESH_BIN="$PWD/src-tauri/target/release/parley"
 INSTALL_APP="/Applications/Parley.app"
 
 find_identity_hash() {
@@ -94,11 +93,22 @@ EOF
 
 SIGN_IDENTITY="$(ensure_codesign_identity)"
 
-bun tauri build --no-bundle
-
-cp "$FRESH_BIN" "$APP_TEMPLATE/Contents/MacOS/parley"
-chmod +x "$APP_TEMPLATE/Contents/MacOS/parley"
+bun tauri build --bundles app
 codesign --force --deep --sign "$SIGN_IDENTITY" "$APP_TEMPLATE"
+
+NATIVE_LIB="$APP_TEMPLATE/Contents/Frameworks/libparley_native_runtime.dylib"
+if [[ ! -f "$NATIVE_LIB" ]]; then
+  echo "Missing native runtime library in the app bundle." >&2
+  exit 1
+fi
+STRING_POOL_OFFSET="$(otool -l "$NATIVE_LIB" | awk '
+  $1 == "cmd" && $2 == "LC_SYMTAB" { symtab = 1; next }
+  symtab && $1 == "stroff" { print $2; exit }
+')"
+if [[ ! "$STRING_POOL_OFFSET" =~ ^[0-9]+$ ]] || (( STRING_POOL_OFFSET % 8 != 0 )); then
+  echo "Native runtime has a misaligned LINKEDIT string pool; refusing to replace the installed app." >&2
+  exit 1
+fi
 
 pkill -f "$INSTALL_APP/Contents/MacOS/parley" 2>/dev/null || true
 
