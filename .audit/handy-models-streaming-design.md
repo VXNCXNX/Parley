@@ -1,0 +1,44 @@
+# Selective Handy model port, accepted design
+
+## Problem and decision
+
+Parley has one post-recording transcription path and keeps the full 16 kHz PCM buffer for history. Handy v0.9.7 adds GGUF inference and live partial text. A complete merge produces 66 conflicts in Parley's cloud, recording and action code. Port the needed behavior with one owner of final text.
+
+Two read-only designs are in `/tmp/parley-upstream-investigation-20260927/architect-candidate-a.md` and `architect-candidate-b.md`. The cross-judge at `architect-judge.md` selected A's single dictation and engine lease, with B's private generation-keyed slot and consumer-thread feed. B's usage called finish before stopping the recorder, which would omit the resampler tail. A's one-use public handle cannot persist across Parley's global action and async stop task. The accepted shape keeps the handle inside `TranscriptionManager`.
+
+## Caller's usage
+
+At start, `TranscribeAction` requests `begin_dictation` from `TranscriptionManager`, then starts recording. The manager decides whether a native session can stream. The recorder consumer feeds its processed 16 kHz frames to that dictation. At stop, `AudioRecordingManager::stop_recording` drains the queued audio and resampler tail through the same feed and returns the retained full buffer. Only then does `finish_dictation` close the feed and return the final text or a batch fallback. The existing action applies Chinese conversion, the selected or app-mapped action, history, and paste once. Cancel closes the active generation and cannot paste.
+
+## State and ownership
+
+`TranscriptionManager` owns one private `DictationSlot`, keyed by a generation number. Its possible states are idle, recording with a batch fallback, recording with a leased native streaming session, finalizing, finished, or cancelled. One stream worker owns the `transcribe_cpp::Session` until it returns the engine. `Feed`, `Finalize`, and `Cancel` travel one ordered channel. The loaded session's `supports_streaming` flag wins over catalog metadata. A timeout is a visible error while the worker may still own the engine. A second finish cannot emit or paste a second result. A stale worker result from a cancelled generation is ignored.
+
+The recorder owns sample capture and VAD. Its CoreAudio callback must hand audio to an allocation-free bounded ring. The consumer owns resampling, VAD, buffered samples, and feeding the dictation. The callback never calls inference or emits UI events. The recorder sends the Stop drain and resampler tail before replying to the action. The worker emits generation-tagged committed and tentative preview text. The overlay only displays these snapshots. It never pastes or stores tentative text.
+
+`EngineType::TranscribeCpp` and a private `LoadedEngine::TranscribeCpp` contain the native runtime. Current Whisper, Parakeet, Moonshine and SenseVoice stay on their existing engines, and Gemini and Chirp stay request/response. A four-entry catalog supplies the two Nemotron variants, Qwen3-ASR 0.6B and Cohere Transcribe 03-2026. Each entry has an immutable Hugging Face revision, expected file size and SHA-256. Keep the catalog as the only source of those values. Use existing download and model management where possible; check the hash before marking a model downloaded. Qwen and Cohere have no live partials.
+
+For recordings above `long_audio_threshold_seconds`, finish or cancel any preview session, return its engine, and apply the existing model switch to the retained samples before choosing the final text. Partial text remains a preview of the starting model. A live dictation cannot switch models mid-audio. If the threshold does not require a switch, a successful native live final is authoritative. A failed or empty stream may batch only after the worker releases the engine. Keep cloud credential checks and model restoration on the current action path.
+
+## Implementation units and checks
+
+1. Add `transcribe-cpp` 0.2.3 and pin `transcribe-cpp-sys` to 0.2.3. A standalone Mac probe showed that Cargo otherwise resolves sys 0.2.4 and `Model::load` rejects the version mismatch. Establish the native batch load and run before touching recording. Check `cargo check`, then a real Nemotron GGUF and 16 kHz fixture.
+2. Add four model descriptors and the native load path. Verify the files and hash behavior, preserve all existing model IDs and downloads, and run Qwen and Cohere in batch when available. On Mac use Metal. Adapt Handy native library staging for Windows and Linux; verify those builds in CI.
+3. Add the private dictation slot and batch compatibility for all existing models. Verify begin, cancel, repeated finish and generation transitions through behavior tests.
+4. Add the recorder's bounded ring and consumer-thread feed. Prove a Stop drain and resampler tail reach both the full buffer and a live stream before finalization. Keep Parley's headset, Bluetooth and default-microphone recovery logic.
+5. Add native live sessions, preview events and overlay rendering. Test partial text before Stop, final text once, cancellation, timeout and long-audio fallback. Check the existing action and app-mapping paths still paste once.
+6. Compare individual Handy audio and shortcut fixes with local behavior. Port a fix only when the defect remains. Build the Mac app, run a real Nemotron dictation, check current ONNX and cloud routes, then open a ready PR.
+
+## Accepted tradeoffs and unresolved checks
+
+The focused catalog excludes Handy's other models until the four selected entries work. Qwen and Cohere keep the batch UX. The full PCM buffer stays in memory during live dictation because history and long-audio switching need it. A native runtime adds C++ build and packaging work. Tauri 2.9.1 hosting this runtime is not yet proven by the standalone probe; a full app build must resolve that. No model becomes the default based only on upstream scores.
+
+The worktree baseline at `bcd303e` passes the frontend build, backend check and 51 Rust unit tests. Lint has nine pre-existing literal-string errors, and all 16 non-English locales already fail the translation consistency check. These inherited failures do not count as regressions.
+
+## Implementation reconciliation
+
+On 2026-09-27 a standalone probe of the exact Nemotron 3.5 Q8 file showed a native stream defect on Metal. A fresh session, 16 kHz French audio, and 560 ms frames stayed active through 6650 ms of 7648 ms, then finalized as only "Bonjour". The same file, audio, and language on CPU emitted six partial updates and the full sentence. A later CPU run with 30 ms frames and automatic language did the same. Batch transcription on Metal still returned the full sentence.
+
+The live path for this Nemotron file therefore requests the CPU backend on macOS. Metal stays available for native batch transcription. The catalog hint does not override `supports_streaming`, and a live result is accepted only when its final text is the session result. The default selected model stays unchanged until quality is measured separately.
+
+The in-process release test loads the same file on Metal and checks that the batch text contains more than the first word. Debug test builds abort in ggml Metal device registration because the app also links whisper.cpp Metal. Release is the verified configuration for this fixture.

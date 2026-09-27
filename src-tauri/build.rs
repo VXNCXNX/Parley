@@ -4,7 +4,98 @@ fn main() {
 
     generate_tray_translations();
 
+    // Linux loads libtranscribe from the package. Windows loads DLLs from the
+    // executable directory. macOS links the native runtime statically.
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
+        println!("cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN/../lib/Parley:$ORIGIN/../lib");
+    }
+    stage_transcribe_runtime_libs();
+
     tauri_build::build()
+}
+
+/// Copy shared transcribe-cpp libraries into `transcribe-libs/` when the build
+/// publishes them. A static macOS build leaves the directories unset.
+fn stage_transcribe_runtime_libs() {
+    use std::collections::{BTreeMap, BTreeSet};
+    use std::path::PathBuf;
+
+    println!("cargo:rerun-if-env-changed=DEP_TRANSCRIBE_CPP_RUNTIME_DIR");
+    println!("cargo:rerun-if-env-changed=DEP_TRANSCRIBE_CPP_MODULE_DIR");
+
+    let Some(runtime_dir) = std::env::var_os("DEP_TRANSCRIBE_CPP_RUNTIME_DIR") else {
+        return;
+    };
+
+    let mut dirs = BTreeSet::new();
+    dirs.insert(PathBuf::from(runtime_dir));
+    if let Some(module_dir) = std::env::var_os("DEP_TRANSCRIBE_CPP_MODULE_DIR") {
+        dirs.insert(PathBuf::from(module_dir));
+    }
+
+    let dest = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("transcribe-libs");
+    let _ = std::fs::remove_dir_all(&dest);
+    std::fs::create_dir_all(&dest).expect("create transcribe-libs staging dir");
+
+    let mut libs: BTreeMap<String, PathBuf> = BTreeMap::new();
+    for dir in &dirs {
+        println!("cargo:rerun-if-changed={}", dir.display());
+        for entry in std::fs::read_dir(dir)
+            .unwrap_or_else(|e| panic!("read {}: {e}", dir.display()))
+            .flatten()
+        {
+            let src = entry.path();
+            let name = src.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            let is_lib = name.ends_with(".dll")
+                || name.ends_with(".dylib")
+                || name.ends_with(".so")
+                || name.contains(".so.");
+            if is_lib {
+                libs.insert(name.to_string(), src);
+            }
+        }
+    }
+
+    let mut best: BTreeMap<&str, (&str, &PathBuf, usize)> = BTreeMap::new();
+    for (name, src) in &libs {
+        let (stem, rank) = match split_versioned_so(name) {
+            None => (name.as_str(), 0),
+            Some((stem, 0)) => (stem, usize::MAX),
+            Some((stem, depth)) => (stem, depth - 1),
+        };
+        match best.get(stem) {
+            Some(&(_, _, existing)) if existing <= rank => {}
+            _ => {
+                best.insert(stem, (name, src, rank));
+            }
+        }
+    }
+
+    let mut copied = 0usize;
+    for &(name, src, _) in best.values() {
+        std::fs::copy(src, dest.join(name))
+            .unwrap_or_else(|e| panic!("copy {}: {e}", src.display()));
+        copied += 1;
+    }
+    if copied == 0 {
+        panic!(
+            "no transcribe-cpp runtime libraries found under {dirs:?}; a shared build must ship them"
+        );
+    }
+    println!("cargo:warning=Staged {copied} transcribe-cpp runtime library file(s)");
+}
+
+fn split_versioned_so(name: &str) -> Option<(&str, usize)> {
+    let idx = name.find(".so")?;
+    let (stem, rest) = (&name[..idx], &name[idx + 3..]);
+    if rest.is_empty() {
+        return Some((stem, 0));
+    }
+    let comps: Vec<&str> = rest.strip_prefix('.')?.split('.').collect();
+    comps
+        .iter()
+        .all(|component| !component.is_empty() && component.bytes().all(|byte| byte.is_ascii_digit()))
+        .then_some((stem, comps.len()))
 }
 
 /// Generate tray menu translations from frontend locale files.

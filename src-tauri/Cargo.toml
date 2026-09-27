@@ -71,6 +71,8 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 tar = "0.4.44"
 flate2 = "1.0"
 transcribe-rs = { version = "0.2.5", features = ["whisper", "parakeet", "moonshine", "sense_voice"] }
+transcribe-cpp = { version = "=0.2.3", default-features = false }
+transcribe-cpp-sys = { version = "=0.2.3", default-features = false }
 ferrous-opencc = "0.2.3"
 clap = { version = "4", features = ["derive"] }
 specta = "=2.0.0-rc.22"
@@ -93,6 +95,14 @@ tauri-plugin-global-shortcut = "2.3.1"
 tauri-plugin-single-instance = "2.3.2"
 tauri-plugin-updater = "2.9.0"
 
+[target.'cfg(all(windows, target_arch = "x86_64"))'.dependencies]
+transcribe-cpp = { version = "=0.2.3", default-features = false, features = ["dynamic-backends", "vulkan"] }
+transcribe-cpp-sys = { version = "=0.2.3", default-features = false, features = ["dynamic-backends", "vulkan"] }
+
+[target.'cfg(all(windows, target_arch = "aarch64"))'.dependencies]
+transcribe-cpp = { version = "=0.2.3", default-features = false }
+transcribe-cpp-sys = { version = "=0.2.3", default-features = false }
+
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.61.3", features = [
   "Win32_Media_Audio_Endpoints",
@@ -105,6 +115,8 @@ whisper-rs = { version = "0.13.2", features = ["cuda"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 handy-keys = "=0.3.4"
+transcribe-cpp = { version = "=0.2.3", default-features = false, features = ["metal"] }
+transcribe-cpp-sys = { version = "=0.2.3", default-features = false, features = ["metal"] }
 tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", rev = "da9c9a8d4eb7f0524a2508988df1a7d9585b4904" }
 whisper-rs = { version = "0.13.2", features = ["metal"] }
 
@@ -114,6 +126,8 @@ whisper-rs = { version = "0.13.2", features = ["metal"] }
 handy-keys = "=0.2.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
+transcribe-cpp = { version = "=0.2.3", default-features = false, features = ["dynamic-backends", "vulkan"] }
+transcribe-cpp-sys = { version = "=0.2.3", default-features = false, features = ["dynamic-backends", "vulkan"] }
 gtk-layer-shell = { version = "0.8", features = ["v0_6"] }
 gtk = "0.18"
 whisper-rs = { version = "0.13.2", features = ["cuda"] }

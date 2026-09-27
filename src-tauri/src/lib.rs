@@ -14,6 +14,7 @@ mod helpers;
 mod input;
 mod llm_client;
 mod managers;
+mod native_runtime;
 mod overlay;
 mod secret_store;
 mod settings;
