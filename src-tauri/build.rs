@@ -29,6 +29,10 @@ fn stage_native_runtime() {
         runtime_dir.join("Cargo.toml").display()
     );
     let mut command = Command::new("cargo");
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
+        // Rust's strip pass can produce a LINKEDIT string table that macOS 27 refuses to load.
+        command.env("CARGO_PROFILE_RELEASE_STRIP", "none");
+    }
     command
         .env("CARGO_TARGET_DIR", &target_dir)
         .args(["build", "--manifest-path"])
