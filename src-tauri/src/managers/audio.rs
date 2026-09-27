@@ -698,7 +698,7 @@ impl AudioRecordingManager {
         }
     }
 
-    pub fn stop_recording(&self, binding_id: &str) -> Option<Vec<f32>> {
+    pub fn stop_recording(&self, binding_id: &str) -> Option<(Vec<f32>, bool)> {
         let mut state = self.state.lock().unwrap();
 
         match *state {
@@ -708,17 +708,17 @@ impl AudioRecordingManager {
                 *state = RecordingState::Idle;
                 drop(state);
 
-                let samples = if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
+                let (samples, used_raw_fallback) = if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
                     match rec.stop() {
                         Ok(buf) => buf,
                         Err(e) => {
                             error!("stop() failed: {e}");
-                            Vec::new()
+                            (Vec::new(), false)
                         }
                     }
                 } else {
                     error!("Recorder not available");
-                    Vec::new()
+                    (Vec::new(), false)
                 };
 
                 *self.is_recording.lock().unwrap() = false;
@@ -740,13 +740,14 @@ impl AudioRecordingManager {
                 // Pad if very short
                 let s_len = samples.len();
                 // debug!("Got {} samples", s_len);
-                if s_len < WHISPER_SAMPLE_RATE && s_len > 0 {
+                let samples = if s_len < WHISPER_SAMPLE_RATE && s_len > 0 {
                     let mut padded = samples;
                     padded.resize(WHISPER_SAMPLE_RATE * 5 / 4, 0.0);
-                    Some(padded)
+                    padded
                 } else {
-                    Some(samples)
-                }
+                    samples
+                };
+                Some((samples, used_raw_fallback))
             }
             _ => None,
         }

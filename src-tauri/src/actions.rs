@@ -486,6 +486,7 @@ impl ShortcutAction for TranscribeAction {
         debug!("Microphone mode - always_on: {}", is_always_on);
 
         let mut recording_started = false;
+        rm.set_dictation_feed(None);
         if let Some(feed) = tm.begin_dictation() {
             rm.set_dictation_feed(Some(feed));
         }
@@ -608,8 +609,7 @@ impl ShortcutAction for TranscribeAction {
             );
 
             let stop_recording_time = Instant::now();
-            rm.set_dictation_feed(None);
-            if let Some(samples) = rm.stop_recording(&binding_id) {
+            if let Some((samples, used_raw_fallback)) = rm.stop_recording(&binding_id) {
                 debug!(
                     "Recording stopped and samples retrieved in {:?}, sample count: {}",
                     stop_recording_time.elapsed(),
@@ -665,13 +665,12 @@ impl ShortcutAction for TranscribeAction {
 
                 let transcription_time = Instant::now();
                 let samples_clone = samples.clone(); // Clone for history saving
-                let transcription_result = if switched_model {
+                rm.set_dictation_feed(None);
+                let transcription_result = if switched_model || used_raw_fallback {
                     tm.cancel_dictation();
                     tm.transcribe(samples)
-                } else if let Some(result) = tm.finish_dictation() {
-                    result
                 } else {
-                    tm.transcribe(samples)
+                    tm.finish_recorded_dictation(samples)
                 };
                 match transcription_result {
                     Ok(transcription) => {

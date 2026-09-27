@@ -12,6 +12,7 @@ pub struct DictationPreview {
 
 enum DictationCmd {
     Feed(Vec<f32>),
+    Barrier(Sender<()>),
     Finalize(Sender<DictationOutcome>),
     Cancel,
 }
@@ -47,6 +48,13 @@ impl DictationSlot {
         let handle = thread::spawn(move || dictation_worker(generation, model_path, language, live, rx, preview_tx));
         self.active = Some(Slot { generation, tx, handle: Some(handle), finished: false });
         generation
+    }
+
+    pub fn wait_for_queued_audio(&self) {
+        let Some(slot) = &self.active else { return };
+        if slot.finished { return };
+        let (reply_tx, reply_rx) = mpsc::channel();
+        if slot.tx.send(DictationCmd::Barrier(reply_tx)).is_ok() { let _ = reply_rx.recv(); }
     }
 
     pub fn feed(&self, generation: u64, pcm: &[f32]) -> bool {
@@ -88,6 +96,7 @@ fn dictation_worker(generation: u64, model_path: PathBuf, language: Option<Strin
     };
     while let Ok(cmd) = rx.recv() {
         match cmd {
+            DictationCmd::Barrier(reply) => { let _ = reply.send(()); }
             DictationCmd::Feed(frame) => {
                 if let Some(dictation) = dictation.as_ref() {
                     if let Ok(Some((committed, tentative))) = dictation.feed(&frame) {

@@ -459,6 +459,16 @@ impl TranscriptionManager {
     }
 
 
+    fn clean_transcription(&self, text: String) -> String {
+        let settings = get_settings(&self.app_handle);
+        let corrected = if settings.custom_words.is_empty() {
+            text
+        } else {
+            apply_custom_words(&text, &settings.custom_words, settings.word_correction_threshold)
+        };
+        filter_transcription_output(&corrected, &settings.app_language, &settings.custom_filler_words)
+    }
+
     pub fn begin_dictation(&self) -> Option<std::sync::mpsc::Sender<Vec<f32>>> {
         let settings = get_settings(&self.app_handle);
         let model_id = settings.selected_model.clone();
@@ -484,6 +494,19 @@ impl TranscriptionManager {
             }
         });
         Some(feed_tx)
+    }
+
+    pub fn finish_recorded_dictation(&self, samples: Vec<f32>) -> Result<String> {
+        self.dictation.lock().unwrap().wait_for_queued_audio();
+        let live = self.finish_dictation();
+        match live {
+            Some(Ok(text)) if !text.trim().is_empty() => Ok(self.clean_transcription(text)),
+            Some(_) => {
+                self.cancel_dictation();
+                self.transcribe(samples)
+            }
+            None => self.transcribe(samples),
+        }
     }
 
     pub fn finish_dictation(&self) -> Option<Result<String>> {

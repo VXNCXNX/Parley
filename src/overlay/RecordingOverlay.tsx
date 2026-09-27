@@ -129,6 +129,7 @@ const RecordingOverlay: React.FC = () => {
   const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const [state, setState] = useState<OverlayState>("recording");
+  const [preview, setPreview] = useState("");
   const [timerStart, setTimerStart] = useState(0);
   const [selectedAction, setSelectedAction] = useState<ActionInfo | null>(null);
   const direction = getLanguageDirection(i18n.language);
@@ -220,6 +221,9 @@ const RecordingOverlay: React.FC = () => {
             <TimerDisplay startTime={timerStart} />
             <AudioBars />
           </>
+        )}
+        {state === "recording" && preview && (
+          <div className="transcribing-text">{preview}</div>
         )}
         {state === "transcribing" && (
           <div className="transcribing-text">{preview || t("overlay.transcribing")}</div>

@@ -19,7 +19,7 @@ use crate::audio_toolkit::{
 
 enum Cmd {
     Start,
-    Stop(mpsc::Sender<Vec<f32>>),
+    Stop(mpsc::Sender<(Vec<f32>, bool)>),
     SetFeed(Option<std::sync::mpsc::Sender<Vec<f32>>>),
     Shutdown,
 }
@@ -226,7 +226,7 @@ impl AudioRecorder {
         self.device.as_ref().and_then(|device| device.name().ok())
     }
 
-    pub fn stop(&self) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
+    pub fn stop(&self) -> Result<(Vec<f32>, bool), Box<dyn std::error::Error>> {
         let (resp_tx, resp_rx) = mpsc::channel();
         if let Some(tx) = &self.cmd_tx {
             tx.send(Cmd::Stop(resp_tx))?;
@@ -486,11 +486,11 @@ fn run_consumer(
                             raw_len,
                             raw_rms
                         );
-                        let _ = reply_tx.send(std::mem::take(&mut raw_recording_samples));
+                        let _ = reply_tx.send((std::mem::take(&mut raw_recording_samples), true));
                         processed_samples.clear();
                     } else {
                         raw_recording_samples.clear();
-                        let _ = reply_tx.send(std::mem::take(&mut processed_samples));
+                        let _ = reply_tx.send((std::mem::take(&mut processed_samples), false));
                     }
                 }
                 Cmd::SetFeed(next) => feed = next,
