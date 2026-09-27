@@ -129,6 +129,7 @@ const RecordingOverlay: React.FC = () => {
   const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const [state, setState] = useState<OverlayState>("recording");
+  const [preview, setPreview] = useState("");
   const [timerStart, setTimerStart] = useState(0);
   const [selectedAction, setSelectedAction] = useState<ActionInfo | null>(null);
   const direction = getLanguageDirection(i18n.language);
@@ -139,21 +140,37 @@ const RecordingOverlay: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
+    let acceptPreview = false;
     let cleanupListeners: (() => void) | undefined;
 
     const setupEventListeners = async () => {
       const unlistenShow = await listen("show-overlay", async (event) => {
         await syncLanguageFromSettings();
         const overlayState = event.payload as OverlayState;
+        acceptPreview = overlayState !== "processing";
         setState(overlayState);
         setIsVisible(true);
         if (overlayState === "recording") {
+          setPreview("");
           setTimerStart(Date.now());
           setSelectedAction(null);
         }
       });
 
+      const unlistenPreview = await listen("dictation-preview", (event) => {
+        if (!acceptPreview) return;
+        const preview = event.payload as {
+          committed?: string;
+          tentative?: string;
+        };
+        const text =
+          `${preview.committed ?? ""}${preview.tentative ?? ""}`.trim();
+        if (text) setPreview(text);
+      });
+
       const unlistenHide = await listen("hide-overlay", () => {
+        acceptPreview = false;
+        setPreview("");
         setIsVisible(false);
         setSelectedAction(null);
       });
@@ -171,6 +188,7 @@ const RecordingOverlay: React.FC = () => {
 
       if (!isMounted) {
         unlistenShow();
+        unlistenPreview();
         unlistenHide();
         unlistenAction();
         unlistenDeselect();
@@ -179,6 +197,7 @@ const RecordingOverlay: React.FC = () => {
 
       cleanupListeners = () => {
         unlistenShow();
+        unlistenPreview();
         unlistenHide();
         unlistenAction();
         unlistenDeselect();
@@ -206,14 +225,19 @@ const RecordingOverlay: React.FC = () => {
       )}
 
       <div className="overlay-middle">
-        {state === "recording" && (
+        {state === "recording" && !preview && (
           <>
             <TimerDisplay startTime={timerStart} />
             <AudioBars />
           </>
         )}
+        {state === "recording" && preview && (
+          <div className="transcribing-text">{preview}</div>
+        )}
         {state === "transcribing" && (
-          <div className="transcribing-text">{t("overlay.transcribing")}</div>
+          <div className="transcribing-text">
+            {preview || t("overlay.transcribing")}
+          </div>
         )}
         {state === "processing" && (
           <div className="transcribing-text">{t("overlay.processing")}</div>

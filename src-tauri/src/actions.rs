@@ -486,6 +486,10 @@ impl ShortcutAction for TranscribeAction {
         debug!("Microphone mode - always_on: {}", is_always_on);
 
         let mut recording_started = false;
+        rm.set_dictation_feed(None);
+        if let Some(feed) = tm.begin_dictation() {
+            rm.set_dictation_feed(Some(feed));
+        }
         if is_always_on {
             // Always-on mode: Play audio feedback immediately, then apply mute after sound finishes
             debug!("Always-on mode: Playing audio feedback immediately");
@@ -522,6 +526,11 @@ impl ShortcutAction for TranscribeAction {
             } else {
                 debug!("Failed to start recording");
             }
+        }
+
+        if !recording_started {
+            rm.set_dictation_feed(None);
+            tm.cancel_dictation();
         }
 
         if recording_started {
@@ -605,7 +614,7 @@ impl ShortcutAction for TranscribeAction {
             );
 
             let stop_recording_time = Instant::now();
-            if let Some(samples) = rm.stop_recording(&binding_id) {
+            if let Some((samples, used_raw_fallback)) = rm.stop_recording(&binding_id) {
                 debug!(
                     "Recording stopped and samples retrieved in {:?}, sample count: {}",
                     stop_recording_time.elapsed(),
@@ -661,7 +670,15 @@ impl ShortcutAction for TranscribeAction {
 
                 let transcription_time = Instant::now();
                 let samples_clone = samples.clone(); // Clone for history saving
-                match tm.transcribe(samples) {
+                let feed = rm.take_dictation_feed();
+                rm.set_dictation_feed(None);
+                let transcription_result = if switched_model || used_raw_fallback {
+                    tm.cancel_dictation();
+                    tm.transcribe(samples)
+                } else {
+                    tm.finish_recorded_dictation(samples, feed)
+                };
+                match transcription_result {
                     Ok(transcription) => {
                         debug!(
                             "Transcription completed in {:?}: '{}'",

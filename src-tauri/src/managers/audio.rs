@@ -198,6 +198,7 @@ pub struct AudioRecordingManager {
     app_handle: tauri::AppHandle,
 
     recorder: Arc<Mutex<Option<AudioRecorder>>>,
+    dictation_feed: Arc<Mutex<Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>>>>,
     is_open: Arc<Mutex<bool>>,
     is_recording: Arc<Mutex<bool>>,
     did_mute: Arc<Mutex<bool>>,
@@ -223,6 +224,7 @@ impl AudioRecordingManager {
             app_handle: app.clone(),
 
             recorder: Arc::new(Mutex::new(None)),
+            dictation_feed: Arc::new(Mutex::new(None)),
             is_open: Arc::new(Mutex::new(false)),
             is_recording: Arc::new(Mutex::new(false)),
             did_mute: Arc::new(Mutex::new(false)),
@@ -657,6 +659,7 @@ impl AudioRecordingManager {
             }
 
             if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
+                let _ = rec.set_feed(self.dictation_feed.lock().unwrap().clone());
                 if rec.start().is_ok() {
                     *self.is_recording.lock().unwrap() = true;
                     *state = RecordingState::Recording {
@@ -688,7 +691,18 @@ impl AudioRecordingManager {
         Ok(())
     }
 
-    pub fn stop_recording(&self, binding_id: &str) -> Option<Vec<f32>> {
+    pub fn take_dictation_feed(&self) -> Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>> {
+        self.dictation_feed.lock().unwrap().take()
+    }
+
+    pub fn set_dictation_feed(&self, feed: Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>>) {
+        *self.dictation_feed.lock().unwrap() = feed.clone();
+        if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
+            let _ = rec.set_feed(feed);
+        }
+    }
+
+    pub fn stop_recording(&self, binding_id: &str) -> Option<(Vec<f32>, bool)> {
         let mut state = self.state.lock().unwrap();
 
         match *state {
@@ -698,17 +712,17 @@ impl AudioRecordingManager {
                 *state = RecordingState::Idle;
                 drop(state);
 
-                let samples = if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
+                let (samples, used_raw_fallback) = if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
                     match rec.stop() {
                         Ok(buf) => buf,
                         Err(e) => {
                             error!("stop() failed: {e}");
-                            Vec::new()
+                            (Vec::new(), false)
                         }
                     }
                 } else {
                     error!("Recorder not available");
-                    Vec::new()
+                    (Vec::new(), false)
                 };
 
                 *self.is_recording.lock().unwrap() = false;
@@ -730,13 +744,14 @@ impl AudioRecordingManager {
                 // Pad if very short
                 let s_len = samples.len();
                 // debug!("Got {} samples", s_len);
-                if s_len < WHISPER_SAMPLE_RATE && s_len > 0 {
+                let samples = if s_len < WHISPER_SAMPLE_RATE && s_len > 0 {
                     let mut padded = samples;
                     padded.resize(WHISPER_SAMPLE_RATE * 5 / 4, 0.0);
-                    Some(padded)
+                    padded
                 } else {
-                    Some(samples)
-                }
+                    samples
+                };
+                Some((samples, used_raw_fallback))
             }
             _ => None,
         }

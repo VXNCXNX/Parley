@@ -1,6 +1,8 @@
 use crate::audio_toolkit::{apply_custom_words, filter_transcription_output};
+use crate::dictation::{pump_recorder_feed, DictationOutcome, DictationSlot, RecorderFeed};
 use crate::managers::audio::AudioRecordingManager;
 use crate::managers::model::{EngineType, ModelManager};
+use crate::native_runtime::{native_language_hint, transcribe_native_batch};
 use crate::settings::{get_settings, ModelUnloadTimeout};
 use anyhow::Result;
 use log::{debug, error, info, warn};
@@ -44,6 +46,7 @@ enum LoadedEngine {
     MoonshineStreaming(MoonshineStreamingEngine),
     SenseVoice(SenseVoiceEngine),
     GeminiApi,
+    TranscribeCpp,
 }
 
 #[derive(Clone)]
@@ -57,6 +60,7 @@ pub struct TranscriptionManager {
     watcher_handle: Arc<Mutex<Option<thread::JoinHandle<()>>>>,
     is_loading: Arc<Mutex<bool>>,
     loading_condvar: Arc<Condvar>,
+    dictation: Arc<Mutex<DictationSlot>>,
 }
 
 impl TranscriptionManager {
@@ -76,6 +80,7 @@ impl TranscriptionManager {
             watcher_handle: Arc::new(Mutex::new(None)),
             is_loading: Arc::new(Mutex::new(false)),
             loading_condvar: Arc::new(Condvar::new()),
+            dictation: Arc::new(Mutex::new(DictationSlot::new())),
         };
 
         // Start the idle watcher
@@ -177,6 +182,7 @@ impl TranscriptionManager {
                     LoadedEngine::MoonshineStreaming(ref mut e) => e.unload_model(),
                     LoadedEngine::SenseVoice(ref mut e) => e.unload_model(),
                     LoadedEngine::GeminiApi => {}
+                    LoadedEngine::TranscribeCpp => {}
                 }
             }
             *engine = None; // Drop the engine to free memory
@@ -374,6 +380,7 @@ impl TranscriptionManager {
                     })?;
                 LoadedEngine::SenseVoice(engine)
             }
+            EngineType::TranscribeCpp => LoadedEngine::TranscribeCpp,
             EngineType::GeminiApi => {
                 let settings = get_settings(&self.app_handle);
                 if settings.get_decrypted_gemini_api_key().is_none() {
@@ -449,6 +456,103 @@ impl TranscriptionManager {
     pub fn get_current_model(&self) -> Option<String> {
         let current_model = self.current_model_id.lock().unwrap();
         current_model.clone()
+    }
+
+    fn clean_transcription(&self, text: String) -> String {
+        let settings = get_settings(&self.app_handle);
+        let corrected = if settings.custom_words.is_empty() {
+            text
+        } else {
+            apply_custom_words(
+                &text,
+                &settings.custom_words,
+                settings.word_correction_threshold,
+            )
+        };
+        filter_transcription_output(
+            &corrected,
+            &settings.app_language,
+            &settings.custom_filler_words,
+        )
+    }
+
+    pub fn begin_dictation(&self) -> Option<std::sync::mpsc::Sender<RecorderFeed>> {
+        let settings = get_settings(&self.app_handle);
+        let model_id = settings.selected_model.clone();
+        let info = self.model_manager.get_model_info(&model_id)?;
+        if !matches!(info.engine_type, EngineType::TranscribeCpp) {
+            return None;
+        }
+        let path = self.model_manager.get_model_path(&model_id).ok()?;
+        let language = native_language_hint(&settings.selected_language, &info.supported_languages);
+        let (preview_tx, preview_rx) = std::sync::mpsc::channel();
+        let app = self.app_handle.clone();
+        thread::spawn(move || {
+            while let Ok(preview) = preview_rx.recv() {
+                let _ = app.emit("dictation-preview", &preview);
+            }
+        });
+        let (feed_tx, feed_rx) = std::sync::mpsc::channel::<RecorderFeed>();
+        let slot = Arc::clone(&self.dictation);
+        let generation = slot.lock().unwrap().begin(
+            path,
+            language,
+            info.filename.starts_with("nemotron-"),
+            Some(preview_tx),
+        );
+        thread::spawn(move || {
+            pump_recorder_feed(&feed_rx, |frame| {
+                let _ = slot.lock().unwrap().feed(generation, frame);
+            });
+        });
+        Some(feed_tx)
+    }
+
+    pub fn finish_recorded_dictation(
+        &self,
+        samples: Vec<f32>,
+        feed: Option<std::sync::mpsc::Sender<RecorderFeed>>,
+    ) -> Result<String> {
+        if let Some(feed) = feed {
+            let (done_tx, done_rx) = std::sync::mpsc::channel();
+            let _ = feed.send(RecorderFeed::Drained(done_tx));
+            let _ = done_rx.recv();
+        }
+        let selected_model = get_settings(&self.app_handle).selected_model;
+        let selected_path = self.model_manager.get_model_path(&selected_model).ok();
+        let same_model =
+            self.dictation.lock().unwrap().active_model_path() == selected_path.as_deref();
+        if !same_model {
+            self.cancel_dictation();
+            return self.transcribe(samples);
+        }
+        let live = self.finish_dictation();
+        match live {
+            Some(Ok(text)) if !text.trim().is_empty() => Ok(self.clean_transcription(text)),
+            Some(_) => {
+                self.cancel_dictation();
+                self.transcribe(samples)
+            }
+            None => self.transcribe(samples),
+        }
+    }
+
+    pub fn finish_dictation(&self) -> Option<Result<String>> {
+        let mut slot = self.dictation.lock().unwrap();
+        let generation = slot.generation();
+        if generation == 0 {
+            return None;
+        }
+        Some(match slot.finalize(generation) {
+            DictationOutcome::Final(text) => Ok(text),
+            DictationOutcome::Empty => Err(anyhow::anyhow!("native dictation returned empty text")),
+            DictationOutcome::Failed(error) => Err(anyhow::anyhow!(error)),
+            DictationOutcome::Stale => Err(anyhow::anyhow!("stale dictation result")),
+        })
+    }
+
+    pub fn cancel_dictation(&self) {
+        self.dictation.lock().unwrap().cancel();
     }
 
     pub fn transcribe(&self, audio: Vec<f32>) -> Result<String> {
@@ -578,6 +682,21 @@ impl TranscriptionManager {
             // Release the lock before transcribing — no mutex held during the engine call
             drop(engine_guard);
 
+            let (native_model_path, model_languages) =
+                if matches!(engine, LoadedEngine::TranscribeCpp) {
+                    let current_id = self.get_current_model().unwrap_or_default();
+                    let info = self.model_manager.get_model_info(&current_id);
+                    let path = self
+                        .model_manager
+                        .get_model_path(&current_id)
+                        .unwrap_or_default();
+                    let languages = info
+                        .map(|model| model.supported_languages)
+                        .unwrap_or_default();
+                    (path, languages)
+                } else {
+                    (std::path::PathBuf::new(), Vec::new())
+                };
             let transcribe_result = catch_unwind(AssertUnwindSafe(
                 || -> Result<transcribe_rs::TranscriptionResult> {
                     match &mut engine {
@@ -642,6 +761,22 @@ impl TranscriptionManager {
                                 .map_err(|e| {
                                     anyhow::anyhow!("SenseVoice transcription failed: {}", e)
                                 })
+                        }
+                        LoadedEngine::TranscribeCpp => {
+                            let language =
+                                native_language_hint(&settings.selected_language, &model_languages);
+                            transcribe_native_batch(
+                                &native_model_path,
+                                &audio,
+                                language.as_deref(),
+                                false,
+                            )
+                            .map(|text| {
+                                transcribe_rs::TranscriptionResult {
+                                    text,
+                                    segments: None,
+                                }
+                            })
                         }
                         LoadedEngine::GeminiApi => {
                             unreachable!("GeminiApi handled before catch_unwind")

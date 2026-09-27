@@ -23,7 +23,9 @@ pub fn cancel_current_operation(app: &AppHandle) {
     // Cancel any ongoing recording
     let audio_manager = app.state::<Arc<AudioRecordingManager>>();
     let recording_was_active = audio_manager.is_recording();
+    audio_manager.set_dictation_feed(None);
     audio_manager.cancel_recording();
+    app.state::<Arc<TranscriptionManager>>().cancel_dictation();
 
     // Update tray icon and hide overlay
     change_tray_icon(app, crate::tray::TrayIconState::Idle);

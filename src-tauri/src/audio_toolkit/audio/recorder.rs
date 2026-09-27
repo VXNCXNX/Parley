@@ -19,7 +19,8 @@ use crate::audio_toolkit::{
 
 enum Cmd {
     Start,
-    Stop(mpsc::Sender<Vec<f32>>),
+    Stop(mpsc::Sender<(Vec<f32>, bool)>),
+    SetFeed(Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>>),
     Shutdown,
 }
 
@@ -225,12 +226,19 @@ impl AudioRecorder {
         self.device.as_ref().and_then(|device| device.name().ok())
     }
 
-    pub fn stop(&self) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
+    pub fn stop(&self) -> Result<(Vec<f32>, bool), Box<dyn std::error::Error>> {
         let (resp_tx, resp_rx) = mpsc::channel();
         if let Some(tx) = &self.cmd_tx {
             tx.send(Cmd::Stop(resp_tx))?;
         }
         Ok(resp_rx.recv()?) // wait for the samples
+    }
+
+    pub fn set_feed(&self, feed: Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>>) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(tx) = &self.cmd_tx {
+            tx.send(Cmd::SetFeed(feed))?;
+        }
+        Ok(())
     }
 
     pub fn close(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -374,6 +382,7 @@ fn run_consumer(
     let mut processed_samples = Vec::<f32>::new();
     let mut raw_recording_samples = Vec::<f32>::new();
     let mut recording = false;
+    let mut feed: Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>> = None;
 
     // ---------- spectrum visualisation setup ---------------------------- //
     const BUCKETS: usize = 16;
@@ -392,6 +401,7 @@ fn run_consumer(
         vad: &Option<Arc<Mutex<Box<dyn vad::VoiceActivityDetector>>>>,
         out_buf: &mut Vec<f32>,
         raw_buf: &mut Vec<f32>,
+        feed: Option<&std::sync::mpsc::Sender<crate::dictation::RecorderFeed>>,
     ) {
         if !recording {
             return;
@@ -402,10 +412,14 @@ fn run_consumer(
         if let Some(vad_arc) = vad {
             let mut det = vad_arc.lock().unwrap();
             match det.push_frame(samples).unwrap_or(VadFrame::Speech(samples)) {
-                VadFrame::Speech(buf) => out_buf.extend_from_slice(buf),
+                VadFrame::Speech(buf) => {
+                    if let Some(feed) = feed { let _ = feed.send(crate::dictation::RecorderFeed::Frame(buf.to_vec())); }
+                    out_buf.extend_from_slice(buf);
+                }
                 VadFrame::Noise => {}
             }
         } else {
+            if let Some(feed) = feed { let _ = feed.send(crate::dictation::RecorderFeed::Frame(samples.to_vec())); }
             out_buf.extend_from_slice(samples);
         }
     }
@@ -444,6 +458,7 @@ fn run_consumer(
                                 &vad,
                                 &mut processed_samples,
                                 &mut raw_recording_samples,
+                                feed.as_ref(),
                             )
                         });
                     }
@@ -455,6 +470,7 @@ fn run_consumer(
                             &vad,
                             &mut processed_samples,
                             &mut raw_recording_samples,
+                            feed.as_ref(),
                         )
                     });
 
@@ -470,13 +486,14 @@ fn run_consumer(
                             raw_len,
                             raw_rms
                         );
-                        let _ = reply_tx.send(std::mem::take(&mut raw_recording_samples));
+                        let _ = reply_tx.send((std::mem::take(&mut raw_recording_samples), true));
                         processed_samples.clear();
                     } else {
                         raw_recording_samples.clear();
-                        let _ = reply_tx.send(std::mem::take(&mut processed_samples));
+                        let _ = reply_tx.send((std::mem::take(&mut processed_samples), false));
                     }
                 }
+                Cmd::SetFeed(next) => feed = next,
                 Cmd::Shutdown => return,
             }
         }
@@ -504,6 +521,7 @@ fn run_consumer(
                 &vad,
                 &mut processed_samples,
                 &mut raw_recording_samples,
+                feed.as_ref(),
             )
         });
     }

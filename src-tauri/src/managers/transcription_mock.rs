@@ -2,9 +2,11 @@
 // This file is copied over transcription.rs during CI tests.
 // Existing tests don't exercise transcription, so this is safe.
 
+use crate::dictation::RecorderFeed;
 use crate::managers::model::ModelManager;
 use anyhow::Result;
 use serde::Serialize;
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use tauri::AppHandle;
 
@@ -52,4 +54,18 @@ impl TranscriptionManager {
     pub fn transcribe(&self, _audio: Vec<f32>) -> Result<String> {
         Ok(String::new())
     }
+
+    pub fn begin_dictation(&self) -> Option<Sender<RecorderFeed>> {
+        None
+    }
+
+    pub fn finish_recorded_dictation(
+        &self,
+        audio: Vec<f32>,
+        _feed: Option<Sender<RecorderFeed>>,
+    ) -> Result<String> {
+        self.transcribe(audio)
+    }
+
+    pub fn cancel_dictation(&self) {}
 }
