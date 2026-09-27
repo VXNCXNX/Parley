@@ -1,4 +1,5 @@
 use crate::audio_toolkit::{apply_custom_words, filter_transcription_output};
+use crate::native_runtime::{native_language_hint, transcribe_native_batch};
 use crate::managers::audio::AudioRecordingManager;
 use crate::managers::model::{EngineType, ModelManager};
 use crate::settings::{get_settings, ModelUnloadTimeout};
@@ -44,6 +45,7 @@ enum LoadedEngine {
     MoonshineStreaming(MoonshineStreamingEngine),
     SenseVoice(SenseVoiceEngine),
     GeminiApi,
+    TranscribeCpp,
 }
 
 #[derive(Clone)]
@@ -177,6 +179,7 @@ impl TranscriptionManager {
                     LoadedEngine::MoonshineStreaming(ref mut e) => e.unload_model(),
                     LoadedEngine::SenseVoice(ref mut e) => e.unload_model(),
                     LoadedEngine::GeminiApi => {}
+                    LoadedEngine::TranscribeCpp => {}
                 }
             }
             *engine = None; // Drop the engine to free memory
@@ -374,6 +377,7 @@ impl TranscriptionManager {
                     })?;
                 LoadedEngine::SenseVoice(engine)
             }
+            EngineType::TranscribeCpp => LoadedEngine::TranscribeCpp,
             EngineType::GeminiApi => {
                 let settings = get_settings(&self.app_handle);
                 if settings.get_decrypted_gemini_api_key().is_none() {
@@ -578,6 +582,15 @@ impl TranscriptionManager {
             // Release the lock before transcribing — no mutex held during the engine call
             drop(engine_guard);
 
+            let (native_model_path, model_languages) = if matches!(engine, LoadedEngine::TranscribeCpp) {
+                let current_id = self.get_current_model().unwrap_or_default();
+                let info = self.model_manager.get_model_info(&current_id);
+                let path = self.model_manager.get_model_path(&current_id).unwrap_or_default();
+                let languages = info.map(|model| model.supported_languages).unwrap_or_default();
+                (path, languages)
+            } else {
+                (std::path::PathBuf::new(), Vec::new())
+            };
             let transcribe_result = catch_unwind(AssertUnwindSafe(
                 || -> Result<transcribe_rs::TranscriptionResult> {
                     match &mut engine {
@@ -642,6 +655,11 @@ impl TranscriptionManager {
                                 .map_err(|e| {
                                     anyhow::anyhow!("SenseVoice transcription failed: {}", e)
                                 })
+                        }
+                        LoadedEngine::TranscribeCpp => {
+                            let language = native_language_hint(&settings.selected_language, &model_languages);
+                            transcribe_native_batch(&native_model_path, &audio, language.as_deref(), false)
+                                .map(|text| transcribe_rs::TranscriptionResult { text, segments: None })
                         }
                         LoadedEngine::GeminiApi => {
                             unreachable!("GeminiApi handled before catch_unwind")

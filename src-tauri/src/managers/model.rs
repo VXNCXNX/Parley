@@ -24,6 +24,7 @@ pub enum EngineType {
     MoonshineStreaming,
     SenseVoice,
     GeminiApi,
+    TranscribeCpp,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -63,6 +64,111 @@ pub struct ModelManager {
     available_models: Mutex<HashMap<String, ModelInfo>>,
     cancel_flags: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
     extracting_models: Arc<Mutex<HashSet<String>>>,
+}
+
+fn native_catalog() -> [ModelInfo; 4] {
+    [
+        native_model(
+            "nemotron-3.5-asr-streaming-0.6b",
+            "Nemotron Streaming 3.5",
+            "Live multilingual transcription across 28 languages.",
+            "handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf",
+            "6d44e540bc31b0de1dbe174a3cea87f53a7f22fb",
+            "nemotron-3.5-asr-streaming-0.6b-Q8_0.gguf",
+            751_094_240,
+            "b94545b313b3223fda7b2857a52681da813935c2127643d1e9ff0c23d988089c",
+            0.82,
+            0.84,
+            &[
+                "en", "es", "fr", "it", "pt", "nl", "de", "tr", "ru", "ar", "hi",
+                "ja", "ko", "vi", "uk", "pl", "sv", "cs", "nb", "da", "bg", "fi",
+                "hr", "sk", "zh", "hu", "ro", "et",
+            ],
+        ),
+        native_model(
+            "nemotron-speech-streaming-en-0.6b",
+            "Nemotron Speech Streaming EN",
+            "English speech-to-text with streaming.",
+            "handy-computer/nemotron-speech-streaming-en-0.6b-gguf",
+            "7d9b719206789e4068d87c6398262ab4dfd4e45d",
+            "nemotron-speech-streaming-en-0.6b-Q8_0.gguf",
+            729_650_176,
+            "90d8c89714cd31efc88be62a40c6b2bea57e0cc2063af1ffe2c28f1a228ca110",
+            0.86,
+            0.80,
+            &["en"],
+        ),
+        native_model(
+            "qwen3-asr-0.6b",
+            "Qwen3-ASR 0.6B",
+            "Multilingual batch transcription.",
+            "handy-computer/Qwen3-ASR-0.6B-gguf",
+            "e4e16599b900eb0cb36e524514756bb92eb092b7",
+            "Qwen3-ASR-0.6B-Q8_0.gguf",
+            850_423_456,
+            "f081b2d5e23bd669d92cc331d722a8a0681943b8e6f34b48996fd5c319b5acd8",
+            0.87,
+            0.63,
+            &[
+                "zh", "en", "yue", "ar", "de", "fr", "es", "pt", "id", "it", "ko",
+                "ru", "th", "vi", "ja", "tr", "hi", "ms", "nl", "sv", "da", "fi",
+                "pl", "cs", "fil", "fa", "el", "ro", "hu", "mk",
+            ],
+        ),
+        native_model(
+            "cohere-transcribe-03-2026",
+            "Cohere Transcribe",
+            "High accuracy batch transcription across 14 languages.",
+            "handy-computer/cohere-transcribe-03-2026-gguf",
+            "dfa4adebb64f3076b7b6b90b721275cc069cb421",
+            "cohere-transcribe-03-2026-Q5_K_M.gguf",
+            1_770_270_208,
+            "14d02f1ad6dd77b3a60f82639879012c3adb4fe25c50a5a47a2c4c661daf1558",
+            0.92,
+            0.63,
+            &[
+                "en", "fr", "de", "es", "it", "pt", "nl", "pl", "el", "ar", "ja",
+                "zh", "vi", "ko",
+            ],
+        ),
+    ]
+}
+
+fn native_model(
+    id: &str,
+    name: &str,
+    description: &str,
+    repo: &str,
+    revision: &str,
+    filename: &str,
+    size_bytes: u64,
+    sha256: &str,
+    accuracy_score: f32,
+    speed_score: f32,
+    languages: &[&str],
+) -> ModelInfo {
+    ModelInfo {
+        id: id.to_string(),
+        name: name.to_string(),
+        description: description.to_string(),
+        filename: filename.to_string(),
+        url: Some(format!(
+            "https://huggingface.co/{repo}/resolve/{revision}/{filename}"
+        )),
+        size_mb: size_bytes.div_ceil(1_000_000),
+        is_downloaded: false,
+        is_downloading: false,
+        partial_size: 0,
+        is_directory: false,
+        engine_type: EngineType::TranscribeCpp,
+        accuracy_score,
+        speed_score,
+        supports_translation: false,
+        is_recommended: false,
+        supported_languages: languages.iter().map(|language| (*language).to_string()).collect(),
+        is_custom: false,
+        sha256: Some(sha256.to_string()),
+    }
 }
 
 impl ModelManager {
@@ -437,6 +543,10 @@ impl ModelManager {
                 sha256: None,
             },
         );
+
+        for model in native_catalog() {
+            available_models.insert(model.id.clone(), model);
+        }
 
         // Auto-discover custom Whisper models (.bin files) in the models directory
         if let Err(e) = Self::discover_custom_whisper_models(&models_dir, &mut available_models) {
@@ -1265,6 +1375,30 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
+    fn native_catalog_pins_verified_files() {
+        let models = native_catalog();
+        assert_eq!(models.len(), 4);
+        let nemotron = models
+            .iter()
+            .find(|model| model.id == "nemotron-3.5-asr-streaming-0.6b")
+            .unwrap();
+        assert!(matches!(nemotron.engine_type, EngineType::TranscribeCpp));
+        assert_eq!(nemotron.size_mb, 752);
+        assert!(nemotron
+            .url
+            .as_deref()
+            .unwrap()
+            .contains("6d44e540bc31b0de1dbe174a3cea87f53a7f22fb"));
+        assert_eq!(
+            nemotron.sha256.as_deref(),
+            Some("b94545b313b3223fda7b2857a52681da813935c2127643d1e9ff0c23d988089c")
+        );
+        assert!(models.iter().any(|model| {
+            model.id == "qwen3-asr-0.6b" && model.supported_languages.contains(&"fr".to_string())
+        }));
+        assert!(models.iter().all(|model| !model.is_recommended));
+    }
+
     fn test_discover_custom_whisper_models() {
         let temp_dir = TempDir::new().unwrap();
         let models_dir = temp_dir.path().to_path_buf();
