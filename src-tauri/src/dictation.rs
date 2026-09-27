@@ -1,5 +1,5 @@
 use crate::native_runtime::NativeDictation;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
@@ -45,6 +45,7 @@ pub enum DictationOutcome {
 
 struct Slot {
     generation: u64,
+    model_path: PathBuf,
     tx: Sender<DictationCmd>,
     handle: Option<JoinHandle<()>>,
     finished: bool,
@@ -74,16 +75,22 @@ impl DictationSlot {
         self.generation += 1;
         let generation = self.generation;
         let (tx, rx) = mpsc::channel();
+        let worker_path = model_path.clone();
         let handle = thread::spawn(move || {
-            dictation_worker(generation, model_path, language, live, rx, preview_tx)
+            dictation_worker(generation, worker_path, language, live, rx, preview_tx)
         });
         self.active = Some(Slot {
             generation,
+            model_path,
             tx,
             handle: Some(handle),
             finished: false,
         });
         generation
+    }
+
+    pub fn active_model_path(&self) -> Option<&Path> {
+        self.active.as_ref().map(|slot| slot.model_path.as_path())
     }
 
     pub fn feed(&self, generation: u64, pcm: &[f32]) -> bool {

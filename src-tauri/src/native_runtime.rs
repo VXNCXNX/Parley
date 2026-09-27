@@ -167,6 +167,12 @@ pub fn native_language_hint(requested: &str, advertised: &[String]) -> Option<St
     if requested.is_empty() || requested.eq_ignore_ascii_case("auto") {
         return None;
     }
+    let requested = match requested {
+        "zh-Hans" | "zh-Hant" => "zh",
+        "no" => "nb",
+        "tl" => "fil",
+        other => other,
+    };
     let requested_base = requested.split(['-', '_']).next().unwrap_or(requested);
     advertised
         .iter()
@@ -199,6 +205,14 @@ mod tests {
         assert_eq!(native_language_hint("fr", &bare).as_deref(), Some("fr"));
         assert_eq!(native_language_hint("auto", &locales), None);
         assert_eq!(native_language_hint("xx", &locales), None);
+        assert_eq!(
+            native_language_hint("zh-Hans", &["zh".to_string()]).as_deref(),
+            Some("zh")
+        );
+        assert_eq!(
+            native_language_hint("no", &["nb".to_string()]).as_deref(),
+            Some("nb")
+        );
     }
 
     #[test]
@@ -232,6 +246,9 @@ mod tests {
         let text = transcribe_native_batch(&model, &pcm, Some("fr"), false).unwrap();
         assert!(text.contains("Bonjour"), "{text}");
         assert!(text.split_whitespace().count() > 8, "{text}");
+        let auto_text = transcribe_native_batch(&model, &pcm, None, false).unwrap();
+        assert!(auto_text.contains("Bonjour"), "{auto_text}");
+        assert!(auto_text.split_whitespace().count() > 8, "{auto_text}");
     }
 }
 

@@ -5,6 +5,12 @@ import { ResetButton } from "../ui/ResetButton";
 import { useSettings } from "../../hooks/useSettings";
 import { LANGUAGES } from "../../lib/constants/languages";
 
+const LANGUAGE_ALIASES: Partial<Record<string, string>> = {
+  "zh-Hans": "zh",
+  no: "nb",
+  tl: "fil",
+};
+
 interface LanguageSelectorProps {
   descriptionMode?: "inline" | "tooltip";
   grouped?: boolean;
@@ -51,10 +57,14 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   const availableLanguages = useMemo(() => {
     if (!supportedLanguages || supportedLanguages.length === 0)
       return LANGUAGES;
-    return LANGUAGES.filter(
-      (lang) =>
-        lang.value === "auto" || supportedLanguages.includes(lang.value),
-    );
+    return LANGUAGES.filter((lang) => {
+      const alias = LANGUAGE_ALIASES[lang.value];
+      return (
+        lang.value === "auto" ||
+        supportedLanguages.includes(lang.value) ||
+        (alias !== undefined && supportedLanguages.includes(alias))
+      );
+    });
   }, [supportedLanguages]);
 
   const filteredLanguages = useMemo(

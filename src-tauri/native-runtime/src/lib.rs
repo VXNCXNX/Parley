@@ -42,6 +42,13 @@ fn advertised_language(requested: Option<&str>, available: &[String]) -> Option<
         .cloned()
 }
 
+fn run_language(arch: &str, requested: Option<&str>, available: &[String]) -> Option<String> {
+    if arch == "qwen3_asr" {
+        return None;
+    }
+    advertised_language(requested, available)
+}
+
 fn set_error(error_out: *mut *mut c_char, message: String) -> c_int {
     if !error_out.is_null() {
         let owned =
@@ -103,7 +110,11 @@ pub unsafe extern "C" fn parley_native_transcribe_batch(
         }
     };
     let mut options = RunOptions::default();
-    options.language = advertised_language(requested_language, &model.capabilities().languages);
+    options.language = run_language(
+        &model.arch(),
+        requested_language,
+        &model.capabilities().languages,
+    );
     let audio = std::slice::from_raw_parts(samples, sample_count);
     match session.run(audio, &options) {
         Ok(transcript) => match CString::new(transcript.text) {
@@ -187,7 +198,11 @@ fn worker_loop(
             return;
         }
     };
-    let language = advertised_language(language.as_deref(), &model.capabilities().languages);
+    let language = run_language(
+        &model.arch(),
+        language.as_deref(),
+        &model.capabilities().languages,
+    );
     run_worker(model, language, streaming, rx);
 }
 
@@ -389,7 +404,7 @@ pub unsafe extern "C" fn parley_native_worker_cancel(worker: *mut NativeWorker) 
 
 #[cfg(test)]
 mod tests {
-    use super::advertised_language;
+    use super::{advertised_language, run_language};
 
     #[test]
     fn maps_requested_language_to_model_locale() {
@@ -405,5 +420,6 @@ mod tests {
         );
         assert_eq!(advertised_language(Some("auto"), &nemotron), None);
         assert_eq!(advertised_language(Some("xx"), &nemotron), None);
+        assert_eq!(run_language("qwen3_asr", Some("fr"), &qwen), None);
     }
 }
