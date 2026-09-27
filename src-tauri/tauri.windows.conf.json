@@ -2,7 +2,8 @@
   "bundle": {
     "resources": {
       "resources": "resources",
-      "transcribe-libs": "."
+      "transcribe-libs": ".",
+      "native-runtime-libs": "."
     }
   }
 }

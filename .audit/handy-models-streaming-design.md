@@ -44,3 +44,5 @@ The live path for this Nemotron file therefore requests the CPU backend on macOS
 The in-process release test loads the same file on Metal and checks that the batch text contains more than the first word. Debug test builds abort in ggml Metal device registration because the app also links whisper.cpp Metal. Release is the verified configuration for this fixture.
 
 The app links whisper.cpp statically. Loading transcribe-cpp in the same binary makes GGUF reads enter Whisper ggml and abort. The native runtime is therefore a separate cdylib, `parley-native-runtime`, loaded at transcription time. Its own ggml symbols stay inside that library. macOS batch requests Metal there. A live request for a Nemotron filename requests CPU. Qwen and Cohere stay on batch. The app test runs the real fixture only when `PARLEY_NATIVE_FIXTURE_DIR` is set.
+
+Linux and Windows compile the separate native runtime statically for CPU. Their packages include that shared library and do not stage dynamic ggml or Vulkan sidecar libraries. Metal batch and CPU live are verified only on this Mac.

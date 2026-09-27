@@ -24,13 +24,14 @@ fn stage_transcribe_runtime_libs() {
     println!("cargo:rerun-if-env-changed=DEP_TRANSCRIBE_CPP_RUNTIME_DIR");
     println!("cargo:rerun-if-env-changed=DEP_TRANSCRIBE_CPP_MODULE_DIR");
 
-    let Some(runtime_dir) = std::env::var_os("DEP_TRANSCRIBE_CPP_RUNTIME_DIR") else {
+    let runtime_dir = std::env::var_os("DEP_TRANSCRIBE_CPP_RUNTIME_DIR").or_else(find_nested_transcribe_dir);
+    let Some(runtime_dir) = runtime_dir else {
         return;
     };
 
     let mut dirs = BTreeSet::new();
     dirs.insert(PathBuf::from(runtime_dir));
-    if let Some(module_dir) = std::env::var_os("DEP_TRANSCRIBE_CPP_MODULE_DIR") {
+    if let Some(module_dir) = std::env::var_os("DEP_TRANSCRIBE_CPP_MODULE_DIR").or_else(|| std::env::var_os("PARLEY_TRANSCRIBE_MODULE_DIR")) {
         dirs.insert(PathBuf::from(module_dir));
     }
 
@@ -376,4 +377,21 @@ fn stage_native_runtime() {
     std::fs::create_dir_all(&dest_dir).expect("create native runtime staging dir");
     std::fs::copy(&source, dest_dir.join(filename)).unwrap_or_else(|error| panic!("copy {}: {error}", source.display()));
     println!("cargo:rustc-env=PARLEY_NATIVE_RUNTIME_PATH={}", source.display());
+}
+
+fn find_nested_transcribe_dir() -> Option<std::ffi::OsString> {
+    let root = std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").ok()?).join("native-runtime/target");
+    let mut found = None;
+    let mut walk = vec![root];
+    while let Some(dir) = walk.pop() {
+        let entries = match std::fs::read_dir(&dir) { Ok(entries) => entries, Err(_) => continue };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() { walk.push(path); continue; }
+            if path.file_name().and_then(|name| name.to_str()) == Some("transcribe-link.json") {
+                found = path.parent().map(|parent| parent.as_os_str().to_os_string());
+            }
+        }
+    }
+    found
 }
