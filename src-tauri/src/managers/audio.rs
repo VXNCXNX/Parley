@@ -198,7 +198,7 @@ pub struct AudioRecordingManager {
     app_handle: tauri::AppHandle,
 
     recorder: Arc<Mutex<Option<AudioRecorder>>>,
-    dictation_feed: Arc<Mutex<Option<std::sync::mpsc::Sender<Vec<f32>>>>>,
+    dictation_feed: Arc<Mutex<Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>>>>,
     is_open: Arc<Mutex<bool>>,
     is_recording: Arc<Mutex<bool>>,
     did_mute: Arc<Mutex<bool>>,
@@ -691,7 +691,11 @@ impl AudioRecordingManager {
         Ok(())
     }
 
-    pub fn set_dictation_feed(&self, feed: Option<std::sync::mpsc::Sender<Vec<f32>>>) {
+    pub fn take_dictation_feed(&self) -> Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>> {
+        self.dictation_feed.lock().unwrap().take()
+    }
+
+    pub fn set_dictation_feed(&self, feed: Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>>) {
         *self.dictation_feed.lock().unwrap() = feed.clone();
         if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
             let _ = rec.set_feed(feed);

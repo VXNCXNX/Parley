@@ -665,12 +665,13 @@ impl ShortcutAction for TranscribeAction {
 
                 let transcription_time = Instant::now();
                 let samples_clone = samples.clone(); // Clone for history saving
+                let feed = rm.take_dictation_feed();
                 rm.set_dictation_feed(None);
                 let transcription_result = if switched_model || used_raw_fallback {
                     tm.cancel_dictation();
                     tm.transcribe(samples)
                 } else {
-                    tm.finish_recorded_dictation(samples)
+                    tm.finish_recorded_dictation(samples, feed)
                 };
                 match transcription_result {
                     Ok(transcription) => {

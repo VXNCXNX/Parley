@@ -1,5 +1,5 @@
 use crate::audio_toolkit::{apply_custom_words, filter_transcription_output};
-use crate::dictation::{DictationOutcome, DictationPreview, DictationSlot};
+use crate::dictation::{DictationOutcome, DictationPreview, DictationSlot, RecorderFeed, pump_recorder_feed};
 use crate::native_runtime::{native_language_hint, transcribe_native_batch};
 use crate::managers::audio::AudioRecordingManager;
 use crate::managers::model::{EngineType, ModelManager};
@@ -469,7 +469,7 @@ impl TranscriptionManager {
         filter_transcription_output(&corrected, &settings.app_language, &settings.custom_filler_words)
     }
 
-    pub fn begin_dictation(&self) -> Option<std::sync::mpsc::Sender<Vec<f32>>> {
+    pub fn begin_dictation(&self) -> Option<std::sync::mpsc::Sender<RecorderFeed>> {
         let settings = get_settings(&self.app_handle);
         let model_id = settings.selected_model.clone();
         let info = self.model_manager.get_model_info(&model_id)?;
@@ -485,19 +485,23 @@ impl TranscriptionManager {
                 let _ = app.emit("dictation-preview", &preview);
             }
         });
-        let (feed_tx, feed_rx) = std::sync::mpsc::channel::<Vec<f32>>();
+        let (feed_tx, feed_rx) = std::sync::mpsc::channel::<RecorderFeed>();
         let slot = Arc::clone(&self.dictation);
         let generation = slot.lock().unwrap().begin(path, language, info.filename.starts_with("nemotron-"), Some(preview_tx));
         thread::spawn(move || {
-            while let Ok(frame) = feed_rx.recv() {
-                let _ = slot.lock().unwrap().feed(generation, &frame);
-            }
+            pump_recorder_feed(&feed_rx, |frame| {
+                let _ = slot.lock().unwrap().feed(generation, frame);
+            });
         });
         Some(feed_tx)
     }
 
-    pub fn finish_recorded_dictation(&self, samples: Vec<f32>) -> Result<String> {
-        self.dictation.lock().unwrap().wait_for_queued_audio();
+    pub fn finish_recorded_dictation(&self, samples: Vec<f32>, feed: Option<std::sync::mpsc::Sender<RecorderFeed>>) -> Result<String> {
+        if let Some(feed) = feed {
+            let (done_tx, done_rx) = std::sync::mpsc::channel();
+            let _ = feed.send(RecorderFeed::Drained(done_tx));
+            let _ = done_rx.recv();
+        }
         let live = self.finish_dictation();
         match live {
             Some(Ok(text)) if !text.trim().is_empty() => Ok(self.clean_transcription(text)),

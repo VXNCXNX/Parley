@@ -10,6 +10,26 @@ pub struct DictationPreview {
     pub tentative: String,
 }
 
+
+pub enum RecorderFeed {
+    Frame(Vec<f32>),
+    Drained(std::sync::mpsc::Sender<()>),
+}
+
+pub fn pump_recorder_feed<F>(rx: &Receiver<RecorderFeed>, mut forward: F)
+where
+    F: FnMut(&[f32]),
+{
+    while let Ok(message) = rx.recv() {
+        match message {
+            RecorderFeed::Frame(frame) => forward(&frame),
+            RecorderFeed::Drained(reply) => {
+                let _ = reply.send(());
+                break;
+            }
+        }
+    }
+}
 enum DictationCmd {
     Feed(Vec<f32>),
     Barrier(Sender<()>),
@@ -131,6 +151,28 @@ pub fn stale_after_cancel(slot: &mut DictationSlot, generation: u64) -> Dictatio
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn blocked_forwarding_keeps_queued_audio() {
+        let (tx, rx) = mpsc::channel();
+        tx.send(RecorderFeed::Frame(vec![1.0, 2.0])).unwrap();
+        tx.send(RecorderFeed::Frame(vec![3.0])).unwrap();
+        let (done_tx, done_rx) = mpsc::channel();
+        tx.send(RecorderFeed::Drained(done_tx)).unwrap();
+        let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let gate = std::sync::Arc::new(std::sync::Barrier::new(2));
+        let gate_thread = std::sync::Arc::clone(&gate);
+        let seen_thread = std::sync::Arc::clone(&seen);
+        let handle = thread::spawn(move || {
+            gate_thread.wait();
+            pump_recorder_feed(&rx, |frame| seen_thread.lock().unwrap().extend_from_slice(frame));
+        });
+        assert!(done_rx.try_recv().is_err());
+        gate.wait();
+        handle.join().unwrap();
+        done_rx.recv().unwrap();
+        assert_eq!(*seen.lock().unwrap(), vec![1.0, 2.0, 3.0]);
+    }
 
     #[test]
     fn second_finalize_is_stale() {
