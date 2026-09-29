@@ -52,6 +52,10 @@
         "name": "Parakeet V3",
         "description": "高速で正確"
       },
+      "parakeet-ultra": {
+        "name": "Parakeet Ultra",
+        "description": "Moondreamが改良したParakeet。ヨーロッパの25言語をローカルで文字起こし。"
+      },
       "moonshine-base": {
         "name": "Moonshine Base",
         "description": "非常に高速、英語のみ。アクセントにも対応。"

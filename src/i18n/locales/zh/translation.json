@@ -52,6 +52,10 @@
         "name": "Parakeet V3",
         "description": "快速且准确"
       },
+      "parakeet-ultra": {
+        "name": "Parakeet Ultra",
+        "description": "由 Moondream 改进的 Parakeet。支持 25 种欧洲语言的本地语音转写。"
+      },
       "moonshine-base": {
         "name": "Moonshine Base",
         "description": "非常快速，仅支持英语。口音处理良好。"

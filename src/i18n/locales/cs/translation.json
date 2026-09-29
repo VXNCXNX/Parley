@@ -52,6 +52,10 @@
         "name": "Parakeet V3",
         "description": "Rychlý a přesný"
       },
+      "parakeet-ultra": {
+        "name": "Parakeet Ultra",
+        "description": "Parakeet doladěný společností Moondream. Místní přepis ve 25 evropských jazycích."
+      },
       "moonshine-base": {
         "name": "Moonshine Base",
         "description": "Velmi rychlý, pouze angličtina. Dobře zvládá přízvuky."

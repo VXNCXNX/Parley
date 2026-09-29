@@ -52,6 +52,10 @@
         "name": "Parakeet V3",
         "description": ".سريع ودقيق"
       },
+      "parakeet-ultra": {
+        "name": "Parakeet Ultra",
+        "description": "نسخة من Parakeet حسّنتها Moondream. تفريغ محلي للكلام بـ25 لغة أوروبية."
+      },
       "moonshine-base": {
         "name": "Moonshine Base",
         "description": ".سريع جداً، الإنجليزية فقط. يتعامل جيداً مع اللهجات"

@@ -66,7 +66,7 @@ pub struct ModelManager {
     extracting_models: Arc<Mutex<HashSet<String>>>,
 }
 
-fn native_catalog() -> [ModelInfo; 4] {
+fn native_catalog() -> [ModelInfo; 5] {
     [
         native_model(
             "nemotron-3.5-asr-streaming-0.6b",
@@ -129,6 +129,23 @@ fn native_catalog() -> [ModelInfo; 4] {
             &[
                 "en", "fr", "de", "es", "it", "pt", "nl", "pl", "el", "ar", "ja",
                 "zh", "vi", "ko",
+            ],
+        ),
+        native_model(
+            "parakeet-ultra",
+            "Parakeet Ultra",
+            "Parakeet refined by Moondream. Local transcription in 25 European languages.",
+            "Nairod785/parakeet-ultra-gguf",
+            "b03613ba54a195238f0e915359f5a5c78269ddc6",
+            "parakeet-ultra-0.6b-Q8_0.gguf",
+            739_508_704,
+            "283562ac9b513f39244fe23c6632738c167d32731a5f4693319a10ca498550a8",
+            0.0,
+            0.0,
+            &[
+                "bg", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "de", "el",
+                "hu", "it", "lv", "lt", "mt", "pl", "pt", "ro", "ru", "sk", "sl",
+                "es", "sv", "uk",
             ],
         ),
     ]
@@ -1377,7 +1394,7 @@ mod tests {
     #[test]
     fn native_catalog_pins_verified_files() {
         let models = native_catalog();
-        assert_eq!(models.len(), 4);
+        assert_eq!(models.len(), 5);
         let nemotron = models
             .iter()
             .find(|model| model.id == "nemotron-3.5-asr-streaming-0.6b")
