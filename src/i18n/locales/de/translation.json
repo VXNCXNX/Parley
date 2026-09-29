@@ -52,6 +52,10 @@
         "name": "Parakeet V3",
         "description": "Schnell und genau"
       },
+      "parakeet-ultra": {
+        "name": "Parakeet Ultra",
+        "description": "Von Moondream verfeinertes Parakeet. Lokale Transkription in 25 europäischen Sprachen."
+      },
       "moonshine-base": {
         "name": "Moonshine Base",
         "description": "Sehr schnell, nur Englisch. Verarbeitet Akzente gut."

@@ -360,6 +360,12 @@ Download the models you want from below
 - V2 (473 MB): `https://blob.handy.computer/parakeet-v2-int8.tar.gz`
 - V3 (478 MB): `https://blob.handy.computer/parakeet-v3-int8.tar.gz`
 
+**Parakeet Ultra (single GGUF file):**
+
+- Ultra (740 MB): [parakeet-ultra-0.6b-Q8_0.gguf](https://huggingface.co/Nairod785/parakeet-ultra-gguf/resolve/b03613ba54a195238f0e915359f5a5c78269ddc6/parakeet-ultra-0.6b-Q8_0.gguf)
+
+You can also download **Parakeet Ultra** from **Settings > Models**. Ultra is [Moondream's refinement](https://huggingface.co/moondream/parakeet-ultra) of [NVIDIA Parakeet V3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) for local transcription in 25 European languages. Parley uses [Nairod785's GGUF conversion](https://huggingface.co/Nairod785/parakeet-ultra-gguf/blob/b03613ba54a195238f0e915359f5a5c78269ddc6/README.md) under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/). The pinned [conversion recipe and checksums](https://huggingface.co/Nairod785/parakeet-ultra-gguf/blob/b03613ba54a195238f0e915359f5a5c78269ddc6/QUANTIZATION.md) document the source and quantization.
+
 #### Step 4: Install Models
 
 **For Whisper Models (.bin files):**
@@ -394,9 +400,13 @@ Final structure should look like:
     └── (config files)
 ```
 
+**For Parakeet Ultra (.gguf file):**
+
+Place `parakeet-ultra-0.6b-Q8_0.gguf` directly in `{app_data_dir}/models/`, keeping that filename. Restart Parley, then select **Parakeet Ultra** in **Settings > Models**.
+
 **Important Notes:**
 
-- For Parakeet models, the extracted directory name **must** match exactly as shown above
+- For Parakeet V2 and V3, the extracted directory name **must** match exactly as shown above
 - Do not rename the `.bin` files for Whisper models—use the exact filenames from the download URLs
 - After placing the files, restart Parler to detect the new models
 

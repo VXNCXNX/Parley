@@ -52,6 +52,10 @@
         "name": "Parakeet V3",
         "description": "Nhanh và chính xác"
       },
+      "parakeet-ultra": {
+        "name": "Parakeet Ultra",
+        "description": "Parakeet được Moondream tinh chỉnh. Phiên âm cục bộ bằng 25 ngôn ngữ châu Âu."
+      },
       "moonshine-base": {
         "name": "Moonshine Base",
         "description": "Rất nhanh, chỉ tiếng Anh. Xử lý tốt các giọng nói."

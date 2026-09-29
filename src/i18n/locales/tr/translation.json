@@ -52,6 +52,10 @@
         "name": "Parakeet V3",
         "description": "Hızlı ve doğru."
       },
+      "parakeet-ultra": {
+        "name": "Parakeet Ultra",
+        "description": "Moondream tarafından iyileştirilen Parakeet. 25 Avrupa dilinde yerel transkripsiyon."
+      },
       "moonshine-base": {
         "name": "Moonshine Base",
         "description": "Çok hızlı, yalnızca İngilizce. Aksanları iyi işler."

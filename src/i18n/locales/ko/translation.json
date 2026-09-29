@@ -52,6 +52,10 @@
         "name": "Parakeet V3",
         "description": "빠르고 정확함"
       },
+      "parakeet-ultra": {
+        "name": "Parakeet Ultra",
+        "description": "Moondream이 다듬은 Parakeet. 유럽 25개 언어를 로컬에서 음성 전사합니다."
+      },
       "moonshine-base": {
         "name": "Moonshine Base",
         "description": "매우 빠름, 영어 전용. 억양을 잘 처리합니다."
