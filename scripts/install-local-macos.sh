@@ -124,6 +124,7 @@ if [[ -e "$INSTALL_APP" ]]; then
 
   if ! EXISTING_REQUIREMENT_OUTPUT="$(codesign -dr - "$INSTALL_APP" 2>&1)"; then
     echo "Could not read the installed app's designated code requirement; refusing to replace it." >&2
+    echo "See README.md#troubleshooting before a manual replacement and Accessibility regrant." >&2
     exit 1
   fi
   EXISTING_REQUIREMENTS=()
@@ -132,10 +133,12 @@ if [[ -e "$INSTALL_APP" ]]; then
   done < <(printf '%s\n' "$EXISTING_REQUIREMENT_OUTPUT" | sed -n 's/^designated => //p')
   if [[ "${#EXISTING_REQUIREMENTS[@]}" -ne 1 || -z "${EXISTING_REQUIREMENTS[0]}" ]]; then
     echo "The installed app has no single readable designated code requirement; refusing to replace it." >&2
+    echo "See README.md#troubleshooting before a manual replacement and Accessibility regrant." >&2
     exit 1
   fi
   if ! codesign --verify --strict --test-requirement "=${EXISTING_REQUIREMENTS[0]}" "$APP_TEMPLATE"; then
     echo "The new app does not satisfy the installed app's code requirement. Refusing to replace it because macOS Accessibility permission may not carry over." >&2
+    echo "See README.md#troubleshooting before a manual replacement and Accessibility regrant." >&2
     exit 1
   fi
 fi

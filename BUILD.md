@@ -83,7 +83,9 @@ Run the **Release** workflow on the commit you want to release. The workflow use
 
 By default, `sign-binaries` and `publish` are both false. An ad-hoc run can create a draft preview. The workflow rejects `publish=true` unless `sign-binaries=true`, before it creates a tag or draft.
 
-Public macOS releases require a Developer ID Application certificate and Apple notarization credentials. Before it uploads a signed macOS build, the workflow checks the app bundle at the target's release path with strict `codesign` verification, the configured Team ID, `spctl`, and a stapled-ticket validation. The workflow then publishes only after both architectures build and all four downloads are present.
+Public macOS releases require a Developer ID Application certificate and Apple notarization credentials. Before it uploads a signed macOS build, the workflow checks the app bundle at the target's release path with strict `codesign` verification, the configured Team ID, `spctl`, and a stapled-ticket validation.
+
+For a signed macOS release, the workflow verifies the final DMG against the imported certificate and submits that DMG for notarization. It requires Apple's acceptance, staples and validates the DMG ticket, and assesses the DMG with Gatekeeper. It then mounts the DMG read-only. The mounted app must satisfy the same certificate requirement, stapled-ticket validation, and Gatekeeper assessment before upload. The workflow publishes only after both architectures pass and all four downloads are present.
 
 The workflow normally uses `GITHUB_TOKEN`. To release a branch that changes workflows relative to the default branch, configure `RELEASE_TOKEN` with repository contents and workflow write permissions. GitHub requires those permissions for that release target.
 
