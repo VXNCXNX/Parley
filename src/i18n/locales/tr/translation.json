@@ -79,6 +79,26 @@
       "sense-voice-int8": {
         "name": "SenseVoice",
         "description": "Çok hızlı. Çince, İngilizce, Japonca, Korece, Kantonca."
+      },
+      "cohere-transcribe-03-2026": {
+        "name": "Cohere Transcribe",
+        "description": "14 dilde yüksek doğrulukla toplu transkripsiyon."
+      },
+      "gemini-api": {
+        "name": "Gemini API",
+        "description": "Google Gemini ile bulut tabanlı transkripsiyon. API anahtarı ve internet bağlantısı gerektirir."
+      },
+      "nemotron-3.5-asr-streaming-0.6b": {
+        "name": "Nemotron Streaming 3.5",
+        "description": "28 dilde gerçek zamanlı transkripsiyon."
+      },
+      "nemotron-speech-streaming-en-0.6b": {
+        "name": "Nemotron Speech Streaming EN",
+        "description": "İngilizce konuşmayı akış halinde metne dönüştürme."
+      },
+      "qwen3-asr-0.6b": {
+        "name": "Qwen3-ASR 0.6B",
+        "description": "Çok dilli toplu transkripsiyon."
       }
     },
     "errors": {
@@ -157,7 +177,26 @@
       },
       "noModelsMatch": "Bu filtreyle eşleşen model yok.",
       "yourModels": "İndirilen modeller",
-      "availableModels": "İndirilebilir"
+      "availableModels": "İndirilebilir",
+      "processingModels": {
+        "addModel": "İşleme Modeli Ekle",
+        "alreadySaved": "Bu model zaten kayıtlı.",
+        "apiKey": "API Anahtarı",
+        "apiKeyPlaceholder": "API anahtarını girin",
+        "cancel": "İptal",
+        "description": "Son işlem eylemlerinde kullanmak üzere LLM modellerini kaydedin.",
+        "fetchModels": "Modelleri getir",
+        "model": "Model",
+        "modelPlaceholder": "Bir model seçin veya yazın",
+        "noModels": "Henüz kayıtlı işleme modeli yok. Eylemlerinizde kullanmak için bir model ekleyin.",
+        "provider": "Sağlayıcı",
+        "save": "Kaydet",
+        "title": "İşleme Modelleri"
+      },
+      "tabs": {
+        "processing": "İşleme",
+        "transcription": "Transkripsiyon"
+      }
     },
     "general": {
       "title": "Genel",
@@ -231,7 +270,8 @@
         "output": "Çıktı",
         "transcription": "Transkripsiyon",
         "history": "Geçmiş",
-        "experimental": "Deneysel"
+        "experimental": "Deneysel",
+        "cloudModels": "Bulut Modelleri"
       },
       "experimentalToggle": {
         "label": "Deneysel Özellikler",
@@ -323,6 +363,14 @@
         "add": "Ekle",
         "remove": "{{word}} Kaldır",
         "duplicate": "\"{{word}}\" zaten mevcut"
+      },
+      "lazyStreamClose": {
+        "description": "Parley'nin kayıttan sonra mikrofonu kısa süre açık tutmasını veya her zaman açık tutmasını seçin. Ses akışı açıkken macOS mikrofon göstergesini gösterir.",
+        "label": "Mikrofon Modu",
+        "modes": {
+          "always": "Her zaman açık",
+          "warm": "Kısa süre açık"
+        }
       }
     },
     "postProcessing": {
@@ -383,6 +431,34 @@
         "cancel": "İptal",
         "selectToEdit": "Ayrıntılarını görüntülemek ve düzenlemek için yukarıdan bir prompt seçin.",
         "createFirst": "İlk son işlem prompt'unuzu oluşturmak için yukarıdaki “Yeni Prompt Oluştur” seçeneğine tıklayın."
+      },
+      "actions": {
+        "addAction": "Eylem Ekle",
+        "cancel": "İptal",
+        "createFirst": "Yapılandırdığınız sağlayıcıyla transkripsiyonları işlemek için ilk eyleminizi oluşturun.",
+        "defaultModel": "Varsayılan",
+        "delete": "Sil",
+        "description": "Özel promptlarınızı Ctrl+sayı (1-9) tuşlarına atayın. Eylemi transkripsiyondan sonra uygulamak için kayıt sırasında kısayola basın.",
+        "editAction": "Eylemi Düzenle",
+        "key": "Tuş",
+        "keyLabel": "Tuş (1-9)",
+        "maxActionsReached": "En fazla 9 eylem eklenebilir.",
+        "model": "Model (isteğe bağlı)",
+        "modelPlaceholder": "Bir model seçin",
+        "modelTip": "Bu eylem için belirli bir model seçin veya API bölümündeki varsayılan modeli kullanın.",
+        "name": "Ad",
+        "namePlaceholder": "Örn. E-posta modu",
+        "noActions": "Henüz yapılandırılmış eylem yok.",
+        "prompt": "Prompt",
+        "promptPlaceholder": "Örn. Bu metni selamlama ve kapanış içeren profesyonel bir e-posta olarak biçimlendir. Paragraflar arasına satır sonları ekle.",
+        "promptTip": "İpucu: Transkripsiyon metnini promptunuza eklemek için <code>${output}</code> kullanın.",
+        "save": "Kaydet",
+        "title": "Eylemler"
+      },
+      "appMappings": {
+        "presetsDescription": "Hızlı başlangıç: 5 standart eylemi (gündelik dil / e-posta / kod / belge / yapay zekâ promptu) ve yaygın uygulamalar için eşleştirmeleri yükleyin.",
+        "loadPresets": "Hazır ayarları yükle",
+        "noActions": "Eşleştirme eklemeden önce yukarıda en az bir son işlem eylemi oluşturun."
       }
     },
     "history": {
@@ -394,7 +470,13 @@
       "save": "Transkripsiyonu kaydet",
       "unsave": "Kaydedilenlerden kaldır",
       "delete": "Kaydı sil",
-      "deleteError": "Kayıt silinemedi. Lütfen tekrar deneyin."
+      "deleteError": "Kayıt silinemedi. Lütfen tekrar deneyin.",
+      "action": "Eylem {{key}}",
+      "originalTranscript": "Orijinal",
+      "postProcessed": "Son işlem uygulandı",
+      "reprocess": "Farklı bir modelle yeniden işle",
+      "reprocessing": "Yeniden işleniyor...",
+      "selectModel": "Model seçin"
     },
     "debug": {
       "title": "Hata Ayıklama",
@@ -496,6 +578,31 @@
           "details": "Parler, hızlı ve yerel konuşmadan metne dönüştürme için Whisper.cpp kullanır. Georgi Gerganov ve katkıda bulunanların harika çalışmaları için teşekkür ederiz."
         }
       }
+    },
+    "gemini": {
+      "apiKey": "API Anahtarı",
+      "apiKeyPlaceholder": "Gemini API anahtarınızı girin",
+      "apiKeyRequired": "API Anahtarı Gerekli",
+      "apiKeyRequiredDescription": "Bulut transkripsiyonunu kullanmak için Google Gemini API anahtarınızı girin.",
+      "cancel": "İptal",
+      "description": "Bulut tabanlı transkripsiyon için Google Gemini API'yi kullanın. API anahtarı gerektirir.",
+      "model": "Model",
+      "modelDescription": "Transkripsiyon için kullanılacak Gemini modelini seçin",
+      "save": "Kaydet",
+      "title": "Gemini API",
+      "saved": "Kaydedildi ✓",
+      "apiKeyConfigured": "API anahtarı yapılandırıldı ✓",
+      "serviceAccountConfigured": "Hizmet hesabı yapılandırıldı ✓"
+    },
+    "longAudioModel": {
+      "description": "Kayıt süresi eşiği aştığında otomatik olarak başka bir modele geçer.",
+      "disabled": "Devre dışı",
+      "modelDescription": "Süresi eşiği aşan kayıtlar için kullanılacak modeli seçin.",
+      "modelLabel": "Uzun kayıtlar için model",
+      "seconds": "{{value}} sn",
+      "thresholdDescription": "Kayıt bu süreyi aştığında uzun kayıt modeline geçer.",
+      "thresholdLabel": "Süre eşiği (saniye)",
+      "title": "Uzun Kayıt Modeli"
     }
   },
   "footer": {
@@ -541,7 +648,14 @@
     "dismiss": "Yoksay"
   },
   "errors": {
-    "loadDirectory": "Dizin yüklenirken hata oluştu: {{error}}"
+    "loadDirectory": "Dizin yüklenirken hata oluştu: {{error}}",
+    "micPermissionDeniedTitle": "Mikrofon erişimi reddedildi",
+    "noInputDevice": "Ses giriş aygıtı bulunamadı. Bir mikrofon veya kulaklık bağlayıp tekrar deneyin.",
+    "noInputDeviceTitle": "Mikrofon bulunamadı",
+    "recordingFailed": "Kayıt başlatılamadı: {{error}}",
+    "micPermissionDenied": {
+      "generic": "Sistem ayarlarınızdan mikrofon erişimine izin verip tekrar deneyin."
+    }
   },
   "appLanguage": {
     "title": "Uygulama Dili",
