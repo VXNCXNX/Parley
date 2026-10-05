@@ -246,11 +246,34 @@ jobs:
 
       - name: verify certificate
         if: contains(inputs.platform, 'macos') && inputs.sign-binaries
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          CERT_INFO=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application")
-          CERT_ID=$(echo "$CERT_INFO" | awk -F'"' '{print $2}')
+          if [[ ! "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "APPLE_TEAM_ID must contain the ten-character Apple Developer team ID." >&2
+            exit 1
+          fi
+
+          identities=()
+          while IFS= read -r identity; do
+            identities+=("$identity")
+          done < <(
+            security find-identity -v -p codesigning build.keychain \
+              | grep -F "Developer ID Application:" \
+              | grep -F "($APPLE_TEAM_ID)" || true
+          )
+          if [[ "${#identities[@]}" -ne 1 ]]; then
+            echo "Expected one Developer ID Application identity for team $APPLE_TEAM_ID; found ${#identities[@]}." >&2
+            exit 1
+          fi
+
+          CERT_ID="$(awk '{print $2}' <<< "${identities[0]}")"
+          if [[ ! "$CERT_ID" =~ ^[A-Fa-f0-9]{40}$ ]]; then
+            echo "The Developer ID identity hash is missing or invalid." >&2
+            exit 1
+          fi
           echo "CERT_ID=$CERT_ID" >> $GITHUB_ENV
-          echo "Certificate imported."
+          echo "Verified one Developer ID Application identity for team $APPLE_TEAM_ID."
 
       - name: Patch asset name pattern
         id: patch-release-name
@@ -285,12 +308,116 @@ jobs:
           WHISPER_NO_AVX: ${{ contains(inputs.platform, 'ubuntu') && !contains(inputs.platform, 'arm') && 'ON' || '' }}
           WHISPER_NO_AVX2: ${{ contains(inputs.platform, 'ubuntu') && !contains(inputs.platform, 'arm') && 'ON' || '' }}
         with:
-          tagName: ${{ inputs.release-id && format('v{0}', steps.get-version.outputs.version) || '' }}
-          releaseName: ${{ inputs.release-id && format('v{0}', steps.get-version.outputs.version) || '' }}
-          releaseId: ${{ inputs.release-id }}
+          tagName: ${{ inputs.release-id != '' && !contains(inputs.platform, 'macos') && format('v{0}', steps.get-version.outputs.version) || '' }}
+          releaseName: ${{ inputs.release-id != '' && !contains(inputs.platform, 'macos') && format('v{0}', steps.get-version.outputs.version) || '' }}
+          releaseId: ${{ inputs.release-id != '' && !contains(inputs.platform, 'macos') && inputs.release-id || '' }}
           releaseDraft: true
           assetNamePattern: ${{ steps.patch-release-name.outputs.platform }}
           args: ${{ inputs.build-args }}
+
+      - name: Verify signed macOS app before upload
+        if: inputs.sign-binaries && contains(inputs.platform, 'macos')
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TARGET: ${{ inputs.target }}
+          PROFILE: ${{ steps.build-profile.outputs.profile }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUNDLE_DIR="src-tauri/target/$TARGET/$PROFILE/bundle"
+          APP_DIR="$BUNDLE_DIR/macos"
+          apps=()
+          while IFS= read -r app; do
+            apps+=("$app")
+          done < <(find "$APP_DIR" -mindepth 1 -maxdepth 1 -type d -name '*.app' -print | sort)
+          if [[ "${#apps[@]}" -ne 1 ]]; then
+            echo "Expected one macOS app bundle in $APP_DIR; found ${#apps[@]}." >&2
+            exit 1
+          fi
+          APP_PATH="${apps[0]}"
+
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          SIGNATURE_DETAILS="$(codesign --display --verbose=4 "$APP_PATH" 2>&1)"
+          if ! grep -Fxq "TeamIdentifier=$APPLE_TEAM_ID" <<< "$SIGNATURE_DETAILS"; then
+            echo "The signed app TeamIdentifier does not match APPLE_TEAM_ID." >&2
+            printf '%s\n' "$SIGNATURE_DETAILS" >&2
+            exit 1
+          fi
+          if ! grep -Eq "^Authority=Developer ID Application: .+ \($APPLE_TEAM_ID\)$" <<< "$SIGNATURE_DETAILS"; then
+            echo "The app is not signed with the expected Developer ID Application identity." >&2
+            printf '%s\n' "$SIGNATURE_DETAILS" >&2
+            exit 1
+          fi
+
+          spctl --assess --type execute --verbose=4 "$APP_PATH"
+          xcrun stapler validate "$APP_PATH"
+
+      - name: Upload verified signed macOS release assets
+        if: inputs.sign-binaries && contains(inputs.platform, 'macos') && inputs.release-id != ''
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ inputs.release-id }}
+          RELEASE_TAG: v${{ steps.get-version.outputs.version }}
+          TARGET: ${{ inputs.target }}
+          PROFILE: ${{ steps.build-profile.outputs.profile }}
+          VERSION: ${{ steps.get-version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case "$TARGET" in
+            aarch64-apple-darwin) ARCH="aarch64" ;;
+            x86_64-apple-darwin) ARCH="x64" ;;
+            *) echo "Unsupported macOS release target: $TARGET" >&2; exit 1 ;;
+          esac
+
+          RELEASE_INFO="$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID")"
+          [[ "$(jq -r '.id' <<< "$RELEASE_INFO")" == "$RELEASE_ID" ]]
+          [[ "$(jq -r '.draft' <<< "$RELEASE_INFO")" == "true" ]]
+          [[ "$(jq -r '.tag_name' <<< "$RELEASE_INFO")" == "$RELEASE_TAG" ]]
+          [[ "$(jq -r '.target_commitish' <<< "$RELEASE_INFO")" == "$GITHUB_SHA" ]]
+
+          TAG_REF="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG")"
+          TAG_TYPE="$(jq -r '.object.type' <<< "$TAG_REF")"
+          TAG_SHA="$(jq -r '.object.sha' <<< "$TAG_REF")"
+          while [[ "$TAG_TYPE" == "tag" ]]; do
+            TAG_OBJECT="$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$TAG_SHA")"
+            TAG_TYPE="$(jq -r '.object.type' <<< "$TAG_OBJECT")"
+            TAG_SHA="$(jq -r '.object.sha' <<< "$TAG_OBJECT")"
+          done
+          if [[ "$TAG_TYPE" != "commit" || "$TAG_SHA" != "$GITHUB_SHA" ]]; then
+            echo "The release tag does not point to this workflow's commit." >&2
+            exit 1
+          fi
+
+          BUNDLE_DIR="src-tauri/target/$TARGET/$PROFILE/bundle"
+          DMG_PATH="$BUNDLE_DIR/dmg/Parley_${VERSION}_${ARCH}.dmg"
+          APP_DIR="$BUNDLE_DIR/macos"
+          apps=()
+          while IFS= read -r app; do
+            apps+=("$app")
+          done < <(find "$APP_DIR" -mindepth 1 -maxdepth 1 -type d -name '*.app' -print | sort)
+          if [[ "${#apps[@]}" -ne 1 ]]; then
+            echo "Expected one macOS app bundle in $APP_DIR; found ${#apps[@]}." >&2
+            exit 1
+          fi
+          APP_PATH="${apps[0]}"
+          UPLOAD_ARCHIVE="$APP_DIR/Parley_${ARCH}.app.tar.gz"
+          tar -czf "$UPLOAD_ARCHIVE" -C "$(dirname "$APP_PATH")" "$(basename "$APP_PATH")"
+          if [[ ! -s "$DMG_PATH" ]]; then
+            echo "The verified DMG is missing or empty." >&2
+            exit 1
+          fi
+          if [[ ! -s "$UPLOAD_ARCHIVE" ]]; then
+            echo "The architecture-named app archive is missing or empty." >&2
+            exit 1
+          fi
+
+          gh release upload "$RELEASE_TAG" \
+            "$DMG_PATH" \
+            "$UPLOAD_ARCHIVE" \
+            --clobber
 
       - name: Build with Tauri (ad-hoc)
         if: ${{ !inputs.sign-binaries }}

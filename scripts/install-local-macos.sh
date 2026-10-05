@@ -95,6 +95,7 @@ SIGN_IDENTITY="$(ensure_codesign_identity)"
 
 bun tauri build --bundles app
 codesign --force --deep --sign "$SIGN_IDENTITY" "$APP_TEMPLATE"
+codesign --verify --deep --strict "$APP_TEMPLATE"
 
 NATIVE_LIB="$APP_TEMPLATE/Contents/Frameworks/libparley_native_runtime.dylib"
 if [[ ! -f "$NATIVE_LIB" ]]; then
@@ -108,6 +109,35 @@ STRING_POOL_OFFSET="$(otool -l "$NATIVE_LIB" | awk '
 if [[ ! "$STRING_POOL_OFFSET" =~ ^[0-9]+$ ]] || (( STRING_POOL_OFFSET % 8 != 0 )); then
   echo "Native runtime has a misaligned LINKEDIT string pool; refusing to replace the installed app." >&2
   exit 1
+fi
+
+if [[ -L "$INSTALL_APP" ]]; then
+  echo "Refusing to replace a symlink at $INSTALL_APP." >&2
+  exit 1
+fi
+
+if [[ -e "$INSTALL_APP" ]]; then
+  if [[ ! -d "$INSTALL_APP" ]]; then
+    echo "Refusing to replace a non-app item at $INSTALL_APP." >&2
+    exit 1
+  fi
+
+  if ! EXISTING_REQUIREMENT_OUTPUT="$(codesign -dr - "$INSTALL_APP" 2>&1)"; then
+    echo "Could not read the installed app's designated code requirement; refusing to replace it." >&2
+    exit 1
+  fi
+  EXISTING_REQUIREMENTS=()
+  while IFS= read -r requirement; do
+    EXISTING_REQUIREMENTS+=("$requirement")
+  done < <(printf '%s\n' "$EXISTING_REQUIREMENT_OUTPUT" | sed -n 's/^designated => //p')
+  if [[ "${#EXISTING_REQUIREMENTS[@]}" -ne 1 || -z "${EXISTING_REQUIREMENTS[0]}" ]]; then
+    echo "The installed app has no single readable designated code requirement; refusing to replace it." >&2
+    exit 1
+  fi
+  if ! codesign --verify --strict --test-requirement "=${EXISTING_REQUIREMENTS[0]}" "$APP_TEMPLATE"; then
+    echo "The new app does not satisfy the installed app's code requirement. Refusing to replace it because macOS Accessibility permission may not carry over." >&2
+    exit 1
+  fi
 fi
 
 pkill -f "$INSTALL_APP/Contents/MacOS/parley" 2>/dev/null || true

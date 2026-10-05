@@ -5,6 +5,8 @@
 ### Fixed
 
 - Keep Swift bridge generation available on Intel macOS hosts when cross-compiling for Apple Silicon.
+- Block unsigned public releases and verify the Developer ID team, Gatekeeper assessment, and stapled notarization ticket before uploading macOS assets.
+- Preserve the installed macOS app's designated code requirement before replacing it, and document Accessibility permission recovery after a signing identity change.
 
 ## [0.8.10] - 2026-10-05
 

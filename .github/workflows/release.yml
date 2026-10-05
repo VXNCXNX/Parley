@@ -25,6 +25,12 @@ jobs:
       release-id: ${{ steps.prepare.outputs.release-id }}
       version: ${{ steps.prepare.outputs.version }}
     steps:
+      - name: Reject unsigned publication
+        if: ${{ inputs.publish && !inputs.sign-binaries }}
+        run: |
+          echo "::error::Publishing a GitHub release requires signed macOS builds."
+          exit 1
+
       - name: Checkout release commit
         uses: actions/checkout@v4
         with:
@@ -116,7 +122,7 @@ jobs:
     permissions:
       contents: write
     needs: [prepare-release, build-macos]
-    if: ${{ inputs.publish && needs.build-macos.result == 'success' }}
+    if: ${{ inputs.publish && inputs.sign-binaries && needs.build-macos.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Check downloads and publish

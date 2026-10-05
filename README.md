@@ -19,7 +19,7 @@ For macOS 11 or later, choose the DMG for your Mac:
 
 1. Open the DMG and drag **Parley** into **Applications**.
 2. Open **Parley** from **Applications**.
-3. These macOS downloads are ad-hoc signed and are not notarized. If macOS blocks the app, open **System Settings > Privacy & Security**, click **Open Anyway**, and confirm **Open**.
+3. The v0.8.10 macOS downloads are ad-hoc signed and are not notarized. If Gatekeeper blocks that release, open **System Settings > Privacy & Security**, click **Open Anyway**, and confirm **Open**.
 4. Grant **Microphone** and **Accessibility** permissions when prompted.
 5. Choose a model in **Settings > Models**, download it, and configure your shortcut.
 
@@ -79,7 +79,8 @@ For a macOS app installation, call the bundled binary:
 
 ## Troubleshooting
 
-- For permissions or shortcut issues on macOS, check **System Settings > Privacy & Security > Microphone** and **Accessibility**.
+- For microphone or shortcut issues on macOS, check **System Settings > Privacy & Security > Microphone** and **Accessibility**.
+- macOS ties Accessibility approval to the app's signing requirement. After installing a build with a different signing identity, open **System Settings > Privacy & Security > Accessibility** (**Réglages Système > Confidentialité et sécurité > Accessibilité**). Remove the stale Parley entry, click **+**, select the exact `/Applications/Parley.app`, and enable it. Restart Parley after changing the grant.
 - Open **Settings > About** to find the app data and log directories. Debug mode is available with `Cmd+Shift+D` on macOS or `Ctrl+Shift+D` on Windows and Linux.
 - If automatic downloads are blocked, place model files in the `models` folder inside the app data directory. Keep the catalog filename for GGUF and Whisper files. For directory-based models, keep the catalog directory name. Restart Parley after a manual install.
 - Custom Whisper GGML `.bin` models in that directory appear after restarting the app.
