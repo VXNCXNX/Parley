@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.8] - 2026-10-05
+## [0.8.9] - 2026-10-05
 
 ### Added
 
@@ -12,6 +12,8 @@
 ### Fixed
 
 - Complete translations for the native model catalog, cloud transcription, actions, and long recording settings in every supported locale.
+- Keep Apple signing variables absent in ad-hoc CI builds so packaging does not try to import an empty certificate.
+- Compile the Swift bridge as a library to avoid a second application entry point.
 - Target macOS 11 or later so clean release builds support the native runtime's C++ filesystem dependency.
 - Recover macOS transcription shortcuts after an event tap interruption.
 - Keep the last working default microphone and preserve shared headset streams between recordings.

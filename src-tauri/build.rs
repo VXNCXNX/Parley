@@ -264,6 +264,7 @@ fn build_apple_intelligence_bridge() {
     let status = Command::new("xcrun")
         .args([
             "swiftc",
+            "-parse-as-library",
             "-target",
             "arm64-apple-macosx11.0",
             "-sdk",
