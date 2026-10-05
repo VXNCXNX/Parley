@@ -79,6 +79,26 @@
       "sense-voice-int8": {
         "name": "SenseVoice",
         "description": "Très rapide. Chinois, anglais, japonais, coréen, cantonais."
+      },
+      "nemotron-3.5-asr-streaming-0.6b": {
+        "name": "Nemotron Streaming 3.5",
+        "description": "Transcription multilingue en direct dans 28 langues."
+      },
+      "nemotron-speech-streaming-en-0.6b": {
+        "name": "Nemotron Speech Streaming EN",
+        "description": "Transcription vocale en anglais en continu."
+      },
+      "qwen3-asr-0.6b": {
+        "name": "Qwen3-ASR 0.6B",
+        "description": "Transcription multilingue par lots."
+      },
+      "cohere-transcribe-03-2026": {
+        "name": "Cohere Transcribe",
+        "description": "Transcription par lots de haute précision dans 14 langues."
+      },
+      "gemini-api": {
+        "name": "Gemini API",
+        "description": "Transcription dans le cloud via Google Gemini. Nécessite une clé API et une connexion Internet."
       }
     },
     "errors": {
@@ -157,7 +177,26 @@
       },
       "noModelsMatch": "Aucun modèle ne correspond à ce filtre.",
       "yourModels": "Modèles téléchargés",
-      "availableModels": "Disponibles au téléchargement"
+      "availableModels": "Disponibles au téléchargement",
+      "tabs": {
+        "transcription": "Transcription",
+        "processing": "Traitement"
+      },
+      "processingModels": {
+        "title": "Modèles de traitement",
+        "description": "Enregistrez des modèles LLM pour les utiliser dans les actions de post-traitement.",
+        "noModels": "Aucun modèle de traitement enregistré. Ajoutez-en un pour l'utiliser dans vos actions.",
+        "addModel": "Ajouter un modèle de traitement",
+        "provider": "Fournisseur",
+        "apiKey": "Clé API",
+        "apiKeyPlaceholder": "Entrez la clé API",
+        "model": "Modèle",
+        "modelPlaceholder": "Sélectionnez ou saisissez un modèle",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "fetchModels": "Récupérer les modèles",
+        "alreadySaved": "Ce modèle est déjà enregistré."
+      }
     },
     "general": {
       "title": "Général",
@@ -231,7 +270,8 @@
         "output": "Sortie",
         "transcription": "Transcription",
         "history": "Historique",
-        "experimental": "Expérimental"
+        "experimental": "Expérimental",
+        "cloudModels": "Modèles dans le cloud"
       },
       "experimentalToggle": {
         "label": "Fonctionnalités Expérimentales",
@@ -391,6 +431,34 @@
         "cancel": "Annuler",
         "selectToEdit": "Sélectionnez un prompt ci-dessus pour voir et modifier ses détails.",
         "createFirst": "Cliquez sur 'Créer un nouveau prompt' ci-dessus pour créer votre premier prompt de post-traitement."
+      },
+      "actions": {
+        "title": "Actions",
+        "description": "Associez les touches Ctrl+chiffre (1-9) à des prompts personnalisés. Appuyez sur un raccourci pendant l'enregistrement pour appliquer l'action après la transcription.",
+        "noActions": "Aucune action configurée.",
+        "createFirst": "Créez votre première action pour traiter les transcriptions avec le fournisseur configuré.",
+        "addAction": "Ajouter une action",
+        "editAction": "Modifier une action",
+        "key": "Touche",
+        "keyLabel": "Touche (1-9)",
+        "name": "Nom",
+        "namePlaceholder": "Ex. Mode e-mail",
+        "prompt": "Prompt",
+        "promptPlaceholder": "Ex. Présente ce texte comme un e-mail professionnel avec une formule de salutation et une formule de politesse. Ajoute des sauts de ligne entre les paragraphes.",
+        "promptTip": "Utilisez <code>${output}</code> pour insérer le texte transcrit dans votre prompt.",
+        "model": "Modèle (facultatif)",
+        "modelPlaceholder": "Sélectionnez un modèle",
+        "modelTip": "Sélectionnez un modèle spécifique pour cette action ou utilisez celui défini par défaut dans la section API.",
+        "defaultModel": "Par défaut",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "delete": "Supprimer",
+        "maxActionsReached": "La limite de 9 actions est atteinte."
+      },
+      "appMappings": {
+        "presetsDescription": "Pour démarrer, chargez 5 actions standard (informel, e-mail, code, document et prompt IA) et des associations pour les applications courantes.",
+        "loadPresets": "Charger les préréglages",
+        "noActions": "Créez au moins une action de post-traitement ci-dessus avant d'ajouter une association."
       }
     },
     "history": {
@@ -405,7 +473,10 @@
       "deleteError": "Échec de la suppression de l'entrée. Veuillez réessayer.",
       "originalTranscript": "Original",
       "postProcessed": "Post-traitement",
-      "action": "Action {{key}}"
+      "action": "Action {{key}}",
+      "reprocess": "Retraiter avec un autre modèle",
+      "reprocessing": "Retraitement en cours...",
+      "selectModel": "Sélectionner un modèle"
     },
     "debug": {
       "title": "Débogage",
@@ -507,6 +578,31 @@
           "details": "Parler utilise Whisper.cpp pour un traitement rapide et local de la parole en texte. Merci au travail incroyable de Georgi Gerganov et des contributeurs."
         }
       }
+    },
+    "longAudioModel": {
+      "title": "Modèle pour les enregistrements longs",
+      "description": "Passer automatiquement à un autre modèle lorsque la durée d'enregistrement dépasse le seuil.",
+      "modelLabel": "Modèle pour les enregistrements longs",
+      "modelDescription": "Sélectionnez le modèle à utiliser pour les enregistrements qui dépassent le seuil.",
+      "thresholdLabel": "Seuil de durée (secondes)",
+      "thresholdDescription": "Passer au modèle pour les enregistrements longs lorsque l'enregistrement dépasse cette durée.",
+      "disabled": "Désactivé",
+      "seconds": "{{value}}s"
+    },
+    "gemini": {
+      "title": "Gemini API",
+      "description": "Utilisez l'API Gemini de Google pour la transcription dans le cloud. Nécessite une clé API.",
+      "apiKey": "Clé API",
+      "apiKeyPlaceholder": "Entrez votre clé API Gemini",
+      "model": "Modèle",
+      "modelDescription": "Sélectionnez le modèle Gemini à utiliser pour la transcription",
+      "apiKeyRequired": "Clé API requise",
+      "apiKeyRequiredDescription": "Entrez votre clé API Google Gemini pour utiliser la transcription dans le cloud.",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "saved": "Enregistré ✓",
+      "apiKeyConfigured": "Clé API configurée ✓",
+      "serviceAccountConfigured": "Compte de service configuré ✓"
     }
   },
   "footer": {
