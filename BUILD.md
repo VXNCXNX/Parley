@@ -81,11 +81,13 @@ Before replacing an existing app, the installer checks that the new bundle satis
 
 Run the **Release** workflow on the commit you want to release. The workflow uses that exact SHA for both macOS builds and the version tag. It requires a matching version entry in `CHANGELOG.md` and reuses a draft release for that tag. An existing tag on another commit or an already published release stops the workflow.
 
-By default, `sign-binaries` and `publish` are both false. An ad-hoc run can create a draft preview. The workflow rejects `publish=true` unless `sign-binaries=true`, before it creates a tag or draft.
+By default, `sign-binaries` is false. Every run creates or reuses a draft release, and the workflow never publishes it. Ad-hoc drafts are development previews and must not be published or recommended as public downloads.
 
 Public macOS releases require a Developer ID Application certificate and Apple notarization credentials. Before it uploads a signed macOS build, the workflow checks the app bundle at the target's release path with strict `codesign` verification, the configured Team ID, `spctl`, and a stapled-ticket validation.
 
-For a signed macOS release, the workflow verifies the final DMG against the imported certificate and submits that DMG for notarization. It requires Apple's acceptance, staples and validates the DMG ticket, and assesses the DMG with Gatekeeper. It then mounts the DMG read-only. The mounted app must satisfy the same certificate requirement, stapled-ticket validation, and Gatekeeper assessment before upload. The workflow publishes only after both architectures pass and all four downloads are present.
+For a signed macOS release, the workflow verifies the final DMG against the imported certificate and submits that DMG for notarization. It requires Apple's acceptance, staples and validates the DMG ticket, and assesses the DMG with Gatekeeper. It then mounts the DMG read-only. The mounted app must satisfy the same certificate requirement, stapled-ticket validation, and Gatekeeper assessment before upload. After both architectures build, the workflow confirms that the release is still a draft for the exact commit and that both DMGs and both app archives are uploaded.
+
+Before you publish, download the exact signed draft DMG for each architecture in a browser to preserve quarantine. On a matching Mac, install each download with Finder and confirm Gatekeeper opens `/Applications/Parley.app`. Confirm Accessibility recognizes that exact installed app, and record a real transcript that pastes into another app. Publish the draft manually in GitHub only after both architectures pass these checks.
 
 The workflow normally uses `GITHUB_TOKEN`. To release a branch that changes workflows relative to the default branch, configure `RELEASE_TOKEN` with repository contents and workflow write permissions. GitHub requires those permissions for that release target.
 
