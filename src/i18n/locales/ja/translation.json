@@ -79,6 +79,26 @@
       "sense-voice-int8": {
         "name": "SenseVoice",
         "description": "非常に高速。中国語、英語、日本語、韓国語、広東語。"
+      },
+      "nemotron-3.5-asr-streaming-0.6b": {
+        "name": "Nemotron Streaming 3.5",
+        "description": "28言語に対応したリアルタイムの文字起こし。"
+      },
+      "nemotron-speech-streaming-en-0.6b": {
+        "name": "Nemotron Speech Streaming EN",
+        "description": "ストリーミングによる英語の音声テキスト変換。"
+      },
+      "qwen3-asr-0.6b": {
+        "name": "Qwen3-ASR 0.6B",
+        "description": "複数の言語に対応した一括文字起こし。"
+      },
+      "cohere-transcribe-03-2026": {
+        "name": "Cohere Transcribe",
+        "description": "14言語に対応した高精度の一括文字起こし。"
+      },
+      "gemini-api": {
+        "name": "Gemini API",
+        "description": "Google Geminiを使ったクラウドでの文字起こし。APIキーとインターネット接続が必要です。"
       }
     },
     "errors": {
@@ -157,7 +177,26 @@
       },
       "noModelsMatch": "このフィルターに一致するモデルがありません。",
       "yourModels": "ダウンロード済みモデル",
-      "availableModels": "ダウンロード可能"
+      "availableModels": "ダウンロード可能",
+      "tabs": {
+        "transcription": "文字起こし",
+        "processing": "後処理"
+      },
+      "processingModels": {
+        "title": "後処理モデル",
+        "description": "後処理アクションに使うLLMモデルを保存します。",
+        "noModels": "後処理モデルはまだ保存されていません。モデルを追加すると、アクションで使えます。",
+        "addModel": "後処理モデルを追加",
+        "provider": "プロバイダー",
+        "apiKey": "APIキー",
+        "apiKeyPlaceholder": "APIキーを入力",
+        "model": "モデル",
+        "modelPlaceholder": "モデルを選択または入力",
+        "save": "保存",
+        "cancel": "キャンセル",
+        "fetchModels": "モデル一覧を取得",
+        "alreadySaved": "このモデルはすでに保存されています。"
+      }
     },
     "general": {
       "title": "一般",
@@ -231,7 +270,8 @@
         "output": "出力",
         "transcription": "文字起こし",
         "history": "履歴",
-        "experimental": "実験的"
+        "experimental": "実験的",
+        "cloudModels": "クラウドモデル"
       },
       "experimentalToggle": {
         "label": "実験的機能",
@@ -323,6 +363,14 @@
         "add": "追加",
         "remove": "{{word}}を削除",
         "duplicate": "「{{word}}」は既に存在します"
+      },
+      "lazyStreamClose": {
+        "label": "マイクの動作モード",
+        "description": "Parleyが録音後もしばらくマイクを有効にしておくか、常に有効にするかを選択します。マイクのストリームが開いている間、macOSにマイク使用中の表示が出ます。",
+        "modes": {
+          "warm": "録音後しばらく維持",
+          "always": "常時オン"
+        }
       }
     },
     "postProcessing": {
@@ -383,6 +431,34 @@
         "cancel": "キャンセル",
         "selectToEdit": "上からプロンプトを選択して、詳細を表示・編集します。",
         "createFirst": "上の「新しいプロンプトを作成」をクリックして、最初の後処理プロンプトを作成してください。"
+      },
+      "actions": {
+        "title": "アクション",
+        "description": "Ctrl+数字キー（1-9）にカスタムプロンプトを割り当てます。録音中にショートカットを押すと、文字起こし後にそのアクションを適用します。",
+        "noActions": "アクションはまだ設定されていません。",
+        "createFirst": "アクションを作成すると、設定済みのプロバイダーで文字起こし結果を処理できます。",
+        "addAction": "アクションを追加",
+        "editAction": "アクションを編集",
+        "key": "キー",
+        "keyLabel": "キー（1-9）",
+        "name": "名前",
+        "namePlaceholder": "例：メールモード",
+        "prompt": "プロンプト",
+        "promptPlaceholder": "例：挨拶と結びを含むビジネスメールに整えてください。段落の間に改行を入れてください。",
+        "promptTip": "ヒント：<code>${output}</code>で文字起こし結果をプロンプトに挿入できます。",
+        "model": "モデル（任意）",
+        "modelPlaceholder": "モデルを選択",
+        "modelTip": "このアクションに使うモデルを指定するか、API設定の既定モデルを使います。",
+        "defaultModel": "既定",
+        "save": "保存",
+        "cancel": "キャンセル",
+        "delete": "削除",
+        "maxActionsReached": "アクションの上限9件に達しました。"
+      },
+      "appMappings": {
+        "presetsDescription": "クイックスタート：5つの標準アクション（カジュアル / メール / コード / ドキュメント / AIプロンプト）と、よく使うアプリへの割り当てを読み込みます。",
+        "loadPresets": "プリセットを読み込む",
+        "noActions": "アプリへの割り当てを追加する前に、上で後処理アクションを一つ以上作成してください。"
       }
     },
     "history": {
@@ -394,7 +470,13 @@
       "save": "文字起こしを保存",
       "unsave": "保存から削除",
       "delete": "エントリーを削除",
-      "deleteError": "エントリーの削除に失敗しました。もう一度お試しください。"
+      "deleteError": "エントリーの削除に失敗しました。もう一度お試しください。",
+      "reprocess": "別のモデルで再処理",
+      "reprocessing": "再処理中...",
+      "selectModel": "モデルを選択",
+      "originalTranscript": "元の文字起こし",
+      "postProcessed": "後処理済み",
+      "action": "アクション {{key}}"
     },
     "debug": {
       "title": "デバッグ",
@@ -496,6 +578,31 @@
           "details": "Parlerは高速でローカルな音声からテキストへの変換にWhisper.cppを使用しています。Georgi Gerganov氏と貢献者の皆様の素晴らしい仕事に感謝します。"
         }
       }
+    },
+    "longAudioModel": {
+      "title": "長時間録音用モデル",
+      "description": "録音時間が設定したしきい値を超えると、自動的に別のモデルに切り替えます。",
+      "modelLabel": "長時間録音に使うモデル",
+      "modelDescription": "しきい値を超える長さの録音に使うモデルを選択してください。",
+      "thresholdLabel": "録音時間のしきい値（秒）",
+      "thresholdDescription": "録音時間がこの値を超えると、長時間録音用モデルに切り替えます。",
+      "disabled": "無効",
+      "seconds": "{{value}}秒"
+    },
+    "gemini": {
+      "title": "Gemini API",
+      "description": "GoogleのGemini APIを使ってクラウドで文字起こしを行います。APIキーが必要です。",
+      "apiKey": "APIキー",
+      "apiKeyPlaceholder": "GeminiのAPIキーを入力",
+      "model": "モデル",
+      "modelDescription": "文字起こしに使うGeminiモデルを選択してください",
+      "apiKeyRequired": "APIキーが必要です",
+      "apiKeyRequiredDescription": "クラウドで文字起こしを使うには、Google GeminiのAPIキーを入力してください。",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "saved": "保存済み ✓",
+      "apiKeyConfigured": "APIキー設定済み ✓",
+      "serviceAccountConfigured": "サービスアカウント設定済み ✓"
     }
   },
   "footer": {
@@ -541,7 +648,14 @@
     "dismiss": "閉じる"
   },
   "errors": {
-    "loadDirectory": "ディレクトリの読み込みエラー: {{error}}"
+    "loadDirectory": "ディレクトリの読み込みエラー: {{error}}",
+    "noInputDeviceTitle": "マイクが見つかりません",
+    "noInputDevice": "音声入力デバイスが検出されませんでした。マイクまたはヘッドセットを接続して、もう一度お試しください。",
+    "micPermissionDeniedTitle": "マイクへのアクセスが拒否されました",
+    "micPermissionDenied": {
+      "generic": "システム設定でマイクへのアクセスを許可して、もう一度お試しください。"
+    },
+    "recordingFailed": "録音を開始できませんでした: {{error}}"
   },
   "appLanguage": {
     "title": "アプリケーション言語",

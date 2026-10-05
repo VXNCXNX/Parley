@@ -79,6 +79,26 @@
       "sense-voice-int8": {
         "name": "SenseVoice",
         "description": "매우 빠름. 중국어, 영어, 일본어, 한국어, 광둥어."
+      },
+      "nemotron-3.5-asr-streaming-0.6b": {
+        "name": "Nemotron Streaming 3.5",
+        "description": "28개 언어를 지원하는 실시간 음성 텍스트 변환."
+      },
+      "nemotron-speech-streaming-en-0.6b": {
+        "name": "Nemotron Speech Streaming EN",
+        "description": "스트리밍 방식의 영어 음성 텍스트 변환."
+      },
+      "qwen3-asr-0.6b": {
+        "name": "Qwen3-ASR 0.6B",
+        "description": "다국어 일괄 음성 텍스트 변환."
+      },
+      "cohere-transcribe-03-2026": {
+        "name": "Cohere Transcribe",
+        "description": "14개 언어를 지원하는 정확도 높은 일괄 음성 텍스트 변환."
+      },
+      "gemini-api": {
+        "name": "Gemini API",
+        "description": "Google Gemini를 통한 클라우드 음성 텍스트 변환. API 키와 인터넷 연결이 필요합니다."
       }
     },
     "errors": {
@@ -222,7 +242,26 @@
         "translation": "번역",
         "allLanguages": "모든 언어"
       },
-      "noModelsMatch": "이 필터에 맞는 모델이 없습니다."
+      "noModelsMatch": "이 필터에 맞는 모델이 없습니다.",
+      "tabs": {
+        "transcription": "음성 인식",
+        "processing": "후처리"
+      },
+      "processingModels": {
+        "title": "후처리 모델",
+        "description": "후처리 작업에 사용할 LLM 모델을 저장합니다.",
+        "noModels": "저장된 후처리 모델이 없습니다. 모델을 추가하면 작업에 사용할 수 있습니다.",
+        "addModel": "후처리 모델 추가",
+        "provider": "제공업체",
+        "apiKey": "API 키",
+        "apiKeyPlaceholder": "API 키 입력",
+        "model": "모델",
+        "modelPlaceholder": "모델 선택 또는 입력",
+        "save": "저장",
+        "cancel": "취소",
+        "fetchModels": "모델 목록 가져오기",
+        "alreadySaved": "이미 저장된 모델입니다."
+      }
     },
     "advanced": {
       "title": "고급",
@@ -231,7 +270,8 @@
         "output": "출력",
         "transcription": "전사",
         "history": "히스토리",
-        "experimental": "실험적"
+        "experimental": "실험적",
+        "cloudModels": "클라우드 모델"
       },
       "experimentalToggle": {
         "label": "실험적 기능",
@@ -323,6 +363,14 @@
         "add": "추가",
         "remove": "{{word}} 제거",
         "duplicate": "\"{{word}}\"이(가) 이미 존재합니다"
+      },
+      "lazyStreamClose": {
+        "label": "마이크 모드",
+        "description": "Parley가 녹음 후 잠시 마이크 연결을 유지할지, 항상 켜 둘지 선택하세요. 스트림이 열려 있는 동안 macOS에 마이크 사용 표시가 나타납니다.",
+        "modes": {
+          "warm": "잠시 유지",
+          "always": "항상 켜기"
+        }
       }
     },
     "postProcessing": {
@@ -383,6 +431,34 @@
         "cancel": "취소",
         "selectToEdit": "세부 정보를 보고 편집하려면 위에서 프롬프트를 선택하세요.",
         "createFirst": "첫 번째 후처리 프롬프트를 만들려면 위의 '새 프롬프트 만들기'를 클릭하세요."
+      },
+      "actions": {
+        "title": "작업",
+        "description": "Ctrl+숫자 키(1-9)에 사용자 지정 프롬프트를 연결합니다. 녹음 중 단축키를 누르면 음성 텍스트 변환 후 해당 작업을 적용합니다.",
+        "noActions": "아직 설정된 작업이 없습니다.",
+        "createFirst": "첫 작업을 만들면 설정한 제공업체를 통해 음성 텍스트 변환 결과를 처리할 수 있습니다.",
+        "addAction": "작업 추가",
+        "editAction": "작업 편집",
+        "key": "키",
+        "keyLabel": "키(1-9)",
+        "name": "이름",
+        "namePlaceholder": "예: 이메일 모드",
+        "prompt": "프롬프트",
+        "promptPlaceholder": "예: 인사말과 맺음말을 포함한 업무용 이메일로 정리해 주세요. 문단 사이에 줄바꿈을 넣어 주세요.",
+        "promptTip": "팁: <code>${output}</code>을 사용하면 음성 텍스트 변환 결과를 프롬프트에 삽입할 수 있습니다.",
+        "model": "모델(선택 사항)",
+        "modelPlaceholder": "모델 선택",
+        "modelTip": "이 작업에 사용할 모델을 선택하거나 API 섹션의 기본 모델을 사용하세요.",
+        "defaultModel": "기본",
+        "save": "저장",
+        "cancel": "취소",
+        "delete": "삭제",
+        "maxActionsReached": "작업은 최대 9개까지 설정할 수 있습니다."
+      },
+      "appMappings": {
+        "presetsDescription": "빠른 시작: 표준 작업 5개(일상 대화 / 이메일 / 코드 / 문서 / AI 프롬프트)와 자주 사용하는 앱 연결 설정을 불러옵니다.",
+        "loadPresets": "프리셋 불러오기",
+        "noActions": "앱 연결을 추가하기 전에 위에서 후처리 작업을 하나 이상 만드세요."
       }
     },
     "history": {
@@ -394,7 +470,13 @@
       "save": "변환된 텍스트 저장",
       "unsave": "저장에서 제거",
       "delete": "항목 삭제",
-      "deleteError": "항목 삭제에 실패했습니다. 다시 시도해주세요."
+      "deleteError": "항목 삭제에 실패했습니다. 다시 시도해주세요.",
+      "reprocess": "다른 모델로 다시 처리",
+      "reprocessing": "다시 처리 중...",
+      "selectModel": "모델 선택",
+      "originalTranscript": "원본",
+      "postProcessed": "후처리 결과",
+      "action": "작업 {{key}}"
     },
     "debug": {
       "title": "디버그",
@@ -496,6 +578,31 @@
           "details": "Parler는 빠르고 로컬 음성-텍스트 처리를 위해 Whisper.cpp를 사용합니다. Georgi Gerganov와 기여자들의 놀라운 작업에 감사드립니다."
         }
       }
+    },
+    "longAudioModel": {
+      "title": "긴 녹음용 모델",
+      "description": "녹음 시간이 기준을 넘으면 자동으로 다른 모델로 전환합니다.",
+      "modelLabel": "긴 녹음에 사용할 모델",
+      "modelDescription": "설정한 시간보다 긴 녹음에 사용할 모델을 선택하세요.",
+      "thresholdLabel": "전환 기준 시간(초)",
+      "thresholdDescription": "녹음 시간이 이 값을 넘으면 긴 녹음용 모델로 전환합니다.",
+      "disabled": "사용 안 함",
+      "seconds": "{{value}}초"
+    },
+    "gemini": {
+      "title": "Gemini API",
+      "description": "Google의 Gemini API로 클라우드 음성 텍스트 변환을 사용합니다. API 키가 필요합니다.",
+      "apiKey": "API 키",
+      "apiKeyPlaceholder": "Gemini API 키 입력",
+      "model": "모델",
+      "modelDescription": "음성 텍스트 변환에 사용할 Gemini 모델을 선택하세요",
+      "apiKeyRequired": "API 키 필요",
+      "apiKeyRequiredDescription": "클라우드 음성 텍스트 변환을 사용하려면 Google Gemini API 키를 입력하세요.",
+      "save": "저장",
+      "cancel": "취소",
+      "saved": "저장됨 ✓",
+      "apiKeyConfigured": "API 키 설정됨 ✓",
+      "serviceAccountConfigured": "서비스 계정 설정됨 ✓"
     }
   },
   "footer": {
@@ -541,7 +648,14 @@
     "dismiss": "닫기"
   },
   "errors": {
-    "loadDirectory": "디렉토리 로딩 오류: {{error}}"
+    "loadDirectory": "디렉토리 로딩 오류: {{error}}",
+    "noInputDeviceTitle": "마이크를 찾을 수 없습니다",
+    "noInputDevice": "오디오 입력 장치가 감지되지 않았습니다. 마이크나 헤드셋을 연결한 후 다시 시도하세요.",
+    "micPermissionDeniedTitle": "마이크 접근이 거부되었습니다",
+    "micPermissionDenied": {
+      "generic": "시스템 설정에서 마이크 접근을 허용한 후 다시 시도하세요."
+    },
+    "recordingFailed": "녹음을 시작하지 못했습니다: {{error}}"
   },
   "appLanguage": {
     "title": "애플리케이션 언어",

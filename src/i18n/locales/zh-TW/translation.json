@@ -79,6 +79,26 @@
       "sense-voice-int8": {
         "name": "SenseVoice",
         "description": "速度極快。支援中文、英語、日語、韓語、粵語。"
+      },
+      "nemotron-3.5-asr-streaming-0.6b": {
+        "name": "Nemotron Streaming 3.5",
+        "description": "支援28種語言的即時轉錄。"
+      },
+      "nemotron-speech-streaming-en-0.6b": {
+        "name": "Nemotron Speech Streaming EN",
+        "description": "以串流方式將英語語音轉換為文字。"
+      },
+      "qwen3-asr-0.6b": {
+        "name": "Qwen3-ASR 0.6B",
+        "description": "支援多種語言的批次轉錄。"
+      },
+      "cohere-transcribe-03-2026": {
+        "name": "Cohere Transcribe",
+        "description": "支援14種語言的高準確度批次轉錄。"
+      },
+      "gemini-api": {
+        "name": "Gemini API",
+        "description": "透過Google Gemini進行雲端轉錄。需要API金鑰和網路連線。"
       }
     },
     "errors": {
@@ -199,7 +219,26 @@
         "translation": "翻譯",
         "allLanguages": "所有語言"
       },
-      "noModelsMatch": "沒有符合此篩選條件的模型"
+      "noModelsMatch": "沒有符合此篩選條件的模型",
+      "tabs": {
+        "transcription": "轉錄",
+        "processing": "後處理"
+      },
+      "processingModels": {
+        "title": "後處理模型",
+        "description": "儲存用於後處理操作的大型語言模型（LLM）。",
+        "noModels": "尚未儲存後處理模型。新增模型後即可用於操作。",
+        "addModel": "新增後處理模型",
+        "provider": "服務供應商",
+        "apiKey": "API金鑰",
+        "apiKeyPlaceholder": "輸入API金鑰",
+        "model": "模型",
+        "modelPlaceholder": "選擇或輸入模型",
+        "save": "儲存",
+        "cancel": "取消",
+        "fetchModels": "取得模型清單",
+        "alreadySaved": "此模型已儲存。"
+      }
     },
     "sound": {
       "title": "聲音",
@@ -231,7 +270,8 @@
         "output": "輸出",
         "transcription": "轉錄",
         "history": "歷史",
-        "experimental": "實驗性"
+        "experimental": "實驗性",
+        "cloudModels": "雲端模型"
       },
       "experimentalToggle": {
         "label": "實驗性功能",
@@ -323,6 +363,14 @@
         "add": "新增",
         "remove": "刪除 {{word}}",
         "duplicate": "「{{word}}」已存在"
+      },
+      "lazyStreamClose": {
+        "label": "麥克風模式",
+        "description": "選擇讓Parley在錄音結束後短暫維持麥克風連線，或讓麥克風保持開啟。音訊串流開啟期間，macOS會顯示麥克風使用指示。",
+        "modes": {
+          "warm": "短暫維持",
+          "always": "持續開啟"
+        }
       }
     },
     "postProcessing": {
@@ -383,6 +431,34 @@
         "cancel": "取消",
         "selectToEdit": "選擇上方的提示詞以檢視和編輯其詳細資訊",
         "createFirst": "點選上方的「建立新提示詞」來建立您的第一個後處理提示詞"
+      },
+      "actions": {
+        "title": "操作",
+        "description": "將自訂提示詞綁定至Ctrl+數字鍵（1-9）。錄音時按下快捷鍵，轉錄完成後就會套用對應操作。",
+        "noActions": "尚未設定操作。",
+        "createFirst": "建立第一個操作，即可透過已設定的服務供應商處理轉錄文字。",
+        "addAction": "新增操作",
+        "editAction": "編輯操作",
+        "key": "按鍵",
+        "keyLabel": "按鍵（1-9）",
+        "name": "名稱",
+        "namePlaceholder": "例如：郵件模式",
+        "prompt": "提示詞",
+        "promptPlaceholder": "例如：將這段內容整理成包含問候語和結語的正式郵件。在段落之間加入換行。",
+        "promptTip": "提示：使用<code>${output}</code>將轉錄文字插入提示詞。",
+        "model": "模型（選填）",
+        "modelPlaceholder": "選擇模型",
+        "modelTip": "為此操作選擇特定模型，或使用API區段設定的預設模型。",
+        "defaultModel": "預設",
+        "save": "儲存",
+        "cancel": "取消",
+        "delete": "刪除",
+        "maxActionsReached": "已達到9個操作的上限。"
+      },
+      "appMappings": {
+        "presetsDescription": "快速開始：載入5個標準操作（口語 / 郵件 / 程式碼 / 文件 / AI提示詞）及常用應用程式的對應設定。",
+        "loadPresets": "載入預設",
+        "noActions": "新增對應設定前，請先在上方建立至少一個後處理操作。"
       }
     },
     "history": {
@@ -394,7 +470,13 @@
       "save": "儲存轉錄",
       "unsave": "從已儲存中移除",
       "delete": "刪除條目",
-      "deleteError": "刪除條目失敗，請重試"
+      "deleteError": "刪除條目失敗，請重試",
+      "reprocess": "使用其他模型重新處理",
+      "reprocessing": "正在重新處理...",
+      "selectModel": "選擇模型",
+      "originalTranscript": "原始文字",
+      "postProcessed": "後處理結果",
+      "action": "操作 {{key}}"
     },
     "debug": {
       "title": "偵錯",
@@ -496,6 +578,31 @@
           "details": "Parler 使用 Whisper.cpp 進行快速的本機語音轉文字處理。感謝 Georgi Gerganov 和貢獻者們的傑出工作"
         }
       }
+    },
+    "longAudioModel": {
+      "title": "長錄音模型",
+      "description": "錄音長度超過設定門檻時，自動切換到其他模型。",
+      "modelLabel": "長錄音使用的模型",
+      "modelDescription": "選擇用於轉錄長度超過門檻的錄音的模型。",
+      "thresholdLabel": "錄音長度門檻（秒）",
+      "thresholdDescription": "錄音長度超過此值時，切換到長錄音模型。",
+      "disabled": "已停用",
+      "seconds": "{{value}}秒"
+    },
+    "gemini": {
+      "title": "Gemini API",
+      "description": "使用Google的Gemini API進行雲端轉錄。需要API金鑰。",
+      "apiKey": "API金鑰",
+      "apiKeyPlaceholder": "輸入Gemini API金鑰",
+      "model": "模型",
+      "modelDescription": "選擇用於轉錄的Gemini模型",
+      "apiKeyRequired": "需要API金鑰",
+      "apiKeyRequiredDescription": "輸入Google Gemini API金鑰以使用雲端轉錄。",
+      "save": "儲存",
+      "cancel": "取消",
+      "saved": "已儲存 ✓",
+      "apiKeyConfigured": "API金鑰已設定 ✓",
+      "serviceAccountConfigured": "服務帳戶已設定 ✓"
     }
   },
   "footer": {
@@ -541,7 +648,14 @@
     "dismiss": "關閉"
   },
   "errors": {
-    "loadDirectory": "載入目錄時發生錯誤: {{error}}"
+    "loadDirectory": "載入目錄時發生錯誤: {{error}}",
+    "noInputDeviceTitle": "找不到麥克風",
+    "noInputDevice": "未偵測到音訊輸入裝置。請連接麥克風或耳機後再試一次。",
+    "micPermissionDeniedTitle": "麥克風存取遭拒",
+    "micPermissionDenied": {
+      "generic": "請在系統設定中允許存取麥克風後再試一次。"
+    },
+    "recordingFailed": "無法開始錄音：{{error}}"
   },
   "appLanguage": {
     "title": "應用程式語言",
