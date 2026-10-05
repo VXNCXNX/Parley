@@ -49,6 +49,8 @@ jobs:
     permissions:
       contents: write
     runs-on: ${{ inputs.platform }}
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: "3.5"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -285,6 +287,7 @@ jobs:
           tagName: ${{ inputs.release-id && format('v{0}', steps.get-version.outputs.version) || '' }}
           releaseName: ${{ inputs.release-id && format('v{0}', steps.get-version.outputs.version) || '' }}
           releaseId: ${{ inputs.release-id }}
+          releaseDraft: true
           assetNamePattern: ${{ steps.patch-release-name.outputs.platform }}
           args: ${{ inputs.build-args }}
 
