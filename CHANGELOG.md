@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.9] - 2026-10-05
+## [0.8.10] - 2026-10-05
 
 ### Added
 
@@ -12,6 +12,8 @@
 ### Fixed
 
 - Complete translations for the native model catalog, cloud transcription, actions, and long recording settings in every supported locale.
+- Declare the native macOS runtime as a bundled framework so Tauri signs it on both Apple Silicon and Intel.
+- Skip the ARM Swift bridge when building an Intel installer on Apple Silicon.
 - Keep Apple signing variables absent in ad-hoc CI builds so packaging does not try to import an empty certificate.
 - Compile the Swift bridge as a library to avoid a second application entry point.
 - Target macOS 11 or later so clean release builds support the native runtime's C++ filesystem dependency.

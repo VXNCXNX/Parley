@@ -1,6 +1,10 @@
 fn main() {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    build_apple_intelligence_bridge();
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos")
+        && std::env::var("CARGO_CFG_TARGET_ARCH").as_deref() == Ok("aarch64")
+    {
+        build_apple_intelligence_bridge();
+    }
 
     generate_tray_translations();
 
