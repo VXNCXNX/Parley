@@ -105,7 +105,10 @@ impl HandyKeysState {
                 return Err(e);
             }
             Err(e) => {
-                return Err(format!("Timed out waiting for HandyKeys manager startup: {}", e));
+                return Err(format!(
+                    "Timed out waiting for HandyKeys manager startup: {}",
+                    e
+                ));
             }
         }
 

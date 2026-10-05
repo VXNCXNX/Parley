@@ -2,8 +2,7 @@
 
 /// Validate that a URL uses http/https and does not target SSRF-sensitive endpoints.
 pub fn validate_provider_url(url: &str) -> Result<(), String> {
-    let parsed =
-        url::Url::parse(url).map_err(|e| format!("Invalid URL '{}': {}", url, e))?;
+    let parsed = url::Url::parse(url).map_err(|e| format!("Invalid URL '{}': {}", url, e))?;
 
     match parsed.scheme() {
         "http" | "https" => {}

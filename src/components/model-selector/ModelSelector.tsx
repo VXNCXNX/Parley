@@ -147,7 +147,9 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ onError }) => {
 
   const handleModelSelect = async (modelId: string) => {
     if (modelId === "gemini-api") {
-      const hasGeminiKey = getSetting("gemini_api_key_set") as boolean | undefined;
+      const hasGeminiKey = getSetting("gemini_api_key_set") as
+        | boolean
+        | undefined;
       if (!hasGeminiKey) {
         setShowModelDropdown(false);
         return;

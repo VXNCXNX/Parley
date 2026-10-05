@@ -47,7 +47,7 @@ pub struct ModelInfo {
     pub supported_languages: Vec<String>, // Languages this model can transcribe
     pub is_custom: bool,            // Whether this is a user-provided custom model
     #[serde(default)]
-    pub sha256: Option<String>,     // Expected SHA-256 hash for integrity verification
+    pub sha256: Option<String>, // Expected SHA-256 hash for integrity verification
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -80,9 +80,8 @@ fn native_catalog() -> [ModelInfo; 5] {
             0.82,
             0.84,
             &[
-                "en", "es", "fr", "it", "pt", "nl", "de", "tr", "ru", "ar", "hi",
-                "ja", "ko", "vi", "uk", "pl", "sv", "cs", "nb", "da", "bg", "fi",
-                "hr", "sk", "zh", "hu", "ro", "et",
+                "en", "es", "fr", "it", "pt", "nl", "de", "tr", "ru", "ar", "hi", "ja", "ko", "vi",
+                "uk", "pl", "sv", "cs", "nb", "da", "bg", "fi", "hr", "sk", "zh", "hu", "ro", "et",
             ],
         ),
         native_model(
@@ -110,9 +109,9 @@ fn native_catalog() -> [ModelInfo; 5] {
             0.87,
             0.63,
             &[
-                "zh", "en", "yue", "ar", "de", "fr", "es", "pt", "id", "it", "ko",
-                "ru", "th", "vi", "ja", "tr", "hi", "ms", "nl", "sv", "da", "fi",
-                "pl", "cs", "fil", "fa", "el", "ro", "hu", "mk",
+                "zh", "en", "yue", "ar", "de", "fr", "es", "pt", "id", "it", "ko", "ru", "th",
+                "vi", "ja", "tr", "hi", "ms", "nl", "sv", "da", "fi", "pl", "cs", "fil", "fa",
+                "el", "ro", "hu", "mk",
             ],
         ),
         native_model(
@@ -127,8 +126,7 @@ fn native_catalog() -> [ModelInfo; 5] {
             0.92,
             0.63,
             &[
-                "en", "fr", "de", "es", "it", "pt", "nl", "pl", "el", "ar", "ja",
-                "zh", "vi", "ko",
+                "en", "fr", "de", "es", "it", "pt", "nl", "pl", "el", "ar", "ja", "zh", "vi", "ko",
             ],
         ),
         native_model(
@@ -143,9 +141,8 @@ fn native_catalog() -> [ModelInfo; 5] {
             0.0,
             0.0,
             &[
-                "bg", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "de", "el",
-                "hu", "it", "lv", "lt", "mt", "pl", "pt", "ro", "ru", "sk", "sl",
-                "es", "sv", "uk",
+                "bg", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "de", "el", "hu", "it", "lv",
+                "lt", "mt", "pl", "pt", "ro", "ru", "sk", "sl", "es", "sv", "uk",
             ],
         ),
     ]
@@ -182,7 +179,10 @@ fn native_model(
         speed_score,
         supports_translation: false,
         is_recommended: false,
-        supported_languages: languages.iter().map(|language| (*language).to_string()).collect(),
+        supported_languages: languages
+            .iter()
+            .map(|language| (*language).to_string())
+            .collect(),
         is_custom: false,
         sha256: Some(sha256.to_string()),
     }
@@ -1085,7 +1085,7 @@ impl ModelManager {
 
         // Verify SHA-256 hash if available
         if let Some(ref expected_hash) = model_info.sha256 {
-            use sha2::{Sha256, Digest};
+            use sha2::{Digest, Sha256};
             info!("Verifying SHA-256 hash for model {}", model_id);
             let mut hasher = Sha256::new();
             let mut hash_file = std::fs::File::open(&partial_path)?;

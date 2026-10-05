@@ -234,7 +234,10 @@ impl AudioRecorder {
         Ok(resp_rx.recv()?) // wait for the samples
     }
 
-    pub fn set_feed(&self, feed: Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>>) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn set_feed(
+        &self,
+        feed: Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(tx) = &self.cmd_tx {
             tx.send(Cmd::SetFeed(feed))?;
         }
@@ -413,13 +416,17 @@ fn run_consumer(
             let mut det = vad_arc.lock().unwrap();
             match det.push_frame(samples).unwrap_or(VadFrame::Speech(samples)) {
                 VadFrame::Speech(buf) => {
-                    if let Some(feed) = feed { let _ = feed.send(crate::dictation::RecorderFeed::Frame(buf.to_vec())); }
+                    if let Some(feed) = feed {
+                        let _ = feed.send(crate::dictation::RecorderFeed::Frame(buf.to_vec()));
+                    }
                     out_buf.extend_from_slice(buf);
                 }
                 VadFrame::Noise => {}
             }
         } else {
-            if let Some(feed) = feed { let _ = feed.send(crate::dictation::RecorderFeed::Frame(samples.to_vec())); }
+            if let Some(feed) = feed {
+                let _ = feed.send(crate::dictation::RecorderFeed::Frame(samples.to_vec()));
+            }
             out_buf.extend_from_slice(samples);
         }
     }

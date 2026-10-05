@@ -31,14 +31,11 @@ const K_AUDIO_OBJECT_SYSTEM_OBJECT: AudioObjectID = 1;
 const K_AUDIO_OBJECT_PROPERTY_SCOPE_GLOBAL: AudioObjectPropertyScope = u32::from_be_bytes(*b"glob");
 const K_AUDIO_OBJECT_PROPERTY_ELEMENT_MAIN: AudioObjectPropertyElement = 0;
 
-const K_AUDIO_HARDWARE_PROPERTY_DEVICES: AudioObjectPropertySelector =
-    u32::from_be_bytes(*b"dev#");
+const K_AUDIO_HARDWARE_PROPERTY_DEVICES: AudioObjectPropertySelector = u32::from_be_bytes(*b"dev#");
 const K_AUDIO_HARDWARE_PROPERTY_DEFAULT_OUTPUT_DEVICE: AudioObjectPropertySelector =
     u32::from_be_bytes(*b"dOut");
-const K_AUDIO_DEVICE_PROPERTY_STREAMS: AudioObjectPropertySelector =
-    u32::from_be_bytes(*b"stm#");
-const K_AUDIO_OBJECT_PROPERTY_NAME: AudioObjectPropertySelector =
-    u32::from_be_bytes(*b"lnam");
+const K_AUDIO_DEVICE_PROPERTY_STREAMS: AudioObjectPropertySelector = u32::from_be_bytes(*b"stm#");
+const K_AUDIO_OBJECT_PROPERTY_NAME: AudioObjectPropertySelector = u32::from_be_bytes(*b"lnam");
 const K_AUDIO_OBJECT_PROPERTY_SCOPE_OUTPUT: AudioObjectPropertyScope = u32::from_be_bytes(*b"outp");
 
 #[link(name = "CoreAudio", kind = "framework")]
@@ -165,13 +162,8 @@ fn device_has_output_streams(device_id: AudioObjectID) -> bool {
             mElement: K_AUDIO_OBJECT_PROPERTY_ELEMENT_MAIN,
         };
         let mut data_size: u32 = 0;
-        let status = AudioObjectGetPropertyDataSize(
-            device_id,
-            &address,
-            0,
-            ptr::null(),
-            &mut data_size,
-        );
+        let status =
+            AudioObjectGetPropertyDataSize(device_id, &address, 0, ptr::null(), &mut data_size);
         status == 0 && data_size > 0
     }
 }
@@ -206,7 +198,9 @@ pub fn set_default_output_device_by_name(target_name: &str) -> Result<(), String
         if !device_has_output_streams(id) {
             continue;
         }
-        let Some(name) = device_name(id) else { continue };
+        let Some(name) = device_name(id) else {
+            continue;
+        };
         if name == target_name {
             unsafe {
                 let address = AudioObjectPropertyAddress {

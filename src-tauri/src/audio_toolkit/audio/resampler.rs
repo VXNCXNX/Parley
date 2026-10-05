@@ -20,8 +20,21 @@ impl FrameResampler {
         let frame_samples = ((out_hz as f64 * frame_dur.as_secs_f64()).round()) as usize;
         assert!(frame_samples > 0, "frame duration too short");
         let chunk_in = RESAMPLER_CHUNK_SIZE;
-        let resampler = (in_hz != out_hz).then(|| FftFixedIn::<f32>::new(in_hz, out_hz, chunk_in, 1, 1).expect("Failed to create resampler"));
-        Self { resampler, chunk_in, in_buf: Vec::with_capacity(chunk_in), frame_samples, pending: Vec::with_capacity(frame_samples), in_hz, out_hz, in_count: 0, out_count: 0 }
+        let resampler = (in_hz != out_hz).then(|| {
+            FftFixedIn::<f32>::new(in_hz, out_hz, chunk_in, 1, 1)
+                .expect("Failed to create resampler")
+        });
+        Self {
+            resampler,
+            chunk_in,
+            in_buf: Vec::with_capacity(chunk_in),
+            frame_samples,
+            pending: Vec::with_capacity(frame_samples),
+            in_hz,
+            out_hz,
+            in_count: 0,
+            out_count: 0,
+        }
     }
 
     pub fn push(&mut self, mut src: &[f32], mut emit: impl FnMut(&[f32])) {
@@ -36,7 +49,12 @@ impl FrameResampler {
             self.in_buf.extend_from_slice(&src[..take]);
             src = &src[take..];
             if self.in_buf.len() == self.chunk_in {
-                if let Ok(out) = self.resampler.as_mut().unwrap().process(&[&self.in_buf[..]], None) {
+                if let Ok(out) = self
+                    .resampler
+                    .as_mut()
+                    .unwrap()
+                    .process(&[&self.in_buf[..]], None)
+                {
                     self.out_count += out[0].len();
                     self.emit_frames(&out[0], &mut emit);
                 }
@@ -47,7 +65,12 @@ impl FrameResampler {
 
     pub fn finish(&mut self, mut emit: impl FnMut(&[f32])) {
         if self.resampler.is_some() && !self.in_buf.is_empty() {
-            if let Ok(out) = self.resampler.as_mut().unwrap().process_partial(Some(&[&self.in_buf[..]]), None) {
+            if let Ok(out) = self
+                .resampler
+                .as_mut()
+                .unwrap()
+                .process_partial(Some(&[&self.in_buf[..]]), None)
+            {
                 self.out_count += out[0].len();
                 self.emit_frames(&out[0], &mut emit);
             }
@@ -59,7 +82,12 @@ impl FrameResampler {
             let mut rounds = 0;
             while self.out_count < expected && rounds < 8 {
                 rounds += 1;
-                match self.resampler.as_mut().unwrap().process_partial::<&[f32]>(None, None) {
+                match self
+                    .resampler
+                    .as_mut()
+                    .unwrap()
+                    .process_partial::<&[f32]>(None, None)
+                {
                     Ok(out) => {
                         let take = (expected - self.out_count).min(out[0].len());
                         self.out_count += take;
@@ -82,7 +110,9 @@ impl FrameResampler {
         self.pending.clear();
         self.in_count = 0;
         self.out_count = 0;
-        if let Some(resampler) = self.resampler.as_mut() { resampler.reset(); }
+        if let Some(resampler) = self.resampler.as_mut() {
+            resampler.reset();
+        }
     }
 
     fn emit_frames(&mut self, mut data: &[f32], emit: &mut impl FnMut(&[f32])) {

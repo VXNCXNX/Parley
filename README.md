@@ -10,7 +10,7 @@ Parley is a fork of [Melvynx/Parler](https://github.com/Melvynx/Parler), which i
 
 Download Parley from the [Parley releases page](https://github.com/VXNCXNX/Parley/releases/latest). Read the [changelog](CHANGELOG.md) for release details.
 
-For macOS, choose the DMG for your Mac:
+For macOS 11 or later, choose the DMG for your Mac:
 
 | Mac                                   | Download architecture |
 | ------------------------------------- | --------------------- |

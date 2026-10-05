@@ -20,7 +20,10 @@ const CHIRP_LOCATIONS = [
   { value: "us", label: "us (multi-region)" },
   { value: "europe-west2", label: "europe-west2 (London)" },
   { value: "europe-west3", label: "europe-west3 (Frankfurt)" },
-  { value: "northamerica-northeast1", label: "northamerica-northeast1 (Montreal)" },
+  {
+    value: "northamerica-northeast1",
+    label: "northamerica-northeast1 (Montreal)",
+  },
   { value: "asia-south1", label: "asia-south1 (Mumbai)" },
 ];
 
@@ -45,9 +48,9 @@ export const GeminiSettings: React.FC = () => {
     "idle" | "saving" | "saved" | "error"
   >("idle");
   const [apiKeyError, setApiKeyError] = useState<string>("");
-  const [saStatus, setSaStatus] = useState<"idle" | "saving" | "saved" | "error">(
-    "idle",
-  );
+  const [saStatus, setSaStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   const [saError, setSaError] = useState<string>("");
 
   const isChirp = currentModel.startsWith("chirp");
@@ -72,9 +75,8 @@ export const GeminiSettings: React.FC = () => {
     if (!localServiceAccount) return;
     setSaStatus("saving");
     setSaError("");
-    const result = await commands.changeChirpServiceAccountSetting(
-      localServiceAccount,
-    );
+    const result =
+      await commands.changeChirpServiceAccountSetting(localServiceAccount);
     if (result.status === "ok") {
       setSaStatus("saved");
       setLocalServiceAccount("");
@@ -106,7 +108,9 @@ export const GeminiSettings: React.FC = () => {
                 saveApiKey();
               }
             }}
-            placeholder={hasApiKey ? "********" : t("settings.gemini.apiKeyPlaceholder")}
+            placeholder={
+              hasApiKey ? "********" : t("settings.gemini.apiKeyPlaceholder")
+            }
             variant="compact"
             className="w-full"
           />
@@ -120,14 +124,16 @@ export const GeminiSettings: React.FC = () => {
               {apiKeyStatus === "saving" ? "Saving..." : "Save API key"}
             </Button>
             {apiKeyStatus === "saved" && (
-              <span className="text-sm text-green-500">Saved ✓</span>
+              <span className="text-sm text-green-500">
+                {t("settings.gemini.saved")}
+              </span>
             )}
             {apiKeyStatus === "error" && (
               <span className="text-sm text-red-500">{apiKeyError}</span>
             )}
             {hasApiKey && apiKeyStatus === "idle" && (
               <span className="text-sm text-muted-foreground">
-                API key configured ✓
+                {t("settings.gemini.apiKeyConfigured")}
               </span>
             )}
           </div>
@@ -182,14 +188,16 @@ export const GeminiSettings: React.FC = () => {
                   {saStatus === "saving" ? "Saving..." : "Save Service Account"}
                 </Button>
                 {saStatus === "saved" && (
-                  <span className="text-sm text-green-500">Saved ✓</span>
+                  <span className="text-sm text-green-500">
+                    {t("settings.gemini.saved")}
+                  </span>
                 )}
                 {saStatus === "error" && (
                   <span className="text-sm text-red-500">{saError}</span>
                 )}
                 {hasServiceAccount && saStatus === "idle" && (
                   <span className="text-sm text-muted-foreground">
-                    Service account configured ✓
+                    {t("settings.gemini.serviceAccountConfigured")}
                   </span>
                 )}
               </div>
@@ -208,7 +216,9 @@ export const GeminiSettings: React.FC = () => {
                 options={CHIRP_LOCATIONS}
                 selectedValue={location}
                 onSelect={(value) =>
-                  commands.changeGeminiLocationSetting(value).then(refreshSettings)
+                  commands
+                    .changeGeminiLocationSetting(value)
+                    .then(refreshSettings)
                 }
                 className="w-[280px]"
               />

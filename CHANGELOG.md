@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.7] - 2026-10-05
+## [0.8.8] - 2026-10-05
 
 ### Added
 
@@ -11,6 +11,8 @@
 
 ### Fixed
 
+- Complete translations for the native model catalog, cloud transcription, actions, and long recording settings in every supported locale.
+- Target macOS 11 or later so clean release builds support the native runtime's C++ filesystem dependency.
 - Recover macOS transcription shortcuts after an event tap interruption.
 - Keep the last working default microphone and preserve shared headset streams between recordings.
 - Keep live audio and preview updates ordered, wait for the recorder's final audio, and surface native feed failures.

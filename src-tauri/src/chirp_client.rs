@@ -169,8 +169,8 @@ async fn get_access_token(sa: &ServiceAccountKey) -> Result<String> {
     let header = Header::new(Algorithm::RS256);
     let key = EncodingKey::from_rsa_pem(sa.private_key.as_bytes())
         .map_err(|e| anyhow!("Failed to parse service account private key: {}", e))?;
-    let assertion = encode(&header, &claims, &key)
-        .map_err(|e| anyhow!("Failed to sign JWT: {}", e))?;
+    let assertion =
+        encode(&header, &claims, &key).map_err(|e| anyhow!("Failed to sign JWT: {}", e))?;
 
     let params = [
         ("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"),
@@ -214,7 +214,8 @@ async fn get_access_token(sa: &ServiceAccountKey) -> Result<String> {
             }
         }
     }
-    let token = token.ok_or_else(|| last_err.unwrap_or_else(|| anyhow!("Token exchange failed")))?;
+    let token =
+        token.ok_or_else(|| last_err.unwrap_or_else(|| anyhow!("Token exchange failed")))?;
 
     let expires_at = now + token.expires_in;
     {
@@ -363,9 +364,7 @@ async fn transcribe_chunk(
     // languageCodes=["auto"]. Skip adaptation in that case to keep auto-detect working.
     let adaptation = if custom_words.is_empty() || is_auto {
         if is_auto && !custom_words.is_empty() {
-            debug!(
-                "Chirp: skipping phrase-set adaptation because language=auto (incompatible)"
-            );
+            debug!("Chirp: skipping phrase-set adaptation because language=auto (incompatible)");
         }
         None
     } else {
