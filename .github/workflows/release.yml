@@ -7,10 +7,6 @@ on:
         description: "Use Developer ID signing and notarization secrets"
         type: boolean
         default: false
-      publish:
-        description: "Publish after both macOS builds and all downloads succeed"
-        type: boolean
-        default: false
 
 concurrency:
   group: release-${{ github.repository }}
@@ -112,14 +108,13 @@ jobs:
       release-id: ${{ needs.prepare-release.outputs.release-id }}
     secrets: inherit
 
-  publish-release:
+  verify-downloads:
     permissions:
-      contents: write
+      contents: read
     needs: [prepare-release, build-macos]
-    if: ${{ inputs.publish && needs.build-macos.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Check downloads and publish
+      - name: Check draft downloads
         uses: actions/github-script@v7
         env:
           RELEASE_ID: ${{ needs.prepare-release.outputs.release-id }}
@@ -149,4 +144,3 @@ jobs:
                 throw new Error(`Missing release download: ${name}`);
               }
             }
-            await github.rest.repos.updateRelease({ ...repo, release_id, draft: false });

@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## macOS release verification
+
+Before a macOS release build, read [BUILD.md](BUILD.md) and [scripts/install-local-macos.sh](scripts/install-local-macos.sh), then recall the gbrain entity `projects/parley` for prior signing decisions.
+
+Keep the installed app's designated signing requirement when replacing it. If a release changes that requirement, state the Accessibility permission migration and test the manual regrant steps for the exact installed app.
+
+Before calling a public macOS release ready, download the final DMG in a browser to preserve quarantine, then install it with Finder. Confirm Gatekeeper opens it, Accessibility recognizes the installed `/Applications/Parley.app`, and a real transcript pastes into another app. A successful build or `codesign` check does not prove Gatekeeper or Accessibility works.
+
+After a signing identity change, direct users to **System Settings > Privacy & Security > Accessibility** (**Réglages Système > Confidentialité et sécurité > Accessibilité**). Remove the stale Parley entry and add the exact installed app. Use this per-app flow instead of resetting all macOS privacy permissions.
+
 ## Development Commands
 
 **Prerequisites:**

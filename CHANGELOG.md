@@ -5,6 +5,9 @@
 ### Fixed
 
 - Keep Swift bridge generation available on Intel macOS hosts when cross-compiling for Apple Silicon.
+- Keep macOS release builds as drafts for manual install and paste verification before publication. Verify the Developer ID team, Gatekeeper assessment, and stapled notarization ticket before uploading signed assets.
+- Submit the final signed macOS DMG for notarization, staple and assess it, and verify its mounted app before upload.
+- Preserve the installed macOS app's designated code requirement before replacing it, and document Accessibility permission recovery after a signing identity change.
 
 ## [0.8.10] - 2026-10-05
 
