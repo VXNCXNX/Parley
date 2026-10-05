@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Keep Swift bridge generation available on Intel macOS hosts when cross-compiling for Apple Silicon.
+
 ## [0.8.10] - 2026-10-05
 
 ### Added
