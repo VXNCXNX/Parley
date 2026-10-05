@@ -79,6 +79,26 @@
       "sense-voice-int8": {
         "name": "SenseVoice",
         "description": "Bardzo szybki. Chiński, angielski, japoński, koreański, kantoński."
+      },
+      "nemotron-3.5-asr-streaming-0.6b": {
+        "name": "Nemotron Streaming 3.5",
+        "description": "Transkrypcja na żywo w 28 językach."
+      },
+      "nemotron-speech-streaming-en-0.6b": {
+        "name": "Nemotron Speech Streaming EN",
+        "description": "Strumieniowe przekształcanie mowy angielskiej w tekst."
+      },
+      "qwen3-asr-0.6b": {
+        "name": "Qwen3-ASR 0.6B",
+        "description": "Wsadowa transkrypcja wielojęzyczna."
+      },
+      "cohere-transcribe-03-2026": {
+        "name": "Cohere Transcribe",
+        "description": "Dokładna transkrypcja wsadowa w 14 językach."
+      },
+      "gemini-api": {
+        "name": "Gemini API",
+        "description": "Transkrypcja w chmurze przez Google Gemini. Wymaga klucza API i połączenia z internetem."
       }
     },
     "errors": {
@@ -157,7 +177,26 @@
       },
       "noModelsMatch": "Żadne modele nie pasują do tego filtra.",
       "yourModels": "Pobrane modele",
-      "availableModels": "Dostępne do pobrania"
+      "availableModels": "Dostępne do pobrania",
+      "tabs": {
+        "transcription": "Transkrypcja",
+        "processing": "Przetwarzanie"
+      },
+      "processingModels": {
+        "title": "Modele do przetwarzania",
+        "description": "Zapisz duże modele językowe do użycia w akcjach przetwarzania końcowego.",
+        "noModels": "Nie zapisano jeszcze żadnych modeli do przetwarzania. Dodaj model, aby używać go w swoich akcjach.",
+        "addModel": "Dodaj model do przetwarzania",
+        "provider": "Dostawca",
+        "apiKey": "Klucz API",
+        "apiKeyPlaceholder": "Wpisz klucz API",
+        "model": "Model",
+        "modelPlaceholder": "Wybierz model lub wpisz jego nazwę",
+        "save": "Zapisz",
+        "cancel": "Anuluj",
+        "fetchModels": "Pobierz modele",
+        "alreadySaved": "Ten model jest już zapisany."
+      }
     },
     "general": {
       "title": "Ogólne",
@@ -231,7 +270,8 @@
         "output": "Wyjście",
         "transcription": "Transkrypcja",
         "history": "Historia",
-        "experimental": "Eksperymentalne"
+        "experimental": "Eksperymentalne",
+        "cloudModels": "Modele w chmurze"
       },
       "experimentalToggle": {
         "label": "Funkcje Eksperymentalne",
@@ -323,6 +363,14 @@
         "add": "Dodaj",
         "remove": "Usuń {{word}}",
         "duplicate": "\"{{word}}\" już istnieje"
+      },
+      "lazyStreamClose": {
+        "label": "Tryb mikrofonu",
+        "description": "Wybierz, czy Parley ma utrzymywać mikrofon w gotowości przez chwilę po nagraniu, czy pozostawiać go zawsze otwarty. macOS pokazuje wskaźnik mikrofonu, dopóki strumień audio jest otwarty.",
+        "modes": {
+          "warm": "Chwilowa gotowość",
+          "always": "Zawsze"
+        }
       }
     },
     "postProcessing": {
@@ -383,6 +431,34 @@
         "cancel": "Anuluj",
         "selectToEdit": "Wybierz prompt powyżej, aby zobaczyć i edytować jego szczegóły.",
         "createFirst": "Kliknij 'Utwórz nowy prompt' powyżej, aby utworzyć pierwszy prompt postprocessingu."
+      },
+      "actions": {
+        "title": "Akcje",
+        "description": "Przypisz własne prompty do klawiszy Ctrl+cyfra (1-9). Naciśnij skrót podczas nagrywania, aby zastosować akcję po transkrypcji.",
+        "noActions": "Nie skonfigurowano jeszcze żadnych akcji.",
+        "createFirst": "Utwórz pierwszą akcję, aby przetwarzać transkrypcje u skonfigurowanego dostawcy.",
+        "addAction": "Dodaj akcję",
+        "editAction": "Edytuj akcję",
+        "key": "Klawisz",
+        "keyLabel": "Klawisz (1-9)",
+        "name": "Nazwa",
+        "namePlaceholder": "np. tryb e-mail",
+        "prompt": "Prompt",
+        "promptPlaceholder": "np. Sformatuj ten tekst jako profesjonalny e-mail z powitaniem i pożegnaniem. Dodaj podziały wierszy między akapitami.",
+        "promptTip": "Wskazówka: użyj <code>${output}</code>, aby wstawić transkrybowany tekst do promptu.",
+        "model": "Model (opcjonalnie)",
+        "modelPlaceholder": "Wybierz model",
+        "modelTip": "Wybierz konkretny model dla tej akcji lub użyj domyślnego modelu z sekcji API.",
+        "defaultModel": "Domyślny",
+        "save": "Zapisz",
+        "cancel": "Anuluj",
+        "delete": "Usuń",
+        "maxActionsReached": "Osiągnięto maksymalną liczbę 9 akcji."
+      },
+      "appMappings": {
+        "presetsDescription": "Szybki start: wczytaj 5 standardowych akcji (tekst nieformalny / e-mail / kod / dokument / prompt dla AI) i przypisania do popularnych aplikacji.",
+        "loadPresets": "Wczytaj ustawienia wstępne",
+        "noActions": "Przed dodaniem przypisania utwórz powyżej co najmniej jedną akcję przetwarzania końcowego."
       }
     },
     "history": {
@@ -394,7 +470,13 @@
       "save": "Zapisz transkrypcję",
       "unsave": "Usuń z zapisanych",
       "delete": "Usuń wpis",
-      "deleteError": "Nie udało się usunąć wpisu. Spróbuj ponownie."
+      "deleteError": "Nie udało się usunąć wpisu. Spróbuj ponownie.",
+      "reprocess": "Przetwórz ponownie innym modelem",
+      "reprocessing": "Ponowne przetwarzanie...",
+      "selectModel": "Wybierz model",
+      "originalTranscript": "Oryginał",
+      "postProcessed": "Po przetwarzaniu końcowym",
+      "action": "Akcja {{key}}"
     },
     "debug": {
       "title": "Debugowanie",
@@ -496,6 +578,31 @@
           "details": "Parler używa Whisper.cpp do szybkiego, lokalnego przetwarzania mowy na tekst. Dzięki niesamowitej pracy Georgi Gerganova i współtwórców."
         }
       }
+    },
+    "longAudioModel": {
+      "title": "Model do długich nagrań",
+      "description": "Automatycznie przełączaj na inny model, gdy czas nagrania przekroczy ustawiony próg.",
+      "modelLabel": "Model do długich nagrań",
+      "modelDescription": "Wybierz model do nagrań dłuższych niż ustawiony próg.",
+      "thresholdLabel": "Próg czasu trwania (sekundy)",
+      "thresholdDescription": "Przełączaj na model do długich nagrań, gdy nagranie przekroczy ten czas.",
+      "disabled": "Wyłączone",
+      "seconds": "{{value}} s"
+    },
+    "gemini": {
+      "title": "Gemini API",
+      "description": "Użyj Gemini API firmy Google do transkrypcji w chmurze. Wymaga klucza API.",
+      "apiKey": "Klucz API",
+      "apiKeyPlaceholder": "Wpisz swój klucz API Gemini",
+      "model": "Model",
+      "modelDescription": "Wybierz model Gemini do transkrypcji",
+      "apiKeyRequired": "Wymagany klucz API",
+      "apiKeyRequiredDescription": "Wpisz swój klucz API Google Gemini, aby korzystać z transkrypcji w chmurze.",
+      "save": "Zapisz",
+      "cancel": "Anuluj",
+      "saved": "Zapisano ✓",
+      "apiKeyConfigured": "Klucz API skonfigurowany ✓",
+      "serviceAccountConfigured": "Konto usługi skonfigurowane ✓"
     }
   },
   "footer": {
@@ -541,7 +648,14 @@
     "dismiss": "Zamknij"
   },
   "errors": {
-    "loadDirectory": "Błąd wczytywania katalogu: {{error}}"
+    "loadDirectory": "Błąd wczytywania katalogu: {{error}}",
+    "noInputDeviceTitle": "Nie znaleziono mikrofonu",
+    "noInputDevice": "Nie wykryto żadnego urządzenia wejściowego audio. Podłącz mikrofon lub zestaw słuchawkowy i spróbuj ponownie.",
+    "micPermissionDeniedTitle": "Odmowa dostępu do mikrofonu",
+    "micPermissionDenied": {
+      "generic": "Zezwól na dostęp do mikrofonu w ustawieniach systemu i spróbuj ponownie."
+    },
+    "recordingFailed": "Nie udało się rozpocząć nagrywania: {{error}}"
   },
   "appLanguage": {
     "title": "Język aplikacji",

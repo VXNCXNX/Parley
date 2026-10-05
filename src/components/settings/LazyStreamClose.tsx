@@ -19,9 +19,8 @@ export const LazyStreamClose: React.FC<LazyStreamCloseProps> = React.memo(
     const alwaysOn =
       (getSetting("always_on_microphone") as boolean | undefined) ?? false;
     const timeoutSeconds =
-      (getSetting("lazy_stream_close_timeout_seconds") as
-        | number
-        | undefined) ?? 300;
+      (getSetting("lazy_stream_close_timeout_seconds") as number | undefined) ??
+      300;
     const mode = alwaysOn ? "always" : "warm";
 
     const timeoutOptions = [
@@ -98,10 +97,7 @@ export const LazyStreamClose: React.FC<LazyStreamCloseProps> = React.memo(
             options={timeoutOptions}
             selectedValue={String(timeoutSeconds)}
             onSelect={(value) =>
-              updateSetting(
-                "lazy_stream_close_timeout_seconds",
-                Number(value),
-              )
+              updateSetting("lazy_stream_close_timeout_seconds", Number(value))
             }
             disabled={
               mode !== "warm" ||

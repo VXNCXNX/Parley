@@ -464,6 +464,11 @@
         "cancel": "Cancel",
         "delete": "Delete",
         "maxActionsReached": "Maximum of 9 actions reached."
+      },
+      "appMappings": {
+        "presetsDescription": "Quick start: load 5 standard actions (casual / email / code / doc / AI prompt) and mappings for common apps.",
+        "loadPresets": "Load presets",
+        "noActions": "Create at least one post-process action above before adding a mapping."
       }
     },
     "history": {
@@ -493,7 +498,10 @@
       "apiKeyRequired": "API Key Required",
       "apiKeyRequiredDescription": "Enter your Google Gemini API key to use cloud transcription.",
       "save": "Save",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "saved": "Saved ✓",
+      "apiKeyConfigured": "API key configured ✓",
+      "serviceAccountConfigured": "Service account configured ✓"
     },
     "debug": {
       "title": "Debug",

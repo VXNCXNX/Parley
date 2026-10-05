@@ -79,6 +79,26 @@
       "sense-voice-int8": {
         "name": "SenseVoice",
         "description": "Molto veloce. Cinese, inglese, giapponese, coreano, cantonese."
+      },
+      "nemotron-3.5-asr-streaming-0.6b": {
+        "name": "Nemotron Streaming 3.5",
+        "description": "Trascrizione multilingue in diretta in 28 lingue."
+      },
+      "nemotron-speech-streaming-en-0.6b": {
+        "name": "Nemotron Speech Streaming EN",
+        "description": "Trascrizione vocale in inglese in tempo reale."
+      },
+      "qwen3-asr-0.6b": {
+        "name": "Qwen3-ASR 0.6B",
+        "description": "Trascrizione multilingue in batch."
+      },
+      "cohere-transcribe-03-2026": {
+        "name": "Cohere Transcribe",
+        "description": "Trascrizione in batch ad alta precisione in 14 lingue."
+      },
+      "gemini-api": {
+        "name": "Gemini API",
+        "description": "Trascrizione nel cloud tramite Google Gemini. Richiede una chiave API e una connessione Internet."
       }
     },
     "errors": {
@@ -157,7 +177,26 @@
       },
       "noModelsMatch": "Nessun modello corrisponde a questo filtro.",
       "yourModels": "Modelli scaricati",
-      "availableModels": "Disponibili per il download"
+      "availableModels": "Disponibili per il download",
+      "tabs": {
+        "transcription": "Trascrizione",
+        "processing": "Elaborazione"
+      },
+      "processingModels": {
+        "title": "Modelli di elaborazione",
+        "description": "Salva modelli LLM da usare nelle azioni di post-elaborazione.",
+        "noModels": "Nessun modello di elaborazione salvato. Aggiungine uno da usare nelle tue azioni.",
+        "addModel": "Aggiungi modello di elaborazione",
+        "provider": "Provider",
+        "apiKey": "Chiave API",
+        "apiKeyPlaceholder": "Inserisci la chiave API",
+        "model": "Modello",
+        "modelPlaceholder": "Seleziona o digita un modello",
+        "save": "Salva",
+        "cancel": "Annulla",
+        "fetchModels": "Recupera modelli",
+        "alreadySaved": "Questo modello è già salvato."
+      }
     },
     "general": {
       "title": "Generale",
@@ -231,7 +270,8 @@
         "output": "Output",
         "transcription": "Trascrizione",
         "history": "Cronologia",
-        "experimental": "Sperimentale"
+        "experimental": "Sperimentale",
+        "cloudModels": "Modelli nel cloud"
       },
       "experimentalToggle": {
         "label": "Funzionalità Sperimentali",
@@ -323,6 +363,14 @@
         "add": "Aggiungi",
         "remove": "Rimuovi {{word}}",
         "duplicate": "\"{{word}}\" esiste già"
+      },
+      "lazyStreamClose": {
+        "label": "Modalità del microfono",
+        "description": "Scegli se Parley mantiene il microfono pronto per qualche istante dopo la registrazione o lo tiene sempre aperto. macOS mostra l'indicatore del microfono mentre il flusso audio è aperto.",
+        "modes": {
+          "warm": "Pronto per qualche istante",
+          "always": "Sempre aperto"
+        }
       }
     },
     "postProcessing": {
@@ -383,6 +431,34 @@
         "cancel": "Annulla",
         "selectToEdit": "Scegli un prompt qui sopra per visualizzare o modificare i dettagli.",
         "createFirst": "Clicca 'Crea un nuovo prompt' qui sopra per creare il tuo primo prompt di post-elaborazione."
+      },
+      "actions": {
+        "title": "Azioni",
+        "description": "Associa i tasti Ctrl+numero (1-9) a prompt personalizzati. Premi una scorciatoia durante la registrazione per applicare l'azione dopo la trascrizione.",
+        "noActions": "Nessuna azione configurata.",
+        "createFirst": "Crea la tua prima azione per elaborare le trascrizioni con il provider configurato.",
+        "addAction": "Aggiungi azione",
+        "editAction": "Modifica azione",
+        "key": "Tasto",
+        "keyLabel": "Tasto (1-9)",
+        "name": "Nome",
+        "namePlaceholder": "Es. Modalità email",
+        "prompt": "Prompt",
+        "promptPlaceholder": "Es. Formatta questo testo come un'email professionale con saluto iniziale e formula di chiusura. Inserisci interruzioni di riga tra i paragrafi.",
+        "promptTip": "Usa <code>${output}</code> per inserire il testo trascritto nel tuo prompt.",
+        "model": "Modello (facoltativo)",
+        "modelPlaceholder": "Seleziona un modello",
+        "modelTip": "Seleziona un modello specifico per questa azione o usa quello predefinito nella sezione API.",
+        "defaultModel": "Predefinito",
+        "save": "Salva",
+        "cancel": "Annulla",
+        "delete": "Elimina",
+        "maxActionsReached": "È stato raggiunto il limite di 9 azioni."
+      },
+      "appMappings": {
+        "presetsDescription": "Per iniziare, carica 5 azioni standard (informale, email, codice, documento e prompt IA) e le associazioni per le app più comuni.",
+        "loadPresets": "Carica preimpostazioni",
+        "noActions": "Crea almeno un'azione di post-elaborazione qui sopra prima di aggiungere un'associazione."
       }
     },
     "history": {
@@ -394,7 +470,13 @@
       "save": "Salva la trascrizione",
       "unsave": "Rimuovi dai salvataggi",
       "delete": "Elimina elemento",
-      "deleteError": "Errore nell'eliminazione dell'elemento. Per favore, prova di nuovo."
+      "deleteError": "Errore nell'eliminazione dell'elemento. Per favore, prova di nuovo.",
+      "reprocess": "Rielabora con un altro modello",
+      "reprocessing": "Rielaborazione in corso...",
+      "selectModel": "Seleziona modello",
+      "originalTranscript": "Originale",
+      "postProcessed": "Post-elaborato",
+      "action": "Azione {{key}}"
     },
     "debug": {
       "title": "Debug",
@@ -496,6 +578,31 @@
           "details": "Parler usa Whisper.cpp per il riconoscimento vocale veloce in locale. Grazie a Georgi Gerganov e collaboratori per il fantastico lavoro."
         }
       }
+    },
+    "longAudioModel": {
+      "title": "Modello per registrazioni lunghe",
+      "description": "Passa automaticamente a un altro modello quando la durata della registrazione supera la soglia.",
+      "modelLabel": "Modello per registrazioni lunghe",
+      "modelDescription": "Seleziona il modello da usare per le registrazioni che superano la soglia.",
+      "thresholdLabel": "Soglia di durata (secondi)",
+      "thresholdDescription": "Passa al modello per registrazioni lunghe quando la registrazione supera questa durata.",
+      "disabled": "Disattivato",
+      "seconds": "{{value}}s"
+    },
+    "gemini": {
+      "title": "Gemini API",
+      "description": "Usa l'API Gemini di Google per la trascrizione nel cloud. Richiede una chiave API.",
+      "apiKey": "Chiave API",
+      "apiKeyPlaceholder": "Inserisci la tua chiave API Gemini",
+      "model": "Modello",
+      "modelDescription": "Seleziona il modello Gemini da usare per la trascrizione",
+      "apiKeyRequired": "Chiave API richiesta",
+      "apiKeyRequiredDescription": "Inserisci la tua chiave API Google Gemini per usare la trascrizione nel cloud.",
+      "save": "Salva",
+      "cancel": "Annulla",
+      "saved": "Salvato ✓",
+      "apiKeyConfigured": "Chiave API configurata ✓",
+      "serviceAccountConfigured": "Account di servizio configurato ✓"
     }
   },
   "footer": {
@@ -541,7 +648,14 @@
     "dismiss": "Ignora"
   },
   "errors": {
-    "loadDirectory": "Errore di caricamento cartella: {{error}}"
+    "loadDirectory": "Errore di caricamento cartella: {{error}}",
+    "noInputDeviceTitle": "Nessun microfono trovato",
+    "noInputDevice": "Non è stato rilevato alcun dispositivo di ingresso audio. Collega un microfono o delle cuffie con microfono e riprova.",
+    "micPermissionDeniedTitle": "Accesso al microfono negato",
+    "micPermissionDenied": {
+      "generic": "Consenti l'accesso al microfono nelle impostazioni di sistema e riprova."
+    },
+    "recordingFailed": "Impossibile avviare la registrazione. {{error}}"
   },
   "appLanguage": {
     "title": "Lingua Applicazione",

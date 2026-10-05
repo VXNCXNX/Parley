@@ -1,5 +1,39 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Keep Swift bridge generation available on Intel macOS hosts when cross-compiling for Apple Silicon.
+
+## [0.8.10] - 2026-10-05
+
+### Added
+
+- Live dictation through a bundled native transcription runtime, with preview text in the recording overlay.
+- Local Nemotron Streaming 3.5, Nemotron Speech Streaming EN, Qwen3-ASR 0.6B, and Cohere Transcribe models, with pinned downloads and SHA-256 verification.
+- Local Parakeet Ultra support using Moondream's refinement of Parakeet V3 in GGUF format.
+- Warm microphone mode with a configurable idle timeout.
+
+### Fixed
+
+- Complete translations for the native model catalog, cloud transcription, actions, and long recording settings in every supported locale.
+- Declare the native macOS runtime as a bundled framework so Tauri signs it on both Apple Silicon and Intel.
+- Skip the ARM Swift bridge when building an Intel installer on Apple Silicon.
+- Keep Apple signing variables absent in ad-hoc CI builds so packaging does not try to import an empty certificate.
+- Compile the Swift bridge as a library to avoid a second application entry point.
+- Target macOS 11 or later so clean release builds support the native runtime's C++ filesystem dependency.
+- Recover macOS transcription shortcuts after an event tap interruption.
+- Keep the last working default microphone and preserve shared headset streams between recordings.
+- Keep live audio and preview updates ordered, wait for the recorder's final audio, and surface native feed failures.
+- Respect each native model's language support during transcription and live dictation.
+- Bundle the native runtime for desktop builds and keep it loadable on macOS, including local installs.
+
+### Changed
+
+- Prepare macOS releases from an exact commit, with Apple Silicon and Intel downloads and optional Developer ID signing.
+- Update Parley download and build instructions, and remove inherited donation links and sponsor assets.
+
 ## [0.8.1] - 2026-05-10
 
 ### Fixed
@@ -11,6 +45,8 @@
 
 - Added `bun run install:local:macos` for local macOS build, signing, install, and launch.
 - Documented the macOS Accessibility permission and code-signing requirement for local development.
+
+The entries below are inherited from [Handy](https://github.com/cjpais/Handy). They describe upstream history, not releases of this Parley fork.
 
 ## [0.3.0] - 2025-07-11
 

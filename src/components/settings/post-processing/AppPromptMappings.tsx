@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { commands, type AppPromptMapping } from "@/bindings";
 import { Dropdown, SettingContainer } from "@/components/ui";
 import { Button } from "../../ui/Button";
@@ -6,8 +7,10 @@ import { Input } from "../../ui/Input";
 import { useSettings } from "../../../hooks/useSettings";
 
 export const AppPromptMappings: React.FC = React.memo(() => {
+  const { t } = useTranslation();
   const { getSetting, refreshSettings } = useSettings();
-  const mappings = (getSetting("app_prompt_mappings") || []) as AppPromptMapping[];
+  const mappings = (getSetting("app_prompt_mappings") ||
+    []) as AppPromptMapping[];
   const actions = getSetting("post_process_actions") || [];
 
   const [draftPattern, setDraftPattern] = useState("");
@@ -27,7 +30,9 @@ export const AppPromptMappings: React.FC = React.memo(() => {
     const pattern = draftPattern.trim();
     if (!pattern || draftActionKey === null) return;
     const next = [
-      ...mappings.filter((m) => m.pattern.toLowerCase() !== pattern.toLowerCase()),
+      ...mappings.filter(
+        (m) => m.pattern.toLowerCase() !== pattern.toLowerCase(),
+      ),
       { pattern, action_key: draftActionKey },
     ];
     await persist(next);
@@ -41,7 +46,9 @@ export const AppPromptMappings: React.FC = React.memo(() => {
   };
 
   const handleUpdateActionKey = async (index: number, action_key: number) => {
-    const next = mappings.map((m, i) => (i === index ? { ...m, action_key } : m));
+    const next = mappings.map((m, i) =>
+      i === index ? { ...m, action_key } : m,
+    );
     await persist(next);
   };
 
@@ -61,17 +68,17 @@ export const AppPromptMappings: React.FC = React.memo(() => {
       <div className="space-y-3">
         <div className="flex items-center justify-between p-2 rounded-md bg-blue-500/5 border border-blue-500/20">
           <span className="text-sm text-mid-gray">
-            Quick start: load 5 standard actions (casual / email / code / doc / AI prompt) + mappings for common apps.
+            {t("settings.postProcessing.appMappings.presetsDescription")}
           </span>
           <Button onClick={handleLoadPresets} variant="primary" size="md">
-            Load presets
+            {t("settings.postProcessing.appMappings.loadPresets")}
           </Button>
         </div>
 
         {actions.length === 0 && (
           <div className="p-3 bg-mid-gray/5 rounded-md border border-mid-gray/20">
             <p className="text-sm text-mid-gray">
-              Create at least one post-process action above before adding a mapping.
+              {t("settings.postProcessing.appMappings.noActions")}
             </p>
           </div>
         )}
@@ -83,7 +90,10 @@ export const AppPromptMappings: React.FC = React.memo(() => {
                 key={`${m.pattern}-${i}`}
                 className="flex items-center gap-2 p-2 rounded-md bg-mid-gray/5 border border-mid-gray/20"
               >
-                <span className="text-sm font-mono flex-1 truncate" title={m.pattern}>
+                <span
+                  className="text-sm font-mono flex-1 truncate"
+                  title={m.pattern}
+                >
                   {m.pattern}
                 </span>
                 <span className="text-xs text-mid-gray">-&gt;</span>
@@ -99,7 +109,7 @@ export const AppPromptMappings: React.FC = React.memo(() => {
                   onClick={() => handleRemove(i)}
                   className="text-xs text-mid-gray/60 hover:text-red-400 px-2"
                 >
-                  Remove
+                  {t("common.remove")}
                 </button>
               </div>
             ))}
@@ -118,7 +128,9 @@ export const AppPromptMappings: React.FC = React.memo(() => {
             />
             <div className="w-48">
               <Dropdown
-                selectedValue={draftActionKey === null ? null : String(draftActionKey)}
+                selectedValue={
+                  draftActionKey === null ? null : String(draftActionKey)
+                }
                 options={actionOptions}
                 onSelect={(v) => setDraftActionKey(Number(v))}
                 placeholder="Pick action"
@@ -130,7 +142,7 @@ export const AppPromptMappings: React.FC = React.memo(() => {
               variant="primary"
               size="md"
             >
-              Add
+              {t("common.add")}
             </Button>
           </div>
         )}

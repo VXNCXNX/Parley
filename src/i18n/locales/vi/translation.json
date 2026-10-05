@@ -79,6 +79,26 @@
       "sense-voice-int8": {
         "name": "SenseVoice",
         "description": "Rất nhanh. Tiếng Trung, tiếng Anh, tiếng Nhật, tiếng Hàn, tiếng Quảng Đông."
+      },
+      "cohere-transcribe-03-2026": {
+        "name": "Cohere Transcribe",
+        "description": "Chuyển âm thanh thành văn bản theo lô với độ chính xác cao, hỗ trợ 14 ngôn ngữ."
+      },
+      "gemini-api": {
+        "name": "Gemini API",
+        "description": "Chuyển âm thanh thành văn bản trên đám mây qua Google Gemini. Cần khóa API và kết nối internet."
+      },
+      "nemotron-3.5-asr-streaming-0.6b": {
+        "name": "Nemotron Streaming 3.5",
+        "description": "Chuyển âm thanh thành văn bản theo thời gian thực, hỗ trợ 28 ngôn ngữ."
+      },
+      "nemotron-speech-streaming-en-0.6b": {
+        "name": "Nemotron Speech Streaming EN",
+        "description": "Chuyển lời nói tiếng Anh thành văn bản theo luồng."
+      },
+      "qwen3-asr-0.6b": {
+        "name": "Qwen3-ASR 0.6B",
+        "description": "Chuyển âm thanh thành văn bản theo lô, hỗ trợ nhiều ngôn ngữ."
       }
     },
     "errors": {
@@ -157,7 +177,26 @@
       },
       "noModelsMatch": "Không có mô hình nào khớp với bộ lọc này.",
       "yourModels": "Mô hình đã tải",
-      "availableModels": "Có sẵn để tải xuống"
+      "availableModels": "Có sẵn để tải xuống",
+      "processingModels": {
+        "addModel": "Thêm mô hình xử lý",
+        "alreadySaved": "Mô hình này đã được lưu.",
+        "apiKey": "Khóa API",
+        "apiKeyPlaceholder": "Nhập khóa API",
+        "cancel": "Hủy",
+        "description": "Lưu các mô hình LLM để dùng trong thao tác xử lý sau.",
+        "fetchModels": "Lấy danh sách mô hình",
+        "model": "Mô hình",
+        "modelPlaceholder": "Chọn hoặc nhập mô hình",
+        "noModels": "Chưa lưu mô hình xử lý nào. Thêm một mô hình để dùng trong các thao tác.",
+        "provider": "Nhà cung cấp",
+        "save": "Lưu",
+        "title": "Mô hình xử lý"
+      },
+      "tabs": {
+        "processing": "Xử lý",
+        "transcription": "Chuyển âm thanh thành văn bản"
+      }
     },
     "general": {
       "title": "Chung",
@@ -231,7 +270,8 @@
         "output": "Đầu ra",
         "transcription": "Chuyển đổi",
         "history": "Lịch sử",
-        "experimental": "Thử nghiệm"
+        "experimental": "Thử nghiệm",
+        "cloudModels": "Mô hình đám mây"
       },
       "experimentalToggle": {
         "label": "Tính năng thử nghiệm",
@@ -323,6 +363,14 @@
         "add": "Thêm",
         "remove": "Xóa {{word}}",
         "duplicate": "\"{{word}}\" đã tồn tại"
+      },
+      "lazyStreamClose": {
+        "description": "Chọn để Parley giữ micrô mở trong thời gian ngắn sau khi ghi âm hoặc luôn giữ mở. macOS hiển thị chỉ báo micrô khi luồng âm thanh đang mở.",
+        "label": "Chế độ micrô",
+        "modes": {
+          "always": "Luôn mở",
+          "warm": "Giữ mở tạm thời"
+        }
       }
     },
     "postProcessing": {
@@ -383,6 +431,34 @@
         "cancel": "Hủy",
         "selectToEdit": "Chọn một prompt ở trên để xem và chỉnh sửa chi tiết.",
         "createFirst": "Nhấn 'Tạo Prompt mới' ở trên để tạo prompt xử lý sau đầu tiên của bạn."
+      },
+      "actions": {
+        "addAction": "Thêm thao tác",
+        "cancel": "Hủy",
+        "createFirst": "Tạo thao tác đầu tiên để xử lý văn bản đã chuyển đổi bằng nhà cung cấp bạn đã cấu hình.",
+        "defaultModel": "Mặc định",
+        "delete": "Xóa",
+        "description": "Gán các prompt tùy chỉnh cho phím Ctrl+số (1-9). Nhấn phím tắt khi ghi âm để áp dụng thao tác sau khi chuyển âm thanh thành văn bản.",
+        "editAction": "Sửa thao tác",
+        "key": "Phím",
+        "keyLabel": "Phím (1-9)",
+        "maxActionsReached": "Đã đạt giới hạn 9 thao tác.",
+        "model": "Mô hình (không bắt buộc)",
+        "modelPlaceholder": "Chọn mô hình",
+        "modelTip": "Chọn mô hình cụ thể cho thao tác này hoặc dùng mô hình mặc định trong mục API.",
+        "name": "Tên",
+        "namePlaceholder": "Ví dụ: Chế độ email",
+        "noActions": "Chưa cấu hình thao tác nào.",
+        "prompt": "Prompt",
+        "promptPlaceholder": "Ví dụ: Định dạng văn bản này thành email chuyên nghiệp có lời chào và lời kết. Thêm ngắt dòng giữa các đoạn.",
+        "promptTip": "Mẹo: Dùng <code>${output}</code> để chèn văn bản đã chuyển đổi vào prompt.",
+        "save": "Lưu",
+        "title": "Thao tác"
+      },
+      "appMappings": {
+        "presetsDescription": "Bắt đầu nhanh: tải 5 thao tác tiêu chuẩn (văn phong thân mật / email / mã / tài liệu / prompt cho AI) và các liên kết cho ứng dụng phổ biến.",
+        "loadPresets": "Tải cấu hình sẵn",
+        "noActions": "Tạo ít nhất một thao tác xử lý sau ở trên trước khi thêm liên kết."
       }
     },
     "history": {
@@ -394,7 +470,13 @@
       "save": "Lưu bản ghi",
       "unsave": "Xóa khỏi đã lưu",
       "delete": "Xóa mục",
-      "deleteError": "Không thể xóa mục. Vui lòng thử lại."
+      "deleteError": "Không thể xóa mục. Vui lòng thử lại.",
+      "action": "Thao tác {{key}}",
+      "originalTranscript": "Bản gốc",
+      "postProcessed": "Đã qua xử lý",
+      "reprocess": "Xử lý lại bằng mô hình khác",
+      "reprocessing": "Đang xử lý lại...",
+      "selectModel": "Chọn mô hình"
     },
     "debug": {
       "title": "Gỡ lỗi",
@@ -496,6 +578,31 @@
           "details": "Parler sử dụng Whisper.cpp để xử lý chuyển đổi giọng nói thành văn bản nhanh, cục bộ. Cảm ơn công việc tuyệt vời của Georgi Gerganov và các cộng tác viên."
         }
       }
+    },
+    "gemini": {
+      "apiKey": "Khóa API",
+      "apiKeyPlaceholder": "Nhập khóa API Gemini của bạn",
+      "apiKeyRequired": "Cần khóa API",
+      "apiKeyRequiredDescription": "Nhập khóa API Google Gemini để chuyển âm thanh thành văn bản trên đám mây.",
+      "cancel": "Hủy",
+      "description": "Dùng Gemini API của Google để chuyển âm thanh thành văn bản trên đám mây. Cần khóa API.",
+      "model": "Mô hình",
+      "modelDescription": "Chọn mô hình Gemini để chuyển âm thanh thành văn bản",
+      "save": "Lưu",
+      "title": "Gemini API",
+      "saved": "Đã lưu ✓",
+      "apiKeyConfigured": "Đã cấu hình khóa API ✓",
+      "serviceAccountConfigured": "Đã cấu hình tài khoản dịch vụ ✓"
+    },
+    "longAudioModel": {
+      "description": "Tự động chuyển sang mô hình khác khi thời lượng ghi âm vượt quá ngưỡng.",
+      "disabled": "Tắt",
+      "modelDescription": "Chọn mô hình cho các bản ghi âm dài hơn ngưỡng.",
+      "modelLabel": "Mô hình cho bản ghi âm dài",
+      "seconds": "{{value}} giây",
+      "thresholdDescription": "Chuyển sang mô hình cho bản ghi âm dài khi thời lượng ghi âm vượt quá mức này.",
+      "thresholdLabel": "Ngưỡng thời lượng (giây)",
+      "title": "Mô hình cho bản ghi âm dài"
     }
   },
   "footer": {
@@ -541,7 +648,14 @@
     "dismiss": "Bỏ qua"
   },
   "errors": {
-    "loadDirectory": "Lỗi khi tải thư mục: {{error}}"
+    "loadDirectory": "Lỗi khi tải thư mục: {{error}}",
+    "micPermissionDeniedTitle": "Quyền truy cập micrô bị từ chối",
+    "noInputDevice": "Không tìm thấy thiết bị đầu vào âm thanh. Hãy kết nối micrô hoặc tai nghe có micrô rồi thử lại.",
+    "noInputDeviceTitle": "Không tìm thấy micrô",
+    "recordingFailed": "Không thể bắt đầu ghi âm: {{error}}",
+    "micPermissionDenied": {
+      "generic": "Cho phép truy cập micrô trong cài đặt hệ thống rồi thử lại."
+    }
   },
   "appLanguage": {
     "title": "Ngôn ngữ ứng dụng",

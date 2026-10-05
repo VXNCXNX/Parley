@@ -1,484 +1,99 @@
 # Parley
 
-> **A speech-to-text app with sub-second cloud transcription, multi-language code-switching, and Glaido-style auto formatting per app.**
-> Fork of [Melvynx/Parler](https://github.com/Melvynx/Parler), itself a fork of [cjpais/Handy](https://github.com/cjpais/Handy).
+Parley is a desktop speech-to-text app. Press a shortcut, speak, and paste the transcript into the app you are using.
 
-## Why this fork?
+Local models transcribe on your computer after you download them. Optional Gemini and Google Cloud Chirp 3 transcription sends audio to Google. Optional post-processing sends the transcript to your selected provider.
 
-- **Sub-second transcription** via Google Chirp 3 (~800ms vs ~25s on Gemini)
-- **Multi-language code-switching** (FR + EN auto) - say "API", "AWS", "PostHog" mid-sentence without misrecognition
-- **Auto formatting per app** (Glaido-style): different post-processing for Slack vs Gmail vs Cursor vs your AI prompts, detected via active window title
-- **Smart presets**: 5 ready-to-use post-process actions (casual / email / code / doc / AI prompt) + ~28 app mappings, one click to load
-- **Long audio support**: silence-aware chunking past Chirp's 60s limit
-- **Resilient**: retry with backoff (429/503/504/502), 30s/10s timeouts
-- **Custom dictionary** with multi-word phrases (e.g. "Preuve AI") and phrase boost
-- **CUDA acceleration on Windows** for local model fallback
+Parley is a fork of [Melvynx/Parler](https://github.com/Melvynx/Parler), which is based on [cjpais/Handy](https://github.com/cjpais/Handy).
 
-Built to match Whisper Flow / Wispr Flow / Glaido without the $15-20/month subscription, using free Google Cloud credits.
+## Download and install
 
-## Original Handy features
+Download Parley from the [Parley releases page](https://github.com/VXNCXNX/Parley/releases/latest). Read the [changelog](CHANGELOG.md) for release details.
 
-- **Conditional model switching**: Automatically use a different (larger) model when audio recordings exceed a configurable duration threshold (default: 10 seconds). This lets you use a fast lightweight model for short recordings and a more accurate model for longer ones.
+For macOS 11 or later, choose the DMG for your Mac:
 
----
+| Mac                                   | Download architecture |
+| ------------------------------------- | --------------------- |
+| Apple Silicon, including M1 and later | `aarch64`             |
+| Intel                                 | `x64`                 |
 
-[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/WVBeWsNXK4)
+1. Open the DMG and drag **Parley** into **Applications**.
+2. Open **Parley** from **Applications**.
+3. These macOS downloads are ad-hoc signed and are not notarized. If macOS blocks the app, open **System Settings > Privacy & Security**, click **Open Anyway**, and confirm **Open**.
+4. Grant **Microphone** and **Accessibility** permissions when prompted.
+5. Choose a model in **Settings > Models**, download it, and configure your shortcut.
 
-**A free, open source, and extensible speech-to-text application that works completely offline.**
+The source supports macOS, Windows, and Linux. Available installers are listed on the releases page.
 
-Parley is a cross-platform desktop application that provides simple, privacy-focused speech transcription. Press a shortcut, speak, and have your words appear in any text field. This happens on your own computer without sending any information to the cloud.
+## Dictation and formatting
 
-## Why Parley?
+- Use a toggle shortcut or push-to-talk to record and paste text.
+- Enable live dictation to see preview text in the recording overlay with a supported native model.
+- Download local models or configure Gemini or Chirp 3 with your own Google credentials.
+- Choose post-processing actions manually or map them to the active app.
+- Add custom words and phrases to the dictionary.
+- Keep the microphone warm between recordings with a configurable timeout.
+- Use a different model for longer recordings. Cloud switching requires configured credentials.
 
-Parley was created to fill the gap for a truly open source, extensible speech-to-text tool. As stated on [handy.computer](https://handy.computer):
+Cloud services may charge for usage. Local transcription does not require a cloud account. To keep transcripts local, also disable cloud post-processing.
 
-- **Free**: Accessibility tooling belongs in everyone's hands, not behind a paywall
-- **Open Source**: Together we can build further. Extend Parley for yourself and contribute to something bigger
-- **Private**: Your voice stays on your computer. Get transcriptions without sending audio to the cloud
-- **Simple**: One tool, one job. Transcribe what you say and put it into a text box
+## Local models
 
-Parley isn't trying to be the best speech-to-text app—it's trying to be the most forkable one.
+The native model catalog includes the following models:
 
-## How It Works
+| Model                        | Transcription mode                           |
+| ---------------------------- | -------------------------------------------- |
+| Nemotron Streaming 3.5       | Multilingual, with live preview              |
+| Nemotron Speech Streaming EN | English, with live preview                   |
+| Qwen3-ASR 0.6B               | Multilingual batch transcription             |
+| Cohere Transcribe            | Multilingual batch transcription             |
+| Parakeet Ultra               | Batch transcription in 25 European languages |
 
-1. **Press** a configurable keyboard shortcut to start/stop recording (or use push-to-talk mode)
-2. **Speak** your words while the shortcut is active
-3. **Release** and Parley processes your speech using Whisper
-4. **Get** your transcribed text pasted directly into whatever app you're using
+The catalog also includes Whisper Small, Medium, Turbo, and Large, Breeze ASR, Parakeet V2 and V3, Moonshine Base, Moonshine V2 Tiny, Small, and Medium, and SenseVoice. Supported languages appear in **Settings > Models**.
 
-The process is entirely local:
+Native GGUF downloads use pinned model revisions and SHA-256 verification. Parakeet Ultra is [Moondream's refinement](https://huggingface.co/moondream/parakeet-ultra) of [NVIDIA Parakeet V3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3). Parley uses [Nairod785's GGUF conversion](https://huggingface.co/Nairod785/parakeet-ultra-gguf/blob/b03613ba54a195238f0e915359f5a5c78269ddc6/README.md) under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/).
 
-- Silence is filtered using VAD (Voice Activity Detection) with Silero
-- Transcription uses your choice of models:
-  - **Whisper models** (Small/Medium/Turbo/Large) with GPU acceleration when available
-  - **Parakeet V3** - CPU-optimized model with excellent performance and automatic language detection
-- Works on Windows, macOS, and Linux
+## Build from source
 
-## Quick Start
+See [BUILD.md](BUILD.md) for prerequisites and platform build instructions.
 
-### Installation
+For local macOS development, `bun run install:local:macos` builds, signs, installs, and launches Parley. It uses the stable `Parley Local Development` certificate so rebuilds retain the same Accessibility permission identity.
 
-1. Download the latest release from the [releases page](https://github.com/Melvynx/Parler/releases) or the [website](https://handy.computer)
-   - **macOS**: Also available via [Homebrew cask](https://formulae.brew.sh/cask/handy): `brew install --cask handy`
-2. Install the application
-3. Launch Parley and grant necessary system permissions (microphone, accessibility)
-4. Configure your preferred keyboard shortcuts in Settings
-5. Start transcribing!
+## Command-line control
 
-### Development Setup
-
-For detailed build instructions including platform-specific requirements, see [BUILD.md](BUILD.md).
-
-#### Building on macOS (this fork)
-
-This fork was developed and optimized on Windows with Nvidia GPU. To build on macOS:
+Use the `parley` binary to control a running instance:
 
 ```bash
-git clone https://github.com/VXNCXNX/Parley.git
-cd Parley
-bun install
-
-# Required: download VAD model
-mkdir -p src-tauri/resources/models
-curl -o src-tauri/resources/models/silero_vad_v4.onnx \
-  https://blob.handy.computer/silero_vad_v4.onnx
-
-# Build, sign with a stable local certificate, install to /Applications, and launch
-bun run install:local:macos
+parley --toggle-transcription
+parley --toggle-post-process
+parley --cancel
 ```
 
-After install, grant **Microphone** and **Accessibility** permissions.
+Startup options include `--start-hidden`, `--no-tray`, and `--debug`. Run `parley --help` for the full list.
 
-The local installer intentionally signs the app with a stable `Parley Local Development`
-certificate instead of ad-hoc signing. macOS ties Accessibility permission to the app's
-code-signing requirement, so ad-hoc rebuilds can make System Settings forget that
-Parley was already authorized. The first run may still require granting Accessibility
-once, but subsequent local installs should keep the same permission identity.
-
-If you need only a raw build artifact without installing it:
+For a macOS app installation, call the bundled binary:
 
 ```bash
-CMAKE_POLICY_VERSION_MINIMUM=3.5 bun run tauri build
+/Applications/Parley.app/Contents/MacOS/parley --toggle-transcription
 ```
-
-**macOS limitations of this fork**:
-
-- CUDA acceleration is Windows-only; macOS uses Metal automatically.
-- All other features (Chirp 3 STT, presets, custom dictionary, post-process actions, paste) work identically.
-
-## Architecture
-
-Parler is built as a Tauri application combining:
-
-- **Frontend**: React + TypeScript with Tailwind CSS for the settings UI
-- **Backend**: Rust for system integration, audio processing, and ML inference
-- **Core Libraries**:
-  - `whisper-rs`: Local speech recognition with Whisper models
-  - `transcription-rs`: CPU-optimized speech recognition with Parakeet models
-  - `cpal`: Cross-platform audio I/O
-  - `vad-rs`: Voice Activity Detection
-  - `rdev`: Global keyboard shortcuts and system events
-  - `rubato`: Audio resampling
-
-### Debug Mode
-
-Parler includes an advanced debug mode for development and troubleshooting. Access it by pressing:
-
-- **macOS**: `Cmd+Shift+D`
-- **Windows/Linux**: `Ctrl+Shift+D`
-
-### CLI Parameters
-
-Parler supports command-line flags for controlling a running instance and customizing startup behavior. These work on all platforms (macOS, Windows, Linux).
-
-**Remote control flags** (sent to an already-running instance via the single-instance plugin):
-
-```bash
-handy --toggle-transcription    # Toggle recording on/off
-handy --toggle-post-process     # Toggle recording with post-processing on/off
-handy --cancel                  # Cancel the current operation
-```
-
-**Startup flags:**
-
-```bash
-handy --start-hidden            # Start without showing the main window
-handy --no-tray                 # Start without the system tray icon
-handy --debug                   # Enable debug mode with verbose logging
-handy --help                    # Show all available flags
-```
-
-Flags can be combined for autostart scenarios:
-
-```bash
-handy --start-hidden --no-tray
-```
-
-> **macOS tip:** When Parler is installed as an app bundle, invoke the binary directly:
->
-> ```bash
-> /Applications/Parler.app/Contents/MacOS/Parler --toggle-transcription
-> ```
-
-## Known Issues & Current Limitations
-
-This project is actively being developed and has some [known issues](https://github.com/Melvynx/Parler/issues). We believe in transparency about the current state:
-
-### Major Issues (Help Wanted)
-
-**Whisper Model Crashes:**
-
-- Whisper models crash on certain system configurations (Windows and Linux)
-- Does not affect all systems - issue is configuration-dependent
-  - If you experience crashes and are a developer, please help to fix and provide debug logs!
-
-**Wayland Support (Linux):**
-
-- Limited support for Wayland display server
-- Requires [`wtype`](https://github.com/atx/wtype) or [`dotool`](https://sr.ht/~geb/dotool/) for text input to work correctly (see [Linux Notes](#linux-notes) below for installation)
-
-### Linux Notes
-
-**Text Input Tools:**
-
-For reliable text input on Linux, install the appropriate tool for your display server:
-
-| Display Server | Recommended Tool | Install Command                                    |
-| -------------- | ---------------- | -------------------------------------------------- |
-| X11            | `xdotool`        | `sudo apt install xdotool`                         |
-| Wayland        | `wtype`          | `sudo apt install wtype`                           |
-| Both           | `dotool`         | `sudo apt install dotool` (requires `input` group) |
-
-- **X11**: Install `xdotool` for both direct typing and clipboard paste shortcuts
-- **Wayland**: Install `wtype` (preferred) or `dotool` for text input to work correctly
-- **dotool setup**: Requires adding your user to the `input` group: `sudo usermod -aG input $USER` (then log out and back in)
-
-Without these tools, Parler falls back to enigo which may have limited compatibility, especially on Wayland.
-
-**Other Notes:**
-
-- **Runtime library dependency (`libgtk-layer-shell.so.0`)**:
-  - Parler links `gtk-layer-shell` on Linux. If startup fails with `error while loading shared libraries: libgtk-layer-shell.so.0`, install the runtime package for your distro:
-
-    | Distro        | Package to install    | Example command                        |
-    | ------------- | --------------------- | -------------------------------------- |
-    | Ubuntu/Debian | `libgtk-layer-shell0` | `sudo apt install libgtk-layer-shell0` |
-    | Fedora/RHEL   | `gtk-layer-shell`     | `sudo dnf install gtk-layer-shell`     |
-    | Arch Linux    | `gtk-layer-shell`     | `sudo pacman -S gtk-layer-shell`       |
-
-  - For building from source on Ubuntu/Debian, you may also need `libgtk-layer-shell-dev`.
-
-- The recording overlay is disabled by default on Linux (`Overlay Position: None`) because certain compositors treat it as the active window. When the overlay is visible it can steal focus, which prevents Parler from pasting back into the application that triggered transcription. If you enable the overlay anyway, be aware that clipboard-based pasting might fail or end up in the wrong window.
-- If you are having trouble with the app, running with the environment variable `WEBKIT_DISABLE_DMABUF_RENDERER=1` may help
-- **Global keyboard shortcuts (Wayland):** On Wayland, system-level shortcuts must be configured through your desktop environment or window manager. Use the [CLI flags](#cli-parameters) as the command for your custom shortcut.
-
-  **GNOME:**
-  1. Open **Settings > Keyboard > Keyboard Shortcuts > Custom Shortcuts**
-  2. Click the **+** button to add a new shortcut
-  3. Set the **Name** to `Toggle Parler Transcription`
-  4. Set the **Command** to `handy --toggle-transcription`
-  5. Click **Set Shortcut** and press your desired key combination (e.g., `Super+O`)
-
-  **KDE Plasma:**
-  1. Open **System Settings > Shortcuts > Custom Shortcuts**
-  2. Click **Edit > New > Global Shortcut > Command/URL**
-  3. Name it `Toggle Parler Transcription`
-  4. In the **Trigger** tab, set your desired key combination
-  5. In the **Action** tab, set the command to `handy --toggle-transcription`
-
-  **Sway / i3:**
-
-  Add to your config file (`~/.config/sway/config` or `~/.config/i3/config`):
-
-  ```ini
-  bindsym $mod+o exec handy --toggle-transcription
-  ```
-
-  **Hyprland:**
-
-  Add to your config file (`~/.config/hypr/hyprland.conf`):
-
-  ```ini
-  bind = $mainMod, O, exec, handy --toggle-transcription
-  ```
-
-- You can also manage global shortcuts outside of Parler via Unix signals, which lets Wayland window managers or other hotkey daemons keep ownership of keybindings:
-
-  | Signal    | Action                                    | Example                |
-  | --------- | ----------------------------------------- | ---------------------- |
-  | `SIGUSR2` | Toggle transcription                      | `pkill -USR2 -n handy` |
-  | `SIGUSR1` | Toggle transcription with post-processing | `pkill -USR1 -n handy` |
-
-  Example Sway config:
-
-  ```ini
-  bindsym $mod+o exec pkill -USR2 -n handy
-  bindsym $mod+p exec pkill -USR1 -n handy
-  ```
-
-  `pkill` here simply delivers the signal—it does not terminate the process.
-
-### Platform Support
-
-- **macOS (both Intel and Apple Silicon)**
-- **x64 Windows**
-- **x64 Linux**
-
-### System Requirements/Recommendations
-
-The following are recommendations for running Parler on your own machine. If you don't meet the system requirements, the performance of the application may be degraded. We are working on improving the performance across all kinds of computers and hardware.
-
-**For Whisper Models:**
-
-- **macOS**: M series Mac, Intel Mac
-- **Windows**: Intel, AMD, or NVIDIA GPU
-- **Linux**: Intel, AMD, or NVIDIA GPU
-  - Ubuntu 22.04, 24.04
-
-**For Parakeet V3 Model:**
-
-- **CPU-only operation** - runs on a wide variety of hardware
-- **Minimum**: Intel Skylake (6th gen) or equivalent AMD processors
-- **Performance**: ~5x real-time speed on mid-range hardware (tested on i5)
-- **Automatic language detection** - no manual language selection required
-
-## Roadmap & Active Development
-
-We're actively working on several features and improvements. Contributions and feedback are welcome!
-
-### In Progress
-
-**Debug Logging:**
-
-- Adding debug logging to a file to help diagnose issues
-
-**macOS Keyboard Improvements:**
-
-- Support for Globe key as transcription trigger
-- A rewrite of global shortcut handling for MacOS, and potentially other OS's too.
-
-**Opt-in Analytics:**
-
-- Collect anonymous usage data to help improve Parler
-- Privacy-first approach with clear opt-in
-
-**Settings Refactoring:**
-
-- Cleanup and refactor settings system which is becoming bloated and messy
-- Implement better abstractions for settings management
-
-**Tauri Commands Cleanup:**
-
-- Abstract and organize Tauri command patterns
-- Investigate tauri-specta for improved type safety and organization
 
 ## Troubleshooting
 
-### Manual Model Installation (For Proxy Users or Network Restrictions)
+- For permissions or shortcut issues on macOS, check **System Settings > Privacy & Security > Microphone** and **Accessibility**.
+- Open **Settings > About** to find the app data and log directories. Debug mode is available with `Cmd+Shift+D` on macOS or `Ctrl+Shift+D` on Windows and Linux.
+- If automatic downloads are blocked, place model files in the `models` folder inside the app data directory. Keep the catalog filename for GGUF and Whisper files. For directory-based models, keep the catalog directory name. Restart Parley after a manual install.
+- Custom Whisper GGML `.bin` models in that directory appear after restarting the app.
+- On Linux, install `xdotool` for X11 or `wtype` for Wayland. `dotool` is another supported option. Wayland shortcuts can call the CLI through your desktop environment.
+- Linux builds require the `gtk-layer-shell` runtime package. The recording overlay is disabled by default on Linux because some compositors let it take focus from the destination app.
 
-If you're behind a proxy, firewall, or in a restricted network environment where Parler cannot download models automatically, you can manually download and install them. The URLs are publicly accessible from any browser.
+Report problems in [Parley issues](https://github.com/VXNCXNX/Parley/issues), including your app version, operating system, model, and relevant logs.
 
-#### Step 1: Find Your App Data Directory
+## Contribute
 
-1. Open Parler settings
-2. Navigate to the **About** section
-3. Copy the "App Data Directory" path shown there, or use the shortcuts:
-   - **macOS**: `Cmd+Shift+D` to open debug menu
-   - **Windows/Linux**: `Ctrl+Shift+D` to open debug menu
+Check [existing issues](https://github.com/VXNCXNX/Parley/issues) and [pull requests](https://github.com/VXNCXNX/Parley/pulls) before opening a contribution. Describe the problem, your change, and how you verified it on your target platform.
 
-The typical paths are:
+## License and credits
 
-- **macOS**: `~/Library/Application Support/com.pais.handy/`
-- **Windows**: `C:\Users\{username}\AppData\Roaming\com.pais.handy\`
-- **Linux**: `~/.config/com.pais.handy/`
+Parley uses the [MIT license](LICENSE). Model files have their own licenses.
 
-#### Step 2: Create Models Directory
-
-Inside your app data directory, create a `models` folder if it doesn't already exist:
-
-```bash
-# macOS/Linux
-mkdir -p ~/Library/Application\ Support/com.pais.handy/models
-
-# Windows (PowerShell)
-New-Item -ItemType Directory -Force -Path "$env:APPDATA\com.pais.handy\models"
-```
-
-#### Step 3: Download Model Files
-
-Download the models you want from below
-
-**Whisper Models (single .bin files):**
-
-- Small (487 MB): `https://blob.handy.computer/ggml-small.bin`
-- Medium (492 MB): `https://blob.handy.computer/whisper-medium-q4_1.bin`
-- Turbo (1600 MB): `https://blob.handy.computer/ggml-large-v3-turbo.bin`
-- Large (1100 MB): `https://blob.handy.computer/ggml-large-v3-q5_0.bin`
-
-**Parakeet Models (compressed archives):**
-
-- V2 (473 MB): `https://blob.handy.computer/parakeet-v2-int8.tar.gz`
-- V3 (478 MB): `https://blob.handy.computer/parakeet-v3-int8.tar.gz`
-
-**Parakeet Ultra (single GGUF file):**
-
-- Ultra (740 MB): [parakeet-ultra-0.6b-Q8_0.gguf](https://huggingface.co/Nairod785/parakeet-ultra-gguf/resolve/b03613ba54a195238f0e915359f5a5c78269ddc6/parakeet-ultra-0.6b-Q8_0.gguf)
-
-You can also download **Parakeet Ultra** from **Settings > Models**. Ultra is [Moondream's refinement](https://huggingface.co/moondream/parakeet-ultra) of [NVIDIA Parakeet V3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) for local transcription in 25 European languages. Parley uses [Nairod785's GGUF conversion](https://huggingface.co/Nairod785/parakeet-ultra-gguf/blob/b03613ba54a195238f0e915359f5a5c78269ddc6/README.md) under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/). The pinned [conversion recipe and checksums](https://huggingface.co/Nairod785/parakeet-ultra-gguf/blob/b03613ba54a195238f0e915359f5a5c78269ddc6/QUANTIZATION.md) document the source and quantization.
-
-#### Step 4: Install Models
-
-**For Whisper Models (.bin files):**
-
-Simply place the `.bin` file directly into the `models` directory:
-
-```
-{app_data_dir}/models/
-├── ggml-small.bin
-├── whisper-medium-q4_1.bin
-├── ggml-large-v3-turbo.bin
-└── ggml-large-v3-q5_0.bin
-```
-
-**For Parakeet Models (.tar.gz archives):**
-
-1. Extract the `.tar.gz` file
-2. Place the **extracted directory** into the `models` folder
-3. The directory must be named exactly as follows:
-   - **Parakeet V2**: `parakeet-tdt-0.6b-v2-int8`
-   - **Parakeet V3**: `parakeet-tdt-0.6b-v3-int8`
-
-Final structure should look like:
-
-```
-{app_data_dir}/models/
-├── parakeet-tdt-0.6b-v2-int8/     (directory with model files inside)
-│   ├── (model files)
-│   └── (config files)
-└── parakeet-tdt-0.6b-v3-int8/     (directory with model files inside)
-    ├── (model files)
-    └── (config files)
-```
-
-**For Parakeet Ultra (.gguf file):**
-
-Place `parakeet-ultra-0.6b-Q8_0.gguf` directly in `{app_data_dir}/models/`, keeping that filename. Restart Parley, then select **Parakeet Ultra** in **Settings > Models**.
-
-**Important Notes:**
-
-- For Parakeet V2 and V3, the extracted directory name **must** match exactly as shown above
-- Do not rename the `.bin` files for Whisper models—use the exact filenames from the download URLs
-- After placing the files, restart Parler to detect the new models
-
-#### Step 5: Verify Installation
-
-1. Restart Parler
-2. Open Settings → Models
-3. Your manually installed models should now appear as "Downloaded"
-4. Select the model you want to use and test transcription
-
-### Custom Whisper Models
-
-Parler can auto-discover custom Whisper GGML models placed in the `models` directory. This is useful for users who want to use fine-tuned or community models not included in the default model list.
-
-**How to use:**
-
-1. Obtain a Whisper model in GGML `.bin` format (e.g., from [Hugging Face](https://huggingface.co/models?search=whisper%20ggml))
-2. Place the `.bin` file in your `models` directory (see paths above)
-3. Restart Parler to discover the new model
-4. The model will appear in the "Custom Models" section of the Models settings page
-
-**Important:**
-
-- Community models are user-provided and may not receive troubleshooting assistance
-- The model must be a valid Whisper GGML format (`.bin` file)
-- Model name is derived from the filename (e.g., `my-custom-model.bin` → "My Custom Model")
-
-### How to Contribute
-
-1. **Check existing issues** at [github.com/Melvynx/Parler/issues](https://github.com/Melvynx/Parler/issues)
-2. **Fork the repository** and create a feature branch
-3. **Test thoroughly** on your target platform
-4. **Submit a pull request** with clear description of changes
-5. **Join the discussion** - reach out at [contact@handy.computer](mailto:contact@handy.computer)
-
-The goal is to create both a useful tool and a foundation for others to build upon—a well-patterned, simple codebase that serves the community.
-
-## Sponsors
-
-<div align="center">
-  We're grateful for the support of our sponsors who help make Parler possible:
-  <br><br>
-  <a href="https://wordcab.com">
-    <img src="sponsor-images/wordcab.png" alt="Wordcab" width="120" height="120">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://github.com/epicenter-so/epicenter">
-    <img src="sponsor-images/epicenter.png" alt="Epicenter" width="120" height="120">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://boltai.com?utm_source=handy">
-    <img src="sponsor-images/boltai.jpg" alt="Bolt AI" width="120" height="120">
-  </a>
-</div>
-
-## Related Projects
-
-- **[Parler CLI](https://github.com/cjpais/handy-cli)** - The original Python command-line version
-- **[handy.computer](https://handy.computer)** - Project website with demos and documentation
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- **Whisper** by OpenAI for the speech recognition model
-- **whisper.cpp and ggml** for amazing cross-platform whisper inference/acceleration
-- **Silero** for great lightweight VAD
-- **Tauri** team for the excellent Rust-based app framework
-- **Community contributors** helping make Parler better
-
----
-
-_"Your search for the right speech-to-text tool can end here—not because Parler is perfect, but because you can make it perfect for you."_
+Thanks to the authors and contributors of Handy and Parler, OpenAI Whisper, whisper.cpp and ggml, transcribe.cpp, Silero VAD, NVIDIA Parakeet, Moondream, and Tauri.

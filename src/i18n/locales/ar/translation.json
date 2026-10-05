@@ -79,6 +79,26 @@
       "sense-voice-int8": {
         "name": "SenseVoice",
         "description": "سريع جداً. الصينية، الإنجليزية، اليابانية، الكورية، الكانتونية."
+      },
+      "nemotron-3.5-asr-streaming-0.6b": {
+        "name": "Nemotron Streaming 3.5",
+        "description": "تفريغ صوتي مباشر متعدد اللغات يدعم 28 لغة."
+      },
+      "nemotron-speech-streaming-en-0.6b": {
+        "name": "Nemotron Speech Streaming EN",
+        "description": "تحويل الكلام بالإنجليزية إلى نص في الوقت الفعلي."
+      },
+      "qwen3-asr-0.6b": {
+        "name": "Qwen3-ASR 0.6B",
+        "description": "تفريغ صوتي متعدد اللغات على دفعات."
+      },
+      "cohere-transcribe-03-2026": {
+        "name": "Cohere Transcribe",
+        "description": "تفريغ صوتي عالي الدقة على دفعات يدعم 14 لغة."
+      },
+      "gemini-api": {
+        "name": "Gemini API",
+        "description": "تفريغ صوتي سحابي عبر Google Gemini. يتطلب مفتاح API واتصالًا بالإنترنت."
       }
     },
     "errors": {
@@ -209,7 +229,8 @@
         "output": "الإخراج",
         "transcription": "التفريغ الصوتي",
         "history": "السجل",
-        "experimental": "تجريبي"
+        "experimental": "تجريبي",
+        "cloudModels": "النماذج السحابية"
       },
       "experimentalToggle": {
         "label": "الميزات التجريبية",
@@ -301,6 +322,14 @@
         "add": "إضافة",
         "remove": "إزالة {{word}}",
         "duplicate": "\"{{word}}\" موجود بالفعل"
+      },
+      "lazyStreamClose": {
+        "label": "وضع الميكروفون",
+        "description": "اختر ما إذا كان Parley يبقي الميكروفون جاهزًا لفترة قصيرة بعد التسجيل أو مفتوحًا دائمًا. يعرض macOS مؤشر الميكروفون ما دام تدفق الصوت مفتوحًا.",
+        "modes": {
+          "warm": "جاهز مؤقتًا",
+          "always": "دائمًا"
+        }
       }
     },
     "postProcessing": {
@@ -361,6 +390,34 @@
         "cancel": "إلغاء",
         "selectToEdit": ".اختر مطالبة أعلاه لعرض وتعديل تفاصيلها",
         "createFirst": ".انقر على 'إنشاء مطالبة جديدة' أعلاه لإنشاء أول مطالبة معالجة لاحقة لك"
+      },
+      "actions": {
+        "title": "الإجراءات",
+        "description": "اربط مفاتيح Ctrl+رقم (1-9) بمطالبات مخصصة. اضغط على اختصار أثناء التسجيل لتطبيق الإجراء بعد التفريغ الصوتي.",
+        "noActions": "لم تُضبط أي إجراءات بعد.",
+        "createFirst": "أنشئ إجراءك الأول لمعالجة التفريغ الصوتي باستخدام المزود الذي أعددته.",
+        "addAction": "إضافة إجراء",
+        "editAction": "تعديل الإجراء",
+        "key": "المفتاح",
+        "keyLabel": "المفتاح (1-9)",
+        "name": "الاسم",
+        "namePlaceholder": "مثلًا: وضع البريد الإلكتروني",
+        "prompt": "المطالبة",
+        "promptPlaceholder": "مثلًا: نسّق هذا النص كبريد إلكتروني مهني يتضمن تحية وخاتمة. أضف فواصل أسطر بين الفقرات.",
+        "promptTip": "تلميح: استخدم <code>${output}</code> لإدراج النص المفرغ في مطالبتك.",
+        "model": "النموذج (اختياري)",
+        "modelPlaceholder": "اختر نموذجًا",
+        "modelTip": "اختر نموذجًا محددًا لهذا الإجراء أو استخدم النموذج الافتراضي من قسم API.",
+        "defaultModel": "الافتراضي",
+        "save": "حفظ",
+        "cancel": "إلغاء",
+        "delete": "حذف",
+        "maxActionsReached": "تم بلوغ الحد الأقصى وهو 9 إجراءات."
+      },
+      "appMappings": {
+        "presetsDescription": "بداية سريعة: حمّل 5 إجراءات قياسية (نص غير رسمي / بريد إلكتروني / كود / مستند / مطالبة للذكاء الاصطناعي) وروابط للتطبيقات الشائعة.",
+        "loadPresets": "تحميل الإعدادات المسبقة",
+        "noActions": "أنشئ إجراء معالجة لاحقة واحدًا على الأقل أعلاه قبل إضافة رابط."
       }
     },
     "history": {
@@ -372,7 +429,13 @@
       "save": "حفظ التفريغ",
       "unsave": "إزالة من المحفوظات",
       "delete": "حذف الإدخال",
-      "deleteError": ".فشل حذف الإدخال. يرجى المحاولة مرة أخرى"
+      "deleteError": ".فشل حذف الإدخال. يرجى المحاولة مرة أخرى",
+      "reprocess": "إعادة المعالجة بنموذج آخر",
+      "reprocessing": "جارٍ إعادة المعالجة...",
+      "selectModel": "اختر النموذج",
+      "originalTranscript": "الأصلي",
+      "postProcessed": "بعد المعالجة اللاحقة",
+      "action": "الإجراء {{key}}"
     },
     "debug": {
       "title": "تصحيح الأخطاء",
@@ -495,7 +558,51 @@
         "translation": "ترجمة",
         "allLanguages": "جميع اللغات"
       },
-      "noModelsMatch": "لا توجد نماذج مطابقة لهذا الفلتر."
+      "noModelsMatch": "لا توجد نماذج مطابقة لهذا الفلتر.",
+      "tabs": {
+        "transcription": "التفريغ الصوتي",
+        "processing": "المعالجة"
+      },
+      "processingModels": {
+        "title": "نماذج المعالجة",
+        "description": "احفظ النماذج اللغوية الكبيرة لاستخدامها في إجراءات المعالجة اللاحقة.",
+        "noModels": "لا توجد نماذج معالجة محفوظة بعد. أضف نموذجًا لاستخدامه في إجراءاتك.",
+        "addModel": "إضافة نموذج معالجة",
+        "provider": "المزود",
+        "apiKey": "مفتاح API",
+        "apiKeyPlaceholder": "أدخل مفتاح API",
+        "model": "النموذج",
+        "modelPlaceholder": "اختر نموذجًا أو اكتب اسمه",
+        "save": "حفظ",
+        "cancel": "إلغاء",
+        "fetchModels": "جلب النماذج",
+        "alreadySaved": "هذا النموذج محفوظ بالفعل."
+      }
+    },
+    "longAudioModel": {
+      "title": "نموذج التسجيلات الطويلة",
+      "description": "الانتقال تلقائيًا إلى نموذج آخر عندما تتجاوز مدة التسجيل الحد المحدد.",
+      "modelLabel": "نموذج للتسجيلات الطويلة",
+      "modelDescription": "اختر نموذجًا لاستخدامه مع التسجيلات التي تتجاوز مدتها الحد المحدد.",
+      "thresholdLabel": "حد المدة (بالثواني)",
+      "thresholdDescription": "الانتقال إلى نموذج التسجيلات الطويلة عندما يتجاوز التسجيل هذه المدة.",
+      "disabled": "معطّل",
+      "seconds": "{{value}} ث"
+    },
+    "gemini": {
+      "title": "Gemini API",
+      "description": "استخدم Gemini API من Google للتفريغ الصوتي السحابي. يتطلب مفتاح API.",
+      "apiKey": "مفتاح API",
+      "apiKeyPlaceholder": "أدخل مفتاح Gemini API الخاص بك",
+      "model": "النموذج",
+      "modelDescription": "اختر نموذج Gemini الذي سيُستخدم للتفريغ الصوتي",
+      "apiKeyRequired": "مفتاح API مطلوب",
+      "apiKeyRequiredDescription": "أدخل مفتاح Google Gemini API الخاص بك لاستخدام التفريغ الصوتي السحابي.",
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "saved": "تم الحفظ ✓",
+      "apiKeyConfigured": "تم إعداد مفتاح API ✓",
+      "serviceAccountConfigured": "تم إعداد حساب الخدمة ✓"
     }
   },
   "footer": {
@@ -541,7 +648,14 @@
     "dismiss": "تجاهل"
   },
   "errors": {
-    "loadDirectory": "خطأ في تحميل المجلد: {{error}}"
+    "loadDirectory": "خطأ في تحميل المجلد: {{error}}",
+    "noInputDeviceTitle": "لم يُعثر على ميكروفون",
+    "noInputDevice": "لم يُكتشف أي جهاز إدخال صوتي. يرجى توصيل ميكروفون أو سماعة رأس والمحاولة مرة أخرى.",
+    "micPermissionDeniedTitle": "رُفض الوصول إلى الميكروفون",
+    "micPermissionDenied": {
+      "generic": "امنح إذن الوصول إلى الميكروفون في إعدادات النظام ثم حاول مرة أخرى."
+    },
+    "recordingFailed": "تعذر بدء التسجيل: {{error}}"
   },
   "appLanguage": {
     "title": "لغة التطبيق",

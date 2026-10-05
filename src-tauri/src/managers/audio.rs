@@ -691,11 +691,16 @@ impl AudioRecordingManager {
         Ok(())
     }
 
-    pub fn take_dictation_feed(&self) -> Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>> {
+    pub fn take_dictation_feed(
+        &self,
+    ) -> Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>> {
         self.dictation_feed.lock().unwrap().take()
     }
 
-    pub fn set_dictation_feed(&self, feed: Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>>) {
+    pub fn set_dictation_feed(
+        &self,
+        feed: Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>>,
+    ) {
         *self.dictation_feed.lock().unwrap() = feed.clone();
         if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
             let _ = rec.set_feed(feed);
@@ -712,18 +717,19 @@ impl AudioRecordingManager {
                 *state = RecordingState::Idle;
                 drop(state);
 
-                let (samples, used_raw_fallback) = if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
-                    match rec.stop() {
-                        Ok(buf) => buf,
-                        Err(e) => {
-                            error!("stop() failed: {e}");
-                            (Vec::new(), false)
+                let (samples, used_raw_fallback) =
+                    if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
+                        match rec.stop() {
+                            Ok(buf) => buf,
+                            Err(e) => {
+                                error!("stop() failed: {e}");
+                                (Vec::new(), false)
+                            }
                         }
-                    }
-                } else {
-                    error!("Recorder not available");
-                    (Vec::new(), false)
-                };
+                    } else {
+                        error!("Recorder not available");
+                        (Vec::new(), false)
+                    };
 
                 *self.is_recording.lock().unwrap() = false;
 

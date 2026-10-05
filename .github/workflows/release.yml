@@ -1,74 +1,152 @@
 name: "Release"
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      sign-binaries:
+        description: "Use Developer ID signing and notarization secrets"
+        type: boolean
+        default: false
+      publish:
+        description: "Publish after both macOS builds and all downloads succeed"
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
 
 jobs:
-  create-release:
+  prepare-release:
     permissions:
       contents: write
     runs-on: ubuntu-latest
     outputs:
-      release-id: ${{ steps.create-release.outputs.result }}
-      version: ${{ steps.get-version.outputs.version }}
+      release-id: ${{ steps.prepare.outputs.release-id }}
+      version: ${{ steps.prepare.outputs.version }}
     steps:
-      - name: Checkout repository
+      - name: Checkout release commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
 
-      - name: Get version from tauri.conf.json
-        id: get-version
-        shell: bash
-        run: |
-          VERSION=$(grep -o '"version": "[^"]*"' src-tauri/tauri.conf.json | cut -d'"' -f4)
-          echo "Application version from tauri.conf.json: $VERSION"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Create Draft Release
-        id: create-release
+      - name: Create or reuse draft release
+        id: prepare
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
-            const { data } = await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: `v${{ steps.get-version.outputs.version }}`,
-              name: `v${{ steps.get-version.outputs.version }}`,
+            const fs = require('fs');
+            const { version } = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+            const entries = fs.readFileSync('CHANGELOG.md', 'utf8')
+              .split(/^## /m)
+              .filter(entry => entry.startsWith(`[${version}] - `));
+            if (entries.length !== 1) {
+              throw new Error(`Expected one CHANGELOG.md entry for ${version}`);
+            }
+            const body = entries[0].slice(entries[0].indexOf('\n') + 1).trim();
+            if (!body) throw new Error(`Empty changelog entry for ${version}`);
+
+            const repo = context.repo;
+            const tag = `v${version}`;
+            const releases = await github.paginate(github.rest.repos.listReleases, repo);
+            const existing = releases.find(release => release.tag_name === tag);
+            if (existing && !existing.draft) {
+              throw new Error(`${tag} is already published`);
+            }
+
+            let tagRef;
+            try {
+              tagRef = (await github.rest.git.getRef({ ...repo, ref: `tags/${tag}` })).data;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              tagRef = (await github.rest.git.createRef({
+                ...repo, ref: `refs/tags/${tag}`, sha: context.sha,
+              })).data;
+            }
+            let object = tagRef.object;
+            while (object.type === 'tag') {
+              object = (await github.rest.git.getTag({ ...repo, tag_sha: object.sha })).data.object;
+            }
+            if (object.type !== 'commit' || object.sha !== context.sha) {
+              throw new Error(`${tag} does not point to release commit ${context.sha}`);
+            }
+
+            const release = {
+              ...repo,
+              tag_name: tag,
+              target_commitish: context.sha,
+              name: tag,
+              body,
               draft: true,
               prerelease: false,
-              generate_release_notes: true
-            })
-            return data.id
+            };
+            const { data } = existing
+              ? await github.rest.repos.updateRelease({ ...release, release_id: existing.id })
+              : await github.rest.repos.createRelease(release);
+            core.setOutput('release-id', String(data.id));
+            core.setOutput('version', version);
 
-  publish-tauri:
+  build-macos:
     permissions:
       contents: write
-    needs: create-release
+    needs: prepare-release
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-26" # for Arm based macs (M1 and above). Uses macOS 26 for Apple Intelligence SDK.
-            args: "--target aarch64-apple-darwin"
+          - platform: "macos-26"
             target: "aarch64-apple-darwin"
-          - platform: "macos-latest" # for Intel based macs.
-            args: "--target x86_64-apple-darwin"
+          - platform: "macos-15-intel"
             target: "x86_64-apple-darwin"
-          - platform: "ubuntu-22.04" # Build .deb on 22.04
-            args: "--bundles deb"
-            target: "x86_64-unknown-linux-gnu"
-          - platform: "ubuntu-24.04" # Build AppImage and RPM on 24.04
-            args: "--bundles appimage,rpm"
-            target: "x86_64-unknown-linux-gnu"
-          - platform: "ubuntu-24.04-arm" # Build for ARM64 Linux
-            args: "--bundles appimage,deb,rpm"
-            target: "aarch64-unknown-linux-gnu"
-
     uses: ./.github/workflows/build.yml
     with:
       platform: ${{ matrix.platform }}
       target: ${{ matrix.target }}
-      build-args: ${{ matrix.args }}
-      sign-binaries: true
-      asset-prefix: "parley"
-      upload-artifacts: false
-      release-id: ${{ needs.create-release.outputs.release-id }}
+      ref: ${{ github.sha }}
+      build-args: >-
+        --target ${{ matrix.target }} --bundles app,dmg
+        ${{ !inputs.sign-binaries && '--config src-tauri/tauri.release-adhoc.conf.json' || '' }}
+      sign-binaries: ${{ inputs.sign-binaries }}
+      upload-artifacts: true
+      release-id: ${{ needs.prepare-release.outputs.release-id }}
     secrets: inherit
+
+  publish-release:
+    permissions:
+      contents: write
+    needs: [prepare-release, build-macos]
+    if: ${{ inputs.publish && needs.build-macos.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check downloads and publish
+        uses: actions/github-script@v7
+        env:
+          RELEASE_ID: ${{ needs.prepare-release.outputs.release-id }}
+          VERSION: ${{ needs.prepare-release.outputs.version }}
+        with:
+          github-token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const repo = context.repo;
+            const release_id = Number(process.env.RELEASE_ID);
+            const version = process.env.VERSION;
+            const { data: release } = await github.rest.repos.getRelease({ ...repo, release_id });
+            const { data: commit } = await github.rest.repos.getCommit({
+              ...repo, ref: `refs/tags/v${version}`,
+            });
+            if (!release.draft || release.tag_name !== `v${version}` || commit.sha !== context.sha) {
+              throw new Error('Release is not a draft for this exact commit');
+            }
+            const assets = await github.paginate(github.rest.repos.listReleaseAssets, { ...repo, release_id });
+            const required = [
+              `Parley_${version}_aarch64.dmg`,
+              `Parley_${version}_x64.dmg`,
+              'Parley_aarch64.app.tar.gz',
+              'Parley_x64.app.tar.gz',
+            ];
+            for (const name of required) {
+              if (!assets.some(asset => asset.name === name && asset.state === 'uploaded' && asset.size > 0)) {
+                throw new Error(`Missing release download: ${name}`);
+              }
+            }
+            await github.rest.repos.updateRelease({ ...repo, release_id, draft: false });

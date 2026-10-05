@@ -84,17 +84,11 @@ pub fn get_active_window_title() -> Option<String> {
 /// Pick the best matching action key for the current active window title.
 /// Returns the action_key from the first mapping whose pattern is a
 /// case-insensitive substring of the title.
-pub fn match_app_action(
-    title: &str,
-    mappings: &[crate::settings::AppPromptMapping],
-) -> Option<u8> {
+pub fn match_app_action(title: &str, mappings: &[crate::settings::AppPromptMapping]) -> Option<u8> {
     let title_lower = title.to_lowercase();
     mappings
         .iter()
-        .find(|m| {
-            !m.pattern.trim().is_empty()
-                && title_lower.contains(&m.pattern.to_lowercase())
-        })
+        .find(|m| !m.pattern.trim().is_empty() && title_lower.contains(&m.pattern.to_lowercase()))
         .map(|m| m.action_key)
 }
 
