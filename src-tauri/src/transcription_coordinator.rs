@@ -1,7 +1,5 @@
-use crate::actions::{ActiveActionState, ACTION_MAP};
+use crate::actions::ACTION_MAP;
 use crate::managers::audio::AudioRecordingManager;
-use crate::overlay::{emit_action_deselected, emit_action_selected};
-use crate::settings::get_settings;
 use log::{debug, error, warn};
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
@@ -23,18 +21,12 @@ enum Command {
         recording_was_active: bool,
     },
     ProcessingFinished,
-    SelectAction {
-        key: u8,
-    },
 }
 
 /// Pipeline lifecycle, owned exclusively by the coordinator thread.
 enum Stage {
     Idle,
-    Recording {
-        binding_id: String,
-        selected_action: Option<u8>,
-    },
+    Recording { binding_id: String },
     Processing,
 }
 
@@ -46,15 +38,7 @@ pub struct TranscriptionCoordinator {
 }
 
 pub fn is_transcribe_binding(id: &str) -> bool {
-    id == "transcribe" || id == "transcribe_with_post_process"
-}
-
-pub fn is_action_binding(id: &str) -> bool {
-    id.starts_with("action_")
-}
-
-pub fn parse_action_key(id: &str) -> Option<u8> {
-    id.strip_prefix("action_").and_then(|k| k.parse().ok())
+    id == "transcribe"
 }
 
 impl TranscriptionCoordinator {
@@ -130,41 +114,6 @@ impl TranscriptionCoordinator {
                         Command::ProcessingFinished => {
                             stage = Stage::Idle;
                         }
-                        Command::SelectAction { key } => {
-                            if let Stage::Recording {
-                                ref mut selected_action,
-                                ..
-                            } = stage
-                            {
-                                let settings = get_settings(&app);
-                                if !settings.post_process_enabled {
-                                    if selected_action.take().is_some() {
-                                        emit_action_deselected(&app);
-                                    }
-                                    debug!(
-                                        "Action {} selection ignored: post-processing is disabled",
-                                        key
-                                    );
-                                    continue;
-                                }
-
-                                if *selected_action == Some(key) {
-                                    *selected_action = None;
-                                    emit_action_deselected(&app);
-                                    debug!("Action {} deselected during recording", key);
-                                } else {
-                                    *selected_action = Some(key);
-                                    if let Some(action) =
-                                        settings.post_process_actions.iter().find(|a| a.key == key)
-                                    {
-                                        emit_action_selected(&app, key, &action.name);
-                                    }
-                                    debug!("Action {} selected during recording", key);
-                                }
-                            } else {
-                                debug!("Action selection ignored: not in recording state");
-                            }
-                        }
                     }
                 }
                 debug!("Transcription coordinator exited");
@@ -217,12 +166,6 @@ impl TranscriptionCoordinator {
             warn!("Transcription coordinator channel closed");
         }
     }
-
-    pub fn select_action(&self, key: u8) {
-        if self.tx.send(Command::SelectAction { key }).is_err() {
-            warn!("Transcription coordinator channel closed");
-        }
-    }
 }
 
 fn start(app: &AppHandle, stage: &mut Stage, binding_id: &str, hotkey_string: &str) {
@@ -237,7 +180,6 @@ fn start(app: &AppHandle, stage: &mut Stage, binding_id: &str, hotkey_string: &s
     {
         *stage = Stage::Recording {
             binding_id: binding_id.to_string(),
-            selected_action: None,
         };
     } else {
         debug!("Start for '{binding_id}' did not begin recording; staying idle");
@@ -245,16 +187,6 @@ fn start(app: &AppHandle, stage: &mut Stage, binding_id: &str, hotkey_string: &s
 }
 
 fn stop(app: &AppHandle, stage: &mut Stage, binding_id: &str, hotkey_string: &str) {
-    // Store selected action in managed state before calling stop
-    if let Stage::Recording {
-        selected_action, ..
-    } = &stage
-    {
-        if let Some(state) = app.try_state::<ActiveActionState>() {
-            *state.0.lock().unwrap() = *selected_action;
-        }
-    }
-
     let Some(action) = ACTION_MAP.get(binding_id) else {
         warn!("No action in ACTION_MAP for '{binding_id}'");
         return;

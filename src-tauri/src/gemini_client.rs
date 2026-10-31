@@ -5,6 +5,7 @@ use log::debug;
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
+use std::time::Duration;
 
 const GEMINI_API_BASE: &str = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -34,11 +35,26 @@ struct SystemInstruction {
 }
 
 #[derive(Serialize)]
+struct ThinkingConfig {
+    #[serde(rename = "thinkingLevel")]
+    thinking_level: String,
+}
+
+#[derive(Serialize)]
+struct GenerationConfig {
+    #[serde(rename = "thinkingConfig")]
+    thinking_config: ThinkingConfig,
+}
+
+#[derive(Serialize)]
 struct GenerateContentRequest {
     contents: Vec<Content>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "systemInstruction")]
     system_instruction: Option<SystemInstruction>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "generationConfig")]
+    generation_config: Option<GenerationConfig>,
 }
 
 #[derive(Deserialize)]
@@ -116,6 +132,7 @@ pub async fn transcribe_audio(api_key: &str, model: &str, audio_samples: &[f32])
             ],
         }],
         system_instruction: None,
+        generation_config: None,
     };
 
     let mut headers = HeaderMap::new();
@@ -165,11 +182,18 @@ pub async fn transcribe_audio(api_key: &str, model: &str, audio_samples: &[f32])
     Ok(text.trim().to_string())
 }
 
+/// Single-shot text generation with a system instruction.
+///
+/// `thinking_level` is the Gemini 3 `thinkingConfig.thinkingLevel` enum (for example
+/// `MINIMAL`). The sampling temperature is left at the model default, which Google
+/// recommends for all Gemini 3 models. `timeout` bounds the whole request, body included.
 pub async fn generate_text(
     api_key: &str,
     model: &str,
     system_prompt: &str,
     user_text: &str,
+    thinking_level: &str,
+    timeout: Duration,
 ) -> Result<String> {
     debug!(
         "Gemini generate_text: model={}, prompt_len={}, text_len={}",
@@ -193,6 +217,11 @@ pub async fn generate_text(
                 inline_data: None,
             }],
         }),
+        generation_config: Some(GenerationConfig {
+            thinking_config: ThinkingConfig {
+                thinking_level: thinking_level.to_string(),
+            },
+        }),
     };
 
     let mut headers = HeaderMap::new();
@@ -202,7 +231,7 @@ pub async fn generate_text(
         HeaderValue::from_str(api_key).map_err(|e| anyhow::anyhow!("Invalid API key: {}", e))?,
     );
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder().timeout(timeout).build()?;
     let response = client
         .post(&url)
         .headers(headers)
@@ -229,15 +258,14 @@ pub async fn generate_text(
         .await
         .map_err(|e| anyhow::anyhow!("Failed to parse Gemini response: {}", e))?;
 
-    let text = resp
+    let text: String = resp
         .candidates
         .and_then(|c| c.into_iter().next())
         .and_then(|c| c.content)
         .and_then(|c| c.parts)
-        .and_then(|p| p.into_iter().next())
-        .and_then(|p| p.text)
+        .map(|parts| parts.into_iter().filter_map(|p| p.text).collect())
         .unwrap_or_default();
 
     debug!("Gemini text generation result length: {}", text.len());
-    Ok(text.trim().to_string())
+    Ok(text)
 }

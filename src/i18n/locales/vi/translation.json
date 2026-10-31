@@ -177,26 +177,7 @@
       },
       "noModelsMatch": "Không có mô hình nào khớp với bộ lọc này.",
       "yourModels": "Mô hình đã tải",
-      "availableModels": "Có sẵn để tải xuống",
-      "processingModels": {
-        "addModel": "Thêm mô hình xử lý",
-        "alreadySaved": "Mô hình này đã được lưu.",
-        "apiKey": "Khóa API",
-        "apiKeyPlaceholder": "Nhập khóa API",
-        "cancel": "Hủy",
-        "description": "Lưu các mô hình LLM để dùng trong thao tác xử lý sau.",
-        "fetchModels": "Lấy danh sách mô hình",
-        "model": "Mô hình",
-        "modelPlaceholder": "Chọn hoặc nhập mô hình",
-        "noModels": "Chưa lưu mô hình xử lý nào. Thêm một mô hình để dùng trong các thao tác.",
-        "provider": "Nhà cung cấp",
-        "save": "Lưu",
-        "title": "Mô hình xử lý"
-      },
-      "tabs": {
-        "processing": "Xử lý",
-        "transcription": "Chuyển âm thanh thành văn bản"
-      }
+      "availableModels": "Có sẵn để tải xuống"
     },
     "general": {
       "title": "Chung",
@@ -375,90 +356,10 @@
     },
     "postProcessing": {
       "title": "Xử lý sau",
-      "hotkey": {
-        "title": "Phím tắt"
-      },
-      "api": {
-        "title": "API (Tương thích OpenAI)",
-        "provider": {
-          "title": "Nhà cung cấp",
-          "description": "Chọn một nhà cung cấp tương thích OpenAI."
-        },
-        "appleIntelligence": {
-          "title": "Apple Intelligence",
-          "description": "Chạy hoàn toàn trên thiết bị. Không cần khóa API hoặc truy cập mạng.",
-          "requirements": "Yêu cầu Mac Apple Silicon chạy macOS Tahoe (26.0) trở lên. Apple Intelligence phải được bật trong Cài đặt Hệ thống.",
-          "unavailable": "Apple Intelligence không khả dụng trên thiết bị này. Yêu cầu Mac Apple Silicon chạy macOS Tahoe (26.0) trở lên với Apple Intelligence được bật trong Cài đặt Hệ thống."
-        },
-        "baseUrl": {
-          "title": "URL cơ sở",
-          "description": "URL cơ sở API cho nhà cung cấp đã chọn. Chỉ có thể chỉnh sửa nhà cung cấp tùy chỉnh.",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "Khóa API",
-          "description": "Khóa API cho nhà cung cấp đã chọn.",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "Mô hình",
-          "descriptionApple": "Cung cấp giới hạn token tùy chọn hoặc giữ cài đặt mặc định trên thiết bị.",
-          "descriptionCustom": "Cung cấp định danh mô hình được yêu cầu bởi điểm cuối tùy chỉnh của bạn.",
-          "descriptionDefault": "Chọn một mô hình được cung cấp bởi nhà cung cấp đã chọn.",
-          "placeholderApple": "Apple Intelligence",
-          "placeholderWithOptions": "Tìm kiếm hoặc chọn một mô hình",
-          "placeholderNoOptions": "Nhập tên mô hình",
-          "refreshModels": "Làm mới mô hình"
-        }
-      },
-      "prompts": {
-        "title": "Prompt",
-        "selectedPrompt": {
-          "title": "Prompt đã chọn",
-          "description": "Chọn một mẫu để tinh chỉnh bản ghi hoặc tạo mới. Sử dụng ${output} trong văn bản prompt để tham chiếu bản ghi đã chụp."
-        },
-        "noPrompts": "Không có prompt nào",
-        "selectPrompt": "Chọn một prompt",
-        "createNew": "Tạo Prompt mới",
-        "promptLabel": "Nhãn Prompt",
-        "promptLabelPlaceholder": "Nhập tên prompt",
-        "promptInstructions": "Hướng dẫn Prompt",
-        "promptInstructionsPlaceholder": "Viết hướng dẫn để chạy sau khi chuyển đổi. Ví dụ: Cải thiện ngữ pháp và độ rõ ràng cho văn bản sau: ${output}",
-        "promptTip": "Mẹo: Sử dụng <code>${output}</code> để chèn văn bản đã chuyển đổi vào prompt của bạn.",
-        "updatePrompt": "Cập nhật Prompt",
-        "deletePrompt": "Xóa Prompt",
-        "createPrompt": "Tạo Prompt",
-        "cancel": "Hủy",
-        "selectToEdit": "Chọn một prompt ở trên để xem và chỉnh sửa chi tiết.",
-        "createFirst": "Nhấn 'Tạo Prompt mới' ở trên để tạo prompt xử lý sau đầu tiên của bạn."
-      },
-      "actions": {
-        "addAction": "Thêm thao tác",
-        "cancel": "Hủy",
-        "createFirst": "Tạo thao tác đầu tiên để xử lý văn bản đã chuyển đổi bằng nhà cung cấp bạn đã cấu hình.",
-        "defaultModel": "Mặc định",
-        "delete": "Xóa",
-        "description": "Gán các prompt tùy chỉnh cho phím Ctrl+số (1-9). Nhấn phím tắt khi ghi âm để áp dụng thao tác sau khi chuyển âm thanh thành văn bản.",
-        "editAction": "Sửa thao tác",
-        "key": "Phím",
-        "keyLabel": "Phím (1-9)",
-        "maxActionsReached": "Đã đạt giới hạn 9 thao tác.",
-        "model": "Mô hình (không bắt buộc)",
-        "modelPlaceholder": "Chọn mô hình",
-        "modelTip": "Chọn mô hình cụ thể cho thao tác này hoặc dùng mô hình mặc định trong mục API.",
-        "name": "Tên",
-        "namePlaceholder": "Ví dụ: Chế độ email",
-        "noActions": "Chưa cấu hình thao tác nào.",
-        "prompt": "Prompt",
-        "promptPlaceholder": "Ví dụ: Định dạng văn bản này thành email chuyên nghiệp có lời chào và lời kết. Thêm ngắt dòng giữa các đoạn.",
-        "promptTip": "Mẹo: Dùng <code>${output}</code> để chèn văn bản đã chuyển đổi vào prompt.",
-        "save": "Lưu",
-        "title": "Thao tác"
-      },
-      "appMappings": {
-        "presetsDescription": "Bắt đầu nhanh: tải 5 thao tác tiêu chuẩn (văn phong thân mật / email / mã / tài liệu / prompt cho AI) và các liên kết cho ứng dụng phổ biến.",
-        "loadPresets": "Tải cấu hình sẵn",
-        "noActions": "Tạo ít nhất một thao tác xử lý sau ở trên trước khi thêm liên kết."
+      "cleanup": {
+        "label": "Dọn dẹp bằng AI",
+        "description": "Sửa dấu câu và từ đệm bằng Gemini sau mỗi lần đọc chính tả. Bản chép lời của bạn được gửi đến Google.",
+        "missingKey": "Tính năng dọn dẹp cần khóa API Gemini. Hãy thêm khóa trong Nâng cao, mục Mô hình đám mây."
       }
     },
     "history": {
@@ -471,7 +372,6 @@
       "unsave": "Xóa khỏi đã lưu",
       "delete": "Xóa mục",
       "deleteError": "Không thể xóa mục. Vui lòng thử lại.",
-      "action": "Thao tác {{key}}",
       "originalTranscript": "Bản gốc",
       "postProcessed": "Đã qua xử lý",
       "reprocess": "Xử lý lại bằng mô hình khác",
@@ -522,10 +422,6 @@
       "clamshellMicrophone": {
         "title": "Micrô chế độ gập",
         "description": "Micrô sử dụng khi nắp laptop được đóng"
-      },
-      "postProcessingToggle": {
-        "label": "Xử lý sau",
-        "description": "Bật tinh chỉnh văn bản bằng AI sau khi chuyển đổi"
       },
       "muteWhileRecording": {
         "label": "Tắt tiếng khi ghi âm",

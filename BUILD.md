@@ -12,7 +12,7 @@ Install the Xcode command-line tools:
 xcode-select --install
 ```
 
-The Apple Silicon build uses a Swift bridge for Apple Intelligence. Enabling Apple Intelligence requires an Xcode SDK with the FoundationModels framework. Builds without that SDK use a stub. The release workflow uses macOS 26 for Apple Silicon and a native Intel runner for Intel builds.
+The release workflow uses macOS 26 for Apple Silicon and a native Intel runner for Intel builds.
 
 ### Windows
 
