@@ -14,6 +14,9 @@ const CLEANUP_MODEL: &str = "gemini-3.5-flash-lite";
 const THINKING_LEVEL: &str = "MINIMAL";
 const DEADLINE: Duration = Duration::from_secs(8);
 const MIN_WORDS: usize = 3;
+/// Scripts without spaces (Chinese, Japanese) count as one word, so a transcript this long
+/// is cleaned even when it has fewer than MIN_WORDS words.
+const MIN_CHARS: usize = 8;
 const MAX_CUSTOM_WORDS: usize = 64;
 const MIN_LENGTH_RATIO: f64 = 0.5;
 const MAX_LENGTH_RATIO: f64 = 1.6;
@@ -42,9 +45,10 @@ pub async fn clean_transcript(
 ) -> Result<String, String> {
     let transcript = transcript.trim();
     let word_count = transcript.split_whitespace().count();
-    if word_count < MIN_WORDS {
+    let char_count = transcript.chars().filter(|c| !c.is_whitespace()).count();
+    if word_count < MIN_WORDS && char_count < MIN_CHARS {
         return Err(format!(
-            "transcript has {word_count} words, under the minimum of {MIN_WORDS}"
+            "transcript has {word_count} words and {char_count} characters, too short to clean"
         ));
     }
 
