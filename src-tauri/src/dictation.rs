@@ -69,6 +69,7 @@ impl DictationSlot {
         model_path: PathBuf,
         language: Option<String>,
         live: bool,
+        vocabulary: Vec<String>,
         preview_tx: Option<Sender<DictationPreview>>,
     ) -> u64 {
         self.cancel();
@@ -77,7 +78,15 @@ impl DictationSlot {
         let (tx, rx) = mpsc::channel();
         let worker_path = model_path.clone();
         let handle = thread::spawn(move || {
-            dictation_worker(generation, worker_path, language, live, rx, preview_tx)
+            dictation_worker(
+                generation,
+                worker_path,
+                language,
+                live,
+                vocabulary,
+                rx,
+                preview_tx,
+            )
         });
         self.active = Some(Slot {
             generation,
@@ -148,25 +157,27 @@ fn dictation_worker(
     model_path: PathBuf,
     language: Option<String>,
     live: bool,
+    vocabulary: Vec<String>,
     rx: Receiver<DictationCmd>,
     preview_tx: Option<Sender<DictationPreview>>,
 ) {
-    let mut dictation = match NativeDictation::begin(&model_path, language.as_deref(), live) {
-        Ok(dictation) => Some(dictation),
-        Err(error) => {
-            while let Ok(cmd) = rx.recv() {
-                match cmd {
-                    DictationCmd::Feed(_) => {}
-                    DictationCmd::Finalize(reply) => {
-                        let _ = reply.send(DictationOutcome::Failed(error.to_string()));
-                        break;
+    let mut dictation =
+        match NativeDictation::begin(&model_path, language.as_deref(), live, &vocabulary) {
+            Ok(dictation) => Some(dictation),
+            Err(error) => {
+                while let Ok(cmd) = rx.recv() {
+                    match cmd {
+                        DictationCmd::Feed(_) => {}
+                        DictationCmd::Finalize(reply) => {
+                            let _ = reply.send(DictationOutcome::Failed(error.to_string()));
+                            break;
+                        }
+                        DictationCmd::Cancel => break,
                     }
-                    DictationCmd::Cancel => break,
                 }
+                return;
             }
-            return;
-        }
-    };
+        };
     let mut feed_error: Option<String> = None;
     while let Ok(cmd) = rx.recv() {
         match cmd {
@@ -242,7 +253,7 @@ mod tests {
     #[test]
     fn second_finalize_is_stale() {
         let mut slot = DictationSlot::new();
-        let generation = slot.begin(PathBuf::from("missing.gguf"), None, false, None);
+        let generation = slot.begin(PathBuf::from("missing.gguf"), None, false, Vec::new(), None);
         let first = slot.finalize(generation);
         let second = slot.finalize(generation);
         assert!(matches!(first, DictationOutcome::Failed(_)));
@@ -252,7 +263,7 @@ mod tests {
     #[test]
     fn cancel_blocks_later_finalize() {
         let mut slot = DictationSlot::new();
-        let generation = slot.begin(PathBuf::from("missing.gguf"), None, false, None);
+        let generation = slot.begin(PathBuf::from("missing.gguf"), None, false, Vec::new(), None);
         slot.cancel();
         assert_eq!(slot.finalize(generation), DictationOutcome::Stale);
     }
@@ -260,7 +271,13 @@ mod tests {
     #[test]
     fn cancel_after_native_start_failure_returns() {
         let mut slot = DictationSlot::new();
-        let generation = slot.begin(PathBuf::from("invalid\0path"), None, false, None);
+        let generation = slot.begin(
+            PathBuf::from("invalid\0path"),
+            None,
+            false,
+            Vec::new(),
+            None,
+        );
         slot.cancel();
         assert_eq!(slot.finalize(generation), DictationOutcome::Stale);
     }
@@ -280,7 +297,13 @@ mod tests {
             .collect();
         let (preview_tx, preview_rx) = mpsc::channel();
         let mut slot = DictationSlot::new();
-        let generation = slot.begin(model, Some("fr".to_string()), true, Some(preview_tx));
+        let generation = slot.begin(
+            model,
+            Some("fr".to_string()),
+            true,
+            Vec::new(),
+            Some(preview_tx),
+        );
         for frame in pcm.chunks(480) {
             assert!(slot.feed(generation, frame));
         }

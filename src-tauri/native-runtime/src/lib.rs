@@ -1,7 +1,62 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
 use std::path::Path;
-use transcribe_cpp::{Backend, Model, ModelOptions, RunOptions};
+use transcribe_cpp::{
+    Backend, Model, ModelOptions, ParakeetVocabularyOptions, RunExtension, RunOptions,
+};
+
+/// Version of the transcribe.cpp tree pinned in Cargo.toml.
+const EXPECTED_TRANSCRIBE_VERSION: &str = "0.4.1";
+
+/// Engine cap on biased terms (`k_vocab_max_terms` in transcribe.cpp).
+const VOCABULARY_MAX_TERMS: usize = 64;
+/// Hex's "Normal" boost: nats per term piece by which a term may score below
+/// the heard words and still replace them.
+const VOCABULARY_BOOST_NATS: f32 = 2.5;
+
+/// Reads the newline-separated custom words the host passes across the FFI.
+/// A null pointer means no vocabulary.
+unsafe fn read_vocabulary(raw: *const c_char) -> Result<Vec<String>, String> {
+    if raw.is_null() {
+        return Ok(Vec::new());
+    }
+    let text = CStr::from_ptr(raw)
+        .to_str()
+        .map_err(|_| "vocabulary is not utf-8".to_string())?;
+    let mut terms: Vec<String> = Vec::new();
+    for term in text.lines().map(str::trim).filter(|term| !term.is_empty()) {
+        if terms.len() == VOCABULARY_MAX_TERMS {
+            break;
+        }
+        if !terms.iter().any(|seen| seen.eq_ignore_ascii_case(term)) {
+            terms.push(term.to_string());
+        }
+    }
+    Ok(terms)
+}
+
+/// Whether the loaded model decodes with Parakeet vocabulary biasing. Other
+/// families (Nemotron, Qwen3-ASR, Cohere) get no vocabulary.
+fn takes_vocabulary(model: &Model) -> bool {
+    model.arch() == "parakeet"
+        && model.accepts_ext(
+            transcribe_cpp::ExtSlot::Run,
+            transcribe_cpp::sys::TRANSCRIBE_EXT_KIND_PARAKEET_VOCABULARY,
+        )
+}
+
+fn apply_vocabulary(model: &Model, options: &mut RunOptions, terms: &[String]) {
+    if terms.is_empty() || !takes_vocabulary(model) {
+        return;
+    }
+    options.vocabulary = terms.to_vec();
+    options.family = Some(RunExtension::ParakeetVocabulary(
+        ParakeetVocabularyOptions {
+            boost: Some(VOCABULARY_BOOST_NATS),
+            sounds_like: Vec::new(),
+        },
+    ));
+}
 
 fn backend_for(path: &Path, live: bool) -> Backend {
     let name = path
@@ -65,6 +120,7 @@ pub unsafe extern "C" fn parley_native_transcribe_batch(
     sample_count: usize,
     language: *const c_char,
     live_backend: c_int,
+    vocabulary: *const c_char,
     text_out: *mut *mut c_char,
     error_out: *mut *mut c_char,
 ) -> c_int {
@@ -75,15 +131,19 @@ pub unsafe extern "C" fn parley_native_transcribe_batch(
         Ok(path) => Path::new(path),
         Err(_) => return set_error(error_out, "model path is not utf-8".to_string()),
     };
-    if transcribe_cpp::version() != "0.2.3" {
+    if transcribe_cpp::version() != EXPECTED_TRANSCRIBE_VERSION {
         return set_error(
             error_out,
             format!(
-                "transcribe-cpp linked {}, expected 0.2.3",
+                "transcribe-cpp linked {}, expected {EXPECTED_TRANSCRIBE_VERSION}",
                 transcribe_cpp::version()
             ),
         );
     }
+    let terms = match read_vocabulary(vocabulary) {
+        Ok(terms) => terms,
+        Err(error) => return set_error(error_out, error),
+    };
     if let Err(error) = transcribe_cpp::init_backends_default() {
         return set_error(error_out, error.to_string());
     }
@@ -110,11 +170,12 @@ pub unsafe extern "C" fn parley_native_transcribe_batch(
         }
     };
     let mut options = RunOptions::default();
-    options.language = run_language(
-        &model.arch(),
-        requested_language,
-        &model.capabilities().languages,
-    );
+    let languages = match model.capabilities() {
+        Ok(capabilities) => capabilities.languages,
+        Err(error) => return set_error(error_out, error.to_string()),
+    };
+    options.language = run_language(&model.arch(), requested_language, &languages);
+    apply_vocabulary(&model, &mut options, &terms);
     let audio = std::slice::from_raw_parts(samples, sample_count);
     match session.run(audio, &options) {
         Ok(transcript) => match CString::new(transcript.text) {
@@ -152,10 +213,15 @@ struct NativeWorker {
     handle: Option<JoinHandle<()>>,
 }
 
-fn start_worker(path: &Path, language: Option<String>, live: bool) -> Result<NativeWorker, String> {
+fn start_worker(
+    path: &Path,
+    language: Option<String>,
+    live: bool,
+    terms: Vec<String>,
+) -> Result<NativeWorker, String> {
     let path = path.to_path_buf();
     let (tx, rx) = mpsc::channel();
-    let handle = thread::spawn(move || worker_loop(path, language, live, rx));
+    let handle = thread::spawn(move || worker_loop(path, language, live, terms, rx));
     Ok(NativeWorker {
         tx,
         handle: Some(handle),
@@ -166,9 +232,10 @@ fn worker_loop(
     path: std::path::PathBuf,
     language: Option<String>,
     live: bool,
+    terms: Vec<String>,
     rx: Receiver<WorkerCmd>,
 ) {
-    let loaded = (|| -> Result<(Model, bool), String> {
+    let loaded = (|| -> Result<(Model, bool, Vec<String>), String> {
         transcribe_cpp::init_backends_default().map_err(|error| error.to_string())?;
         let model = Model::load_with(
             &path,
@@ -178,10 +245,11 @@ fn worker_loop(
             },
         )
         .map_err(|error| error.to_string())?;
-        let streaming = live && model.capabilities().supports_streaming;
-        Ok((model, streaming))
+        let capabilities = model.capabilities().map_err(|error| error.to_string())?;
+        let streaming = live && capabilities.supports_streaming;
+        Ok((model, streaming, capabilities.languages))
     })();
-    let (model, streaming) = match loaded {
+    let (model, streaming, languages) = match loaded {
         Ok(loaded) => loaded,
         Err(error) => {
             while let Ok(cmd) = rx.recv() {
@@ -198,15 +266,17 @@ fn worker_loop(
             return;
         }
     };
-    let language = run_language(
-        &model.arch(),
-        language.as_deref(),
-        &model.capabilities().languages,
-    );
-    run_worker(model, language, streaming, rx);
+    let language = run_language(&model.arch(), language.as_deref(), &languages);
+    run_worker(model, language, streaming, terms, rx);
 }
 
-fn run_worker(model: Model, language: Option<String>, streaming: bool, rx: Receiver<WorkerCmd>) {
+fn run_worker(
+    model: Model,
+    language: Option<String>,
+    streaming: bool,
+    terms: Vec<String>,
+    rx: Receiver<WorkerCmd>,
+) {
     let mut session = match model.session() {
         Ok(session) => session,
         Err(error) => {
@@ -226,6 +296,7 @@ fn run_worker(model: Model, language: Option<String>, streaming: bool, rx: Recei
     };
     let mut options = RunOptions::default();
     options.language = language;
+    apply_vocabulary(&model, &mut options, &terms);
     if streaming {
         let mut stream = match session.stream(&options, &transcribe_cpp::StreamOptions::default()) {
             Ok(stream) => stream,
@@ -297,6 +368,7 @@ pub unsafe extern "C" fn parley_native_worker_begin(
     path: *const c_char,
     language: *const c_char,
     live: c_int,
+    vocabulary: *const c_char,
     worker_out: *mut *mut NativeWorker,
     error_out: *mut *mut c_char,
 ) -> c_int {
@@ -316,7 +388,11 @@ pub unsafe extern "C" fn parley_native_worker_begin(
             Err(_) => return set_error(error_out, "language is not utf-8".to_string()),
         }
     };
-    match start_worker(path, language, live != 0) {
+    let terms = match read_vocabulary(vocabulary) {
+        Ok(terms) => terms,
+        Err(error) => return set_error(error_out, error),
+    };
+    match start_worker(path, language, live != 0, terms) {
         Ok(worker) => {
             *worker_out = Box::into_raw(Box::new(worker));
             0

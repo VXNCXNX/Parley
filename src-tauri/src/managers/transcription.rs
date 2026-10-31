@@ -498,6 +498,7 @@ impl TranscriptionManager {
             path,
             language,
             info.filename.starts_with("nemotron-"),
+            settings.custom_words.clone(),
             Some(preview_tx),
         );
         thread::spawn(move || {
@@ -770,6 +771,7 @@ impl TranscriptionManager {
                                 &audio,
                                 language.as_deref(),
                                 false,
+                                &settings.custom_words,
                             )
                             .map(|text| {
                                 transcribe_rs::TranscriptionResult {
