@@ -1,8 +1,9 @@
 use std::{
+    collections::VecDeque,
     io::Error,
     panic::{self, AssertUnwindSafe},
     sync::{mpsc, Arc, Mutex},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use cpal::{
@@ -19,7 +20,11 @@ use crate::audio_toolkit::{
 
 enum Cmd {
     Start,
-    Stop(mpsc::Sender<(Vec<f32>, bool)>),
+    Stop {
+        reply: mpsc::Sender<(Vec<f32>, bool)>,
+        /// Keep capturing for POST_RELEASE_TAIL_MS before replying.
+        with_tail: bool,
+    },
     SetFeed(Option<std::sync::mpsc::Sender<crate::dictation::RecorderFeed>>),
     Shutdown,
 }
@@ -226,10 +231,23 @@ impl AudioRecorder {
         self.device.as_ref().and_then(|device| device.name().ok())
     }
 
+    /// Stops recording and returns the samples, after a short tail of extra capture.
     pub fn stop(&self) -> Result<(Vec<f32>, bool), Box<dyn std::error::Error>> {
+        self.stop_inner(true)
+    }
+
+    /// Stops recording right away, for callers that discard the samples.
+    pub fn cancel(&self) -> Result<(Vec<f32>, bool), Box<dyn std::error::Error>> {
+        self.stop_inner(false)
+    }
+
+    fn stop_inner(&self, with_tail: bool) -> Result<(Vec<f32>, bool), Box<dyn std::error::Error>> {
         let (resp_tx, resp_rx) = mpsc::channel();
         if let Some(tx) = &self.cmd_tx {
-            tx.send(Cmd::Stop(resp_tx))?;
+            tx.send(Cmd::Stop {
+                reply: resp_tx,
+                with_tail,
+            })?;
         }
         Ok(resp_rx.recv()?) // wait for the samples
     }
@@ -365,6 +383,33 @@ pub fn is_microphone_access_denied(error_message: &str) -> bool {
         || normalized.contains("0x80070005")
 }
 
+/// Most recent resampled frames seen while no recording is active. Replayed on
+/// Start so speech that began just before the key press is kept.
+struct PreRoll {
+    frames: VecDeque<Vec<f32>>,
+    capacity: usize,
+}
+
+impl PreRoll {
+    fn new() -> Self {
+        Self {
+            frames: VecDeque::new(),
+            capacity: constants::PRE_ROLL_MS.div_ceil(constants::FRAME_MS) as usize,
+        }
+    }
+
+    fn push(&mut self, frame: &[f32]) {
+        let mut buf = if self.frames.len() >= self.capacity {
+            self.frames.pop_front().unwrap_or_default()
+        } else {
+            Vec::with_capacity(frame.len())
+        };
+        buf.clear();
+        buf.extend_from_slice(frame);
+        self.frames.push_back(buf);
+    }
+}
+
 fn run_consumer(
     in_sample_rate: u32,
     vad: Option<Arc<Mutex<Box<dyn vad::VoiceActivityDetector>>>>,
@@ -379,8 +424,9 @@ fn run_consumer(
     let mut frame_resampler = FrameResampler::new(
         in_sample_rate as usize,
         constants::WHISPER_SAMPLE_RATE as usize,
-        Duration::from_millis(30),
+        Duration::from_millis(constants::FRAME_MS),
     );
+    let mut pre_roll = PreRoll::new();
 
     let mut processed_samples = Vec::<f32>::new();
     let mut raw_recording_samples = Vec::<f32>::new();
@@ -453,11 +499,35 @@ fn run_consumer(
                     if let Some(v) = &vad {
                         v.lock().unwrap().reset();
                     }
+                    // Replay the pre-roll through the same path as live frames so the
+                    // VAD prefill, the raw fallback and the streaming feed all see it.
+                    for frame in pre_roll.frames.drain(..) {
+                        handle_frame(
+                            &frame,
+                            true,
+                            &vad,
+                            &mut processed_samples,
+                            &mut raw_recording_samples,
+                            feed.as_ref(),
+                        );
+                    }
                 }
-                Cmd::Stop(reply_tx) => {
+                Cmd::Stop { reply, with_tail } => {
                     recording = false;
+                    let tail_deadline = with_tail.then(|| {
+                        Instant::now() + Duration::from_millis(constants::POST_RELEASE_TAIL_MS)
+                    });
 
-                    while let Ok(remaining) = sample_rx.try_recv() {
+                    // Drain what is already queued. With a tail, keep reading until the
+                    // deadline; a stalled stream just ends the wait there.
+                    loop {
+                        let next = match tail_deadline {
+                            Some(deadline) => sample_rx
+                                .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                                .ok(),
+                            None => sample_rx.try_recv().ok(),
+                        };
+                        let Some(remaining) = next else { break };
                         frame_resampler.push(&remaining, &mut |frame: &[f32]| {
                             handle_frame(
                                 frame,
@@ -493,12 +563,14 @@ fn run_consumer(
                             raw_len,
                             raw_rms
                         );
-                        let _ = reply_tx.send((std::mem::take(&mut raw_recording_samples), true));
+                        let _ = reply.send((std::mem::take(&mut raw_recording_samples), true));
                         processed_samples.clear();
                     } else {
                         raw_recording_samples.clear();
-                        let _ = reply_tx.send((std::mem::take(&mut processed_samples), false));
+                        let _ = reply.send((std::mem::take(&mut processed_samples), false));
                     }
+                    // Whatever was buffered belongs to the clip that just ended.
+                    pre_roll.frames.clear();
                 }
                 Cmd::SetFeed(next) => feed = next,
                 Cmd::Shutdown => return,
@@ -522,14 +594,18 @@ fn run_consumer(
 
         // ---------- existing pipeline ------------------------------------ //
         frame_resampler.push(&raw, &mut |frame: &[f32]| {
-            handle_frame(
-                frame,
-                recording,
-                &vad,
-                &mut processed_samples,
-                &mut raw_recording_samples,
-                feed.as_ref(),
-            )
+            if recording {
+                handle_frame(
+                    frame,
+                    true,
+                    &vad,
+                    &mut processed_samples,
+                    &mut raw_recording_samples,
+                    feed.as_ref(),
+                );
+            } else {
+                pre_roll.push(frame);
+            }
         });
     }
 }

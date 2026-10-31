@@ -562,12 +562,6 @@ impl ShortcutAction for TranscribeAction {
         change_tray_icon(app, TrayIconState::Transcribing);
         show_transcribing_overlay(app);
 
-        // Unmute before playing audio feedback so the stop sound is audible
-        rm.remove_mute();
-
-        // Play audio feedback for recording stop
-        play_feedback_sound(app, SoundType::Stop);
-
         let binding_id = binding_id.to_string(); // Clone binding_id for the async task
         let settings = crate::settings::get_settings(app);
         let post_process = self.post_process && settings.post_process_enabled;
@@ -614,7 +608,12 @@ impl ShortcutAction for TranscribeAction {
             );
 
             let stop_recording_time = Instant::now();
-            if let Some((samples, used_raw_fallback)) = rm.stop_recording(&binding_id) {
+            let stopped = rm.stop_recording(&binding_id);
+            // Unmute and play the stop sound only once the release tail is captured,
+            // so neither the tone nor unmuted audio ends up in the recording.
+            rm.remove_mute();
+            play_feedback_sound(&ah, SoundType::Stop);
+            if let Some((samples, used_raw_fallback)) = stopped {
                 debug!(
                     "Recording stopped and samples retrieved in {:?}, sample count: {}",
                     stop_recording_time.elapsed(),
