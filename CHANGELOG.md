@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Removed
+
+- Trim the model catalog to Parakeet Ultra, Nemotron Streaming 3.5, Cohere Transcribe, Whisper Turbo, and the Gemini API. Whisper Small, Medium, and Large, Breeze ASR, Parakeet V2 and V3, the Moonshine models, SenseVoice, Qwen3-ASR 0.6B, and Nemotron Speech Streaming EN are gone, along with the ONNX engines that ran them. Downloaded files stay on disk.
+
+### Changed
+
+- Make Parakeet Ultra the recommended model. A saved model or long recording model that names a removed model moves to Parakeet Ultra.
+
 ### Fixed
 
 - Keep Swift bridge generation available on Intel macOS hosts when cross-compiling for Apple Silicon.

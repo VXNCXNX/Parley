@@ -28,69 +28,17 @@
       "speed": "速度"
     },
     "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "高速でそこそこ正確。"
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "良好な精度、中程度の速度"
-      },
       "turbo": {
         "name": "Whisper Turbo",
         "description": "精度と速度のバランスが良い。"
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "良好な精度、ただし低速。"
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "英語のみ。英語話者に最適なモデル。"
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "高速で正確"
       },
       "parakeet-ultra": {
         "name": "Parakeet Ultra",
         "description": "Moondreamが改良したParakeet。ヨーロッパの25言語をローカルで文字起こし。"
       },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "非常に高速、英語のみ。アクセントにも対応。"
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "超高速、英語のみ"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "高速、英語のみ。速度と精度のバランスが良い。"
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "英語のみ。高品質。"
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "台湾華語に最適化。コードスイッチングに対応。"
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "非常に高速。中国語、英語、日本語、韓国語、広東語。"
-      },
       "nemotron-3.5-asr-streaming-0.6b": {
         "name": "Nemotron Streaming 3.5",
         "description": "28言語に対応したリアルタイムの文字起こし。"
-      },
-      "nemotron-speech-streaming-en-0.6b": {
-        "name": "Nemotron Speech Streaming EN",
-        "description": "ストリーミングによる英語の音声テキスト変換。"
-      },
-      "qwen3-asr-0.6b": {
-        "name": "Qwen3-ASR 0.6B",
-        "description": "複数の言語に対応した一括文字起こし。"
       },
       "cohere-transcribe-03-2026": {
         "name": "Cohere Transcribe",
@@ -132,9 +80,6 @@
     "active": "アクティブ",
     "switching": "切替中...",
     "noModelsAvailable": "利用可能なモデルがありません",
-    "extracting": "{{modelName}}を展開中...",
-    "extractingMultiple": "{{count}}個のモデルを展開中...",
-    "extractingGeneric": "展開中...",
     "downloading": "ダウンロード中 {{percentage}}%",
     "downloadingMultiple": "{{count}}個のモデルをダウンロード中...",
     "modelReady": "モデル準備完了",

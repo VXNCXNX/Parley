@@ -28,69 +28,17 @@
       "speed": "속도"
     },
     "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "빠르고 상당히 정확합니다."
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "좋은 정확도, 중간 속도"
-      },
       "turbo": {
         "name": "Whisper Turbo",
         "description": "정확도와 속도의 균형."
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "좋은 정확도지만 느립니다."
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "영어 전용. 영어 사용자를 위한 최고의 모델."
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "빠르고 정확함"
       },
       "parakeet-ultra": {
         "name": "Parakeet Ultra",
         "description": "Moondream이 다듬은 Parakeet. 유럽 25개 언어를 로컬에서 음성 전사합니다."
       },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "매우 빠름, 영어 전용. 억양을 잘 처리합니다."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "초고속, 영어 전용"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "빠름, 영어 전용. 속도와 정확도의 균형이 좋음."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "영어 전용. 높은 품질."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "대만 만다린에 최적화. 코드 스위칭 지원."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "매우 빠름. 중국어, 영어, 일본어, 한국어, 광둥어."
-      },
       "nemotron-3.5-asr-streaming-0.6b": {
         "name": "Nemotron Streaming 3.5",
         "description": "28개 언어를 지원하는 실시간 음성 텍스트 변환."
-      },
-      "nemotron-speech-streaming-en-0.6b": {
-        "name": "Nemotron Speech Streaming EN",
-        "description": "스트리밍 방식의 영어 음성 텍스트 변환."
-      },
-      "qwen3-asr-0.6b": {
-        "name": "Qwen3-ASR 0.6B",
-        "description": "다국어 일괄 음성 텍스트 변환."
       },
       "cohere-transcribe-03-2026": {
         "name": "Cohere Transcribe",
@@ -132,9 +80,6 @@
     "active": "활성",
     "switching": "전환 중...",
     "noModelsAvailable": "사용 가능한 모델이 없습니다",
-    "extracting": "{{modelName}} 압축 해제 중...",
-    "extractingMultiple": "{{count}}개 모델 압축 해제 중...",
-    "extractingGeneric": "압축 해제 중...",
     "downloading": "다운로드 중 {{percentage}}%",
     "downloadingMultiple": "{{count}}개 모델 다운로드 중...",
     "modelReady": "모델 준비 완료",

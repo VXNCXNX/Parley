@@ -23,7 +23,6 @@ interface ModelsStore {
   models: ModelInfo[];
   currentModel: string;
   downloadingModels: Record<string, true>;
-  extractingModels: Record<string, true>;
   downloadProgress: Record<string, DownloadProgress>;
   downloadStats: Record<string, DownloadStats>;
   loading: boolean;
@@ -43,7 +42,6 @@ interface ModelsStore {
   deleteModel: (modelId: string) => Promise<boolean>;
   getModelInfo: (modelId: string) => ModelInfo | undefined;
   isModelDownloading: (modelId: string) => boolean;
-  isModelExtracting: (modelId: string) => boolean;
   getDownloadProgress: (modelId: string) => DownloadProgress | undefined;
 
   // Internal setters
@@ -58,7 +56,6 @@ export const useModelStore = create<ModelsStore>()(
     models: [],
     currentModel: "",
     downloadingModels: {},
-    extractingModels: {},
     downloadProgress: {},
     downloadStats: {},
     loading: true,
@@ -249,10 +246,6 @@ export const useModelStore = create<ModelsStore>()(
       return modelId in get().downloadingModels;
     },
 
-    isModelExtracting: (modelId: string) => {
-      return modelId in get().extractingModels;
-    },
-
     getDownloadProgress: (modelId: string) => {
       return get().downloadProgress[modelId];
     },
@@ -322,38 +315,6 @@ export const useModelStore = create<ModelsStore>()(
         );
         get().loadModels();
       });
-
-      listen<string>("model-extraction-started", (event) => {
-        const modelId = event.payload;
-        set(
-          produce((state) => {
-            state.extractingModels[modelId] = true;
-          }),
-        );
-      });
-
-      listen<string>("model-extraction-completed", (event) => {
-        const modelId = event.payload;
-        set(
-          produce((state) => {
-            delete state.extractingModels[modelId];
-          }),
-        );
-        get().loadModels();
-      });
-
-      listen<{ model_id: string; error: string }>(
-        "model-extraction-failed",
-        (event) => {
-          const modelId = event.payload.model_id;
-          set(
-            produce((state) => {
-              delete state.extractingModels[modelId];
-              state.error = `Failed to extract model: ${event.payload.error}`;
-            }),
-          );
-        },
-      );
 
       listen<string>("model-download-cancelled", (event) => {
         const modelId = event.payload;

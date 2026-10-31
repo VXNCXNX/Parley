@@ -1,28 +1,21 @@
 use crate::settings::{get_settings, write_settings};
 use anyhow::Result;
-use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tar::Archive;
 use tauri::{AppHandle, Emitter, Manager};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub enum EngineType {
     Whisper,
-    Parakeet,
-    Moonshine,
-    MoonshineStreaming,
-    SenseVoice,
     GeminiApi,
     TranscribeCpp,
 }
@@ -38,7 +31,6 @@ pub struct ModelInfo {
     pub is_downloaded: bool,
     pub is_downloading: bool,
     pub partial_size: u64,
-    pub is_directory: bool,
     pub engine_type: EngineType,
     pub accuracy_score: f32,        // 0.0 to 1.0, higher is more accurate
     pub speed_score: f32,           // 0.0 to 1.0, higher is faster
@@ -63,10 +55,39 @@ pub struct ModelManager {
     models_dir: PathBuf,
     available_models: Mutex<HashMap<String, ModelInfo>>,
     cancel_flags: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
-    extracting_models: Arc<Mutex<HashSet<String>>>,
 }
 
-fn native_catalog() -> [ModelInfo; 5] {
+/// Model every new install starts with, and the target for migrated selections.
+pub const DEFAULT_MODEL_ID: &str = "parakeet-ultra";
+
+/// Ids of models that were dropped from the catalog. A saved selection that
+/// names one of them is moved to `DEFAULT_MODEL_ID`. Downloaded files stay on disk.
+const REMOVED_MODEL_IDS: [&str; 13] = [
+    "small",
+    "medium",
+    "large",
+    "breeze-asr",
+    "parakeet-tdt-0.6b-v2",
+    "parakeet-tdt-0.6b-v3",
+    "moonshine-base",
+    "moonshine-tiny-streaming-en",
+    "moonshine-small-streaming-en",
+    "moonshine-medium-streaming-en",
+    "sense-voice-int8",
+    "qwen3-asr-0.6b",
+    "nemotron-speech-streaming-en-0.6b",
+];
+
+/// Whisper files of removed models. Without this list the custom model
+/// discovery would surface files users already downloaded as custom models.
+const REMOVED_WHISPER_FILENAMES: [&str; 4] = [
+    "ggml-small.bin",
+    "whisper-medium-q4_1.bin",
+    "ggml-large-v3-q5_0.bin",
+    "breeze-asr-q5_k.bin",
+];
+
+fn native_catalog() -> [ModelInfo; 3] {
     [
         native_model(
             "nemotron-3.5-asr-streaming-0.6b",
@@ -85,36 +106,6 @@ fn native_catalog() -> [ModelInfo; 5] {
             ],
         ),
         native_model(
-            "nemotron-speech-streaming-en-0.6b",
-            "Nemotron Speech Streaming EN",
-            "English speech-to-text with streaming.",
-            "handy-computer/nemotron-speech-streaming-en-0.6b-gguf",
-            "7d9b719206789e4068d87c6398262ab4dfd4e45d",
-            "nemotron-speech-streaming-en-0.6b-Q8_0.gguf",
-            729_650_176,
-            "90d8c89714cd31efc88be62a40c6b2bea57e0cc2063af1ffe2c28f1a228ca110",
-            0.86,
-            0.80,
-            &["en"],
-        ),
-        native_model(
-            "qwen3-asr-0.6b",
-            "Qwen3-ASR 0.6B",
-            "Multilingual batch transcription.",
-            "handy-computer/Qwen3-ASR-0.6B-gguf",
-            "e4e16599b900eb0cb36e524514756bb92eb092b7",
-            "Qwen3-ASR-0.6B-Q8_0.gguf",
-            850_423_456,
-            "f081b2d5e23bd669d92cc331d722a8a0681943b8e6f34b48996fd5c319b5acd8",
-            0.87,
-            0.63,
-            &[
-                "zh", "en", "yue", "ar", "de", "fr", "es", "pt", "id", "it", "ko", "ru", "th",
-                "vi", "ja", "tr", "hi", "ms", "nl", "sv", "da", "fi", "pl", "cs", "fil", "fa",
-                "el", "ro", "hu", "mk",
-            ],
-        ),
-        native_model(
             "cohere-transcribe-03-2026",
             "Cohere Transcribe",
             "High accuracy batch transcription across 14 languages.",
@@ -129,22 +120,25 @@ fn native_catalog() -> [ModelInfo; 5] {
                 "en", "fr", "de", "es", "it", "pt", "nl", "pl", "el", "ar", "ja", "zh", "vi", "ko",
             ],
         ),
-        native_model(
-            "parakeet-ultra",
-            "Parakeet Ultra",
-            "Parakeet refined by Moondream. Local transcription in 25 European languages.",
-            "Nairod785/parakeet-ultra-gguf",
-            "b03613ba54a195238f0e915359f5a5c78269ddc6",
-            "parakeet-ultra-0.6b-Q8_0.gguf",
-            739_508_704,
-            "283562ac9b513f39244fe23c6632738c167d32731a5f4693319a10ca498550a8",
-            0.0,
-            0.0,
-            &[
-                "bg", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "de", "el", "hu", "it", "lv",
-                "lt", "mt", "pl", "pt", "ro", "ru", "sk", "sl", "es", "sv", "uk",
-            ],
-        ),
+        ModelInfo {
+            is_recommended: true,
+            ..native_model(
+                DEFAULT_MODEL_ID,
+                "Parakeet Ultra",
+                "Parakeet refined by Moondream. Local transcription in 25 European languages.",
+                "Nairod785/parakeet-ultra-gguf",
+                "b03613ba54a195238f0e915359f5a5c78269ddc6",
+                "parakeet-ultra-0.6b-Q8_0.gguf",
+                739_508_704,
+                "283562ac9b513f39244fe23c6632738c167d32731a5f4693319a10ca498550a8",
+                0.0,
+                0.0,
+                &[
+                    "bg", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "de", "el", "hu", "it",
+                    "lv", "lt", "mt", "pl", "pt", "ro", "ru", "sk", "sl", "es", "sv", "uk",
+                ],
+            )
+        },
     ]
 }
 
@@ -173,7 +167,6 @@ fn native_model(
         is_downloaded: false,
         is_downloading: false,
         partial_size: 0,
-        is_directory: false,
         engine_type: EngineType::TranscribeCpp,
         accuracy_score,
         speed_score,
@@ -221,55 +214,6 @@ impl ModelManager {
 
         // TODO this should be read from a JSON file or something..
         available_models.insert(
-            "small".to_string(),
-            ModelInfo {
-                id: "small".to_string(),
-                name: "Whisper Small".to_string(),
-                description: "Fast and fairly accurate.".to_string(),
-                filename: "ggml-small.bin".to_string(),
-                url: Some("https://blob.handy.computer/ggml-small.bin".to_string()),
-                size_mb: 487,
-                is_downloaded: false,
-                is_downloading: false,
-                partial_size: 0,
-                is_directory: false,
-                engine_type: EngineType::Whisper,
-                accuracy_score: 0.60,
-                speed_score: 0.85,
-                supports_translation: true,
-                is_recommended: false,
-                supported_languages: whisper_languages.clone(),
-                is_custom: false,
-                sha256: None,
-            },
-        );
-
-        // Add downloadable models
-        available_models.insert(
-            "medium".to_string(),
-            ModelInfo {
-                id: "medium".to_string(),
-                name: "Whisper Medium".to_string(),
-                description: "Good accuracy, medium speed".to_string(),
-                filename: "whisper-medium-q4_1.bin".to_string(),
-                url: Some("https://blob.handy.computer/whisper-medium-q4_1.bin".to_string()),
-                size_mb: 492, // Approximate size
-                is_downloaded: false,
-                is_downloading: false,
-                partial_size: 0,
-                is_directory: false,
-                engine_type: EngineType::Whisper,
-                accuracy_score: 0.75,
-                speed_score: 0.60,
-                supports_translation: true,
-                is_recommended: false,
-                supported_languages: whisper_languages.clone(),
-                is_custom: false,
-                sha256: None,
-            },
-        );
-
-        available_models.insert(
             "turbo".to_string(),
             ModelInfo {
                 id: "turbo".to_string(),
@@ -281,255 +225,12 @@ impl ModelManager {
                 is_downloaded: false,
                 is_downloading: false,
                 partial_size: 0,
-                is_directory: false,
                 engine_type: EngineType::Whisper,
                 accuracy_score: 0.80,
                 speed_score: 0.40,
                 supports_translation: false, // Turbo doesn't support translation
-                is_recommended: true,
-                supported_languages: whisper_languages.clone(),
-                is_custom: false,
-                sha256: None,
-            },
-        );
-
-        available_models.insert(
-            "large".to_string(),
-            ModelInfo {
-                id: "large".to_string(),
-                name: "Whisper Large".to_string(),
-                description: "Good accuracy, but slow.".to_string(),
-                filename: "ggml-large-v3-q5_0.bin".to_string(),
-                url: Some("https://blob.handy.computer/ggml-large-v3-q5_0.bin".to_string()),
-                size_mb: 1100, // Approximate size
-                is_downloaded: false,
-                is_downloading: false,
-                partial_size: 0,
-                is_directory: false,
-                engine_type: EngineType::Whisper,
-                accuracy_score: 0.85,
-                speed_score: 0.30,
-                supports_translation: true,
                 is_recommended: false,
                 supported_languages: whisper_languages.clone(),
-                is_custom: false,
-                sha256: None,
-            },
-        );
-
-        available_models.insert(
-            "breeze-asr".to_string(),
-            ModelInfo {
-                id: "breeze-asr".to_string(),
-                name: "Breeze ASR".to_string(),
-                description: "Optimized for Taiwanese Mandarin. Code-switching support."
-                    .to_string(),
-                filename: "breeze-asr-q5_k.bin".to_string(),
-                url: Some("https://blob.handy.computer/breeze-asr-q5_k.bin".to_string()),
-                size_mb: 1080,
-                is_downloaded: false,
-                is_downloading: false,
-                partial_size: 0,
-                is_directory: false,
-                engine_type: EngineType::Whisper,
-                accuracy_score: 0.85,
-                speed_score: 0.35,
-                supports_translation: false,
-                is_recommended: false,
-                supported_languages: whisper_languages.clone(),
-                is_custom: false,
-                sha256: None,
-            },
-        );
-
-        // Add NVIDIA Parakeet models (directory-based)
-        available_models.insert(
-            "parakeet-tdt-0.6b-v2".to_string(),
-            ModelInfo {
-                id: "parakeet-tdt-0.6b-v2".to_string(),
-                name: "Parakeet V2".to_string(),
-                description: "English only. The best model for English speakers.".to_string(),
-                filename: "parakeet-tdt-0.6b-v2-int8".to_string(), // Directory name
-                url: Some("https://blob.handy.computer/parakeet-v2-int8.tar.gz".to_string()),
-                size_mb: 473, // Approximate size for int8 quantized model
-                is_downloaded: false,
-                is_downloading: false,
-                partial_size: 0,
-                is_directory: true,
-                engine_type: EngineType::Parakeet,
-                accuracy_score: 0.85,
-                speed_score: 0.85,
-                supports_translation: false,
-                is_recommended: false,
-                supported_languages: vec!["en".to_string()],
-                is_custom: false,
-                sha256: None,
-            },
-        );
-
-        // Parakeet V3 supported languages (25 EU languages + Russian/Ukrainian):
-        // bg, hr, cs, da, nl, en, et, fi, fr, de, el, hu, it, lv, lt, mt, pl, pt, ro, sk, sl, es, sv, ru, uk
-        let parakeet_v3_languages: Vec<String> = vec![
-            "bg", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "de", "el", "hu", "it", "lv",
-            "lt", "mt", "pl", "pt", "ro", "sk", "sl", "es", "sv", "ru", "uk",
-        ]
-        .into_iter()
-        .map(String::from)
-        .collect();
-
-        available_models.insert(
-            "parakeet-tdt-0.6b-v3".to_string(),
-            ModelInfo {
-                id: "parakeet-tdt-0.6b-v3".to_string(),
-                name: "Parakeet V3".to_string(),
-                description: "Fast and accurate. Supports 25 European languages.".to_string(),
-                filename: "parakeet-tdt-0.6b-v3-int8".to_string(), // Directory name
-                url: Some("https://blob.handy.computer/parakeet-v3-int8.tar.gz".to_string()),
-                size_mb: 478, // Approximate size for int8 quantized model
-                is_downloaded: false,
-                is_downloading: false,
-                partial_size: 0,
-                is_directory: true,
-                engine_type: EngineType::Parakeet,
-                accuracy_score: 0.80,
-                speed_score: 0.85,
-                supports_translation: false,
-                is_recommended: true,
-                supported_languages: parakeet_v3_languages,
-                is_custom: false,
-                sha256: None,
-            },
-        );
-
-        available_models.insert(
-            "moonshine-base".to_string(),
-            ModelInfo {
-                id: "moonshine-base".to_string(),
-                name: "Moonshine Base".to_string(),
-                description: "Very fast, English only. Handles accents well.".to_string(),
-                filename: "moonshine-base".to_string(),
-                url: Some("https://blob.handy.computer/moonshine-base.tar.gz".to_string()),
-                size_mb: 58,
-                is_downloaded: false,
-                is_downloading: false,
-                partial_size: 0,
-                is_directory: true,
-                engine_type: EngineType::Moonshine,
-                accuracy_score: 0.70,
-                speed_score: 0.90,
-                supports_translation: false,
-                is_recommended: false,
-                supported_languages: vec!["en".to_string()],
-                is_custom: false,
-                sha256: None,
-            },
-        );
-
-        available_models.insert(
-            "moonshine-tiny-streaming-en".to_string(),
-            ModelInfo {
-                id: "moonshine-tiny-streaming-en".to_string(),
-                name: "Moonshine V2 Tiny".to_string(),
-                description: "Ultra-fast, English only".to_string(),
-                filename: "moonshine-tiny-streaming-en".to_string(),
-                url: Some(
-                    "https://blob.handy.computer/moonshine-tiny-streaming-en.tar.gz".to_string(),
-                ),
-                size_mb: 31,
-                is_downloaded: false,
-                is_downloading: false,
-                partial_size: 0,
-                is_directory: true,
-                engine_type: EngineType::MoonshineStreaming,
-                accuracy_score: 0.55,
-                speed_score: 0.95,
-                supports_translation: false,
-                is_recommended: false,
-                supported_languages: vec!["en".to_string()],
-                is_custom: false,
-                sha256: None,
-            },
-        );
-
-        available_models.insert(
-            "moonshine-small-streaming-en".to_string(),
-            ModelInfo {
-                id: "moonshine-small-streaming-en".to_string(),
-                name: "Moonshine V2 Small".to_string(),
-                description: "Fast, English only. Good balance of speed and accuracy.".to_string(),
-                filename: "moonshine-small-streaming-en".to_string(),
-                url: Some(
-                    "https://blob.handy.computer/moonshine-small-streaming-en.tar.gz".to_string(),
-                ),
-                size_mb: 100,
-                is_downloaded: false,
-                is_downloading: false,
-                partial_size: 0,
-                is_directory: true,
-                engine_type: EngineType::MoonshineStreaming,
-                accuracy_score: 0.65,
-                speed_score: 0.90,
-                supports_translation: false,
-                is_recommended: false,
-                supported_languages: vec!["en".to_string()],
-                is_custom: false,
-                sha256: None,
-            },
-        );
-
-        available_models.insert(
-            "moonshine-medium-streaming-en".to_string(),
-            ModelInfo {
-                id: "moonshine-medium-streaming-en".to_string(),
-                name: "Moonshine V2 Medium".to_string(),
-                description: "English only. High quality.".to_string(),
-                filename: "moonshine-medium-streaming-en".to_string(),
-                url: Some(
-                    "https://blob.handy.computer/moonshine-medium-streaming-en.tar.gz".to_string(),
-                ),
-                size_mb: 192,
-                is_downloaded: false,
-                is_downloading: false,
-                partial_size: 0,
-                is_directory: true,
-                engine_type: EngineType::MoonshineStreaming,
-                accuracy_score: 0.75,
-                speed_score: 0.80,
-                supports_translation: false,
-                is_recommended: false,
-                supported_languages: vec!["en".to_string()],
-                is_custom: false,
-                sha256: None,
-            },
-        );
-
-        // SenseVoice supported languages
-        let sense_voice_languages: Vec<String> =
-            vec!["zh", "zh-Hans", "zh-Hant", "en", "yue", "ja", "ko"]
-                .into_iter()
-                .map(String::from)
-                .collect();
-
-        available_models.insert(
-            "sense-voice-int8".to_string(),
-            ModelInfo {
-                id: "sense-voice-int8".to_string(),
-                name: "SenseVoice".to_string(),
-                description: "Very fast. Chinese, English, Japanese, Korean, Cantonese."
-                    .to_string(),
-                filename: "sense-voice-int8".to_string(),
-                url: Some("https://blob.handy.computer/sense-voice-int8.tar.gz".to_string()),
-                size_mb: 160,
-                is_downloaded: false,
-                is_downloading: false,
-                partial_size: 0,
-                is_directory: true,
-                engine_type: EngineType::SenseVoice,
-                accuracy_score: 0.65,
-                speed_score: 0.95,
-                supports_translation: false,
-                is_recommended: false,
-                supported_languages: sense_voice_languages,
                 is_custom: false,
                 sha256: None,
             },
@@ -549,7 +250,6 @@ impl ModelManager {
                 is_downloaded: true,
                 is_downloading: false,
                 partial_size: 0,
-                is_directory: false,
                 engine_type: EngineType::GeminiApi,
                 accuracy_score: 0.9,
                 speed_score: 0.7,
@@ -575,11 +275,10 @@ impl ModelManager {
             models_dir,
             available_models: Mutex::new(available_models),
             cancel_flags: Arc::new(Mutex::new(HashMap::new())),
-            extracting_models: Arc::new(Mutex::new(HashSet::new())),
         };
 
-        // Migrate any bundled models to user directory
-        manager.migrate_bundled_models()?;
+        // Move saved selections that name a removed model to the default model
+        manager.migrate_removed_model_selection();
 
         // Check which models are already downloaded
         manager.update_download_status()?;
@@ -600,31 +299,35 @@ impl ModelManager {
         models.get(model_id).cloned()
     }
 
-    fn migrate_bundled_models(&self) -> Result<()> {
-        // Check for bundled models and copy them to user directory
-        let bundled_models = ["ggml-small.bin"]; // Add other bundled models here if any
+    /// Point `selected_model` and `long_audio_model` at the default model when
+    /// they name a model that is no longer in the catalog. Files on disk are untouched.
+    fn migrate_removed_model_selection(&self) {
+        let mut settings = get_settings(&self.app_handle);
+        let mut changed = false;
 
-        for filename in &bundled_models {
-            let bundled_path = self.app_handle.path().resolve(
-                &format!("resources/models/{}", filename),
-                tauri::path::BaseDirectory::Resource,
+        if REMOVED_MODEL_IDS.contains(&settings.selected_model.as_str()) {
+            debug!(
+                "Migrating selected model '{}' to '{}'",
+                settings.selected_model, DEFAULT_MODEL_ID
             );
+            settings.selected_model = DEFAULT_MODEL_ID.to_string();
+            changed = true;
+        }
 
-            if let Ok(bundled_path) = bundled_path {
-                if bundled_path.exists() {
-                    let user_path = self.models_dir.join(filename);
-
-                    // Only copy if user doesn't already have the model
-                    if !user_path.exists() {
-                        info!("Migrating bundled model {} to user directory", filename);
-                        fs::copy(&bundled_path, &user_path)?;
-                        info!("Successfully migrated {}", filename);
-                    }
-                }
+        if let Some(long_audio_model) = settings.long_audio_model.as_deref() {
+            if REMOVED_MODEL_IDS.contains(&long_audio_model) {
+                debug!(
+                    "Migrating long audio model '{}' to '{}'",
+                    long_audio_model, DEFAULT_MODEL_ID
+                );
+                settings.long_audio_model = Some(DEFAULT_MODEL_ID.to_string());
+                changed = true;
             }
         }
 
-        Ok(())
+        if changed {
+            write_settings(&self.app_handle, settings);
+        }
     }
 
     fn update_download_status(&self) -> Result<()> {
@@ -634,48 +337,17 @@ impl ModelManager {
             if matches!(model.engine_type, EngineType::GeminiApi) {
                 continue;
             }
-            if model.is_directory {
-                // For directory-based models, check if the directory exists
-                let model_path = self.models_dir.join(&model.filename);
-                let partial_path = self.models_dir.join(format!("{}.partial", &model.filename));
-                let extracting_path = self
-                    .models_dir
-                    .join(format!("{}.extracting", &model.filename));
+            let model_path = self.models_dir.join(&model.filename);
+            let partial_path = self.models_dir.join(format!("{}.partial", &model.filename));
 
-                // Clean up any leftover .extracting directories from interrupted extractions
-                // But only if this model is NOT currently being extracted
-                let is_currently_extracting = {
-                    let extracting = self.extracting_models.lock().unwrap();
-                    extracting.contains(&model.id)
-                };
-                if extracting_path.exists() && !is_currently_extracting {
-                    warn!("Cleaning up interrupted extraction for model: {}", model.id);
-                    let _ = fs::remove_dir_all(&extracting_path);
-                }
+            model.is_downloaded = model_path.exists();
+            model.is_downloading = false;
 
-                model.is_downloaded = model_path.exists() && model_path.is_dir();
-                model.is_downloading = false;
-
-                // Get partial file size if it exists (for the .tar.gz being downloaded)
-                if partial_path.exists() {
-                    model.partial_size = partial_path.metadata().map(|m| m.len()).unwrap_or(0);
-                } else {
-                    model.partial_size = 0;
-                }
+            // Get partial file size if it exists
+            if partial_path.exists() {
+                model.partial_size = partial_path.metadata().map(|m| m.len()).unwrap_or(0);
             } else {
-                // For file-based models (existing logic)
-                let model_path = self.models_dir.join(&model.filename);
-                let partial_path = self.models_dir.join(format!("{}.partial", &model.filename));
-
-                model.is_downloaded = model_path.exists();
-                model.is_downloading = false;
-
-                // Get partial file size if it exists
-                if partial_path.exists() {
-                    model.partial_size = partial_path.metadata().map(|m| m.len()).unwrap_or(0);
-                } else {
-                    model.partial_size = 0;
-                }
+                model.partial_size = 0;
             }
         }
 
@@ -702,13 +374,19 @@ impl ModelManager {
             }
         }
 
-        // If no model is selected, pick the first downloaded local model.
+        // If no model is selected, pick the default model when it is downloaded,
+        // else the first downloaded local model.
         // Gemini is cloud-only and should not be auto-selected.
         if settings.selected_model.is_empty() {
             let models = self.available_models.lock().unwrap();
-            if let Some(available_model) = models.values().find(|model| {
+            let is_local_downloaded = |model: &&ModelInfo| {
                 model.is_downloaded && !matches!(model.engine_type, EngineType::GeminiApi)
-            }) {
+            };
+            if let Some(available_model) = models
+                .get(DEFAULT_MODEL_ID)
+                .filter(is_local_downloaded)
+                .or_else(|| models.values().find(is_local_downloaded))
+            {
                 info!(
                     "Auto-selecting model: {} ({})",
                     available_model.id, available_model.name
@@ -727,7 +405,7 @@ impl ModelManager {
     }
 
     /// Discover custom Whisper models (.bin files) in the models directory.
-    /// Skips files that match predefined model filenames.
+    /// Skips files that match predefined or removed model filenames.
     fn discover_custom_whisper_models(
         models_dir: &Path,
         available_models: &mut HashMap<String, ModelInfo>,
@@ -736,11 +414,16 @@ impl ModelManager {
             return Ok(());
         }
 
-        // Collect filenames of predefined Whisper file-based models to skip
+        // Collect filenames of predefined and removed Whisper models to skip
         let predefined_filenames: HashSet<String> = available_models
             .values()
-            .filter(|m| matches!(m.engine_type, EngineType::Whisper) && !m.is_directory)
+            .filter(|m| matches!(m.engine_type, EngineType::Whisper))
             .map(|m| m.filename.clone())
+            .chain(
+                REMOVED_WHISPER_FILENAMES
+                    .iter()
+                    .map(|name| name.to_string()),
+            )
             .collect();
 
         // Scan models directory for .bin files
@@ -830,7 +513,6 @@ impl ModelManager {
                     is_downloaded: true, // Already present on disk
                     is_downloading: false,
                     partial_size: 0,
-                    is_directory: false,
                     engine_type: EngineType::Whisper,
                     accuracy_score: 0.0, // Sentinel: UI hides score bars when both are 0
                     speed_score: 0.0,
@@ -1109,95 +791,8 @@ impl ModelManager {
             info!("SHA-256 hash verified for model {}", model_id);
         }
 
-        // Handle directory-based models (extract tar.gz) vs file-based models
-        if model_info.is_directory {
-            // Track that this model is being extracted
-            {
-                let mut extracting = self.extracting_models.lock().unwrap();
-                extracting.insert(model_id.to_string());
-            }
-
-            // Emit extraction started event
-            let _ = self.app_handle.emit("model-extraction-started", model_id);
-            info!("Extracting archive for directory-based model: {}", model_id);
-
-            // Use a temporary extraction directory to ensure atomic operations
-            let temp_extract_dir = self
-                .models_dir
-                .join(format!("{}.extracting", &model_info.filename));
-            let final_model_dir = self.models_dir.join(&model_info.filename);
-
-            // Clean up any previous incomplete extraction
-            if temp_extract_dir.exists() {
-                let _ = fs::remove_dir_all(&temp_extract_dir);
-            }
-
-            // Create temporary extraction directory
-            fs::create_dir_all(&temp_extract_dir)?;
-
-            // Open the downloaded tar.gz file
-            let tar_gz = File::open(&partial_path)?;
-            let tar = GzDecoder::new(tar_gz);
-            let mut archive = Archive::new(tar);
-
-            // Extract to the temporary directory first
-            archive.unpack(&temp_extract_dir).map_err(|e| {
-                let error_msg = format!("Failed to extract archive: {}", e);
-                // Clean up failed extraction
-                let _ = fs::remove_dir_all(&temp_extract_dir);
-                // Remove from extracting set
-                {
-                    let mut extracting = self.extracting_models.lock().unwrap();
-                    extracting.remove(model_id);
-                }
-                let _ = self.app_handle.emit(
-                    "model-extraction-failed",
-                    &serde_json::json!({
-                        "model_id": model_id,
-                        "error": error_msg
-                    }),
-                );
-                anyhow::anyhow!(error_msg)
-            })?;
-
-            // Find the actual extracted directory (archive might have a nested structure)
-            let extracted_dirs: Vec<_> = fs::read_dir(&temp_extract_dir)?
-                .filter_map(|entry| entry.ok())
-                .filter(|entry| entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false))
-                .collect();
-
-            if extracted_dirs.len() == 1 {
-                // Single directory extracted, move it to the final location
-                let source_dir = extracted_dirs[0].path();
-                if final_model_dir.exists() {
-                    fs::remove_dir_all(&final_model_dir)?;
-                }
-                fs::rename(&source_dir, &final_model_dir)?;
-                // Clean up temp directory
-                let _ = fs::remove_dir_all(&temp_extract_dir);
-            } else {
-                // Multiple items or no directories, rename the temp directory itself
-                if final_model_dir.exists() {
-                    fs::remove_dir_all(&final_model_dir)?;
-                }
-                fs::rename(&temp_extract_dir, &final_model_dir)?;
-            }
-
-            info!("Successfully extracted archive for model: {}", model_id);
-            // Remove from extracting set
-            {
-                let mut extracting = self.extracting_models.lock().unwrap();
-                extracting.remove(model_id);
-            }
-            // Emit extraction completed event
-            let _ = self.app_handle.emit("model-extraction-completed", model_id);
-
-            // Remove the downloaded tar.gz file
-            let _ = fs::remove_file(&partial_path);
-        } else {
-            // Move partial file to final location for file-based models
-            fs::rename(&partial_path, &model_path)?;
-        }
+        // Move partial file to final location
+        fs::rename(&partial_path, &model_path)?;
 
         // Update download status
         {
@@ -1252,25 +847,15 @@ impl ModelManager {
 
         let mut deleted_something = false;
 
-        if model_info.is_directory {
-            // Delete complete model directory if it exists
-            if model_path.exists() && model_path.is_dir() {
-                info!("Deleting model directory at: {:?}", model_path);
-                fs::remove_dir_all(&model_path)?;
-                info!("Model directory deleted successfully");
-                deleted_something = true;
-            }
-        } else {
-            // Delete complete model file if it exists
-            if model_path.exists() {
-                info!("Deleting model file at: {:?}", model_path);
-                fs::remove_file(&model_path)?;
-                info!("Model file deleted successfully");
-                deleted_something = true;
-            }
+        // Delete complete model file if it exists
+        if model_path.exists() {
+            info!("Deleting model file at: {:?}", model_path);
+            fs::remove_file(&model_path)?;
+            info!("Model file deleted successfully");
+            deleted_something = true;
         }
 
-        // Delete partial file if it exists (same for both types)
+        // Delete partial file if it exists
         if partial_path.exists() {
             info!("Deleting partial file at: {:?}", partial_path);
             fs::remove_file(&partial_path)?;
@@ -1329,26 +914,13 @@ impl ModelManager {
             .models_dir
             .join(format!("{}.partial", &model_info.filename));
 
-        if model_info.is_directory {
-            // For directory-based models, ensure the directory exists and is complete
-            if model_path.exists() && model_path.is_dir() && !partial_path.exists() {
-                Ok(model_path)
-            } else {
-                Err(anyhow::anyhow!(
-                    "Complete model directory not found: {}",
-                    model_id
-                ))
-            }
+        if model_path.exists() && !partial_path.exists() {
+            Ok(model_path)
         } else {
-            // For file-based models (existing logic)
-            if model_path.exists() && !partial_path.exists() {
-                Ok(model_path)
-            } else {
-                Err(anyhow::anyhow!(
-                    "Complete model file not found: {}",
-                    model_id
-                ))
-            }
+            Err(anyhow::anyhow!(
+                "Complete model file not found: {}",
+                model_id
+            ))
         }
     }
 
@@ -1388,13 +960,14 @@ impl ModelManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs::File;
     use std::io::Write;
     use tempfile::TempDir;
 
     #[test]
     fn native_catalog_pins_verified_files() {
         let models = native_catalog();
-        assert_eq!(models.len(), 5);
+        assert_eq!(models.len(), 3);
         let nemotron = models
             .iter()
             .find(|model| model.id == "nemotron-3.5-asr-streaming-0.6b")
@@ -1411,9 +984,12 @@ mod tests {
             Some("b94545b313b3223fda7b2857a52681da813935c2127643d1e9ff0c23d988089c")
         );
         assert!(models.iter().any(|model| {
-            model.id == "qwen3-asr-0.6b" && model.supported_languages.contains(&"fr".to_string())
+            model.id == "cohere-transcribe-03-2026"
+                && model.supported_languages.contains(&"fr".to_string())
         }));
-        assert!(models.iter().all(|model| !model.is_recommended));
+        assert!(models
+            .iter()
+            .all(|model| model.is_recommended == (model.id == DEFAULT_MODEL_ID)));
     }
 
     #[test]
@@ -1448,7 +1024,6 @@ mod tests {
                 is_downloaded: false,
                 is_downloading: false,
                 partial_size: 0,
-                is_directory: false,
                 engine_type: EngineType::Whisper,
                 accuracy_score: 0.5,
                 speed_score: 0.5,

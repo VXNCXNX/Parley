@@ -28,57 +28,13 @@
       "speed": "швидкість"
     },
     "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "Швидка та досить точна"
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "Хороша точність, середня швидкість"
-      },
       "turbo": {
         "name": "Whisper Turbo",
         "description": "Збалансована точність та швидкість"
       },
-      "large": {
-        "name": "Whisper Large",
-        "description": "Хороша точність, але повільна"
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "Лише англійська. Найкраща модель для англомовних"
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "Швидка та точна"
-      },
       "parakeet-ultra": {
         "name": "Parakeet Ultra",
         "description": "Parakeet, доопрацьований Moondream. Локальна транскрипція 25 європейськими мовами."
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "Дуже швидкий, лише англійська. Добре справляється з акцентами."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "Надшвидкий, лише англійська"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "Швидкий, лише англійська. Добрий баланс швидкості та точності."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "Лише англійська. Висока якість."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "Оптимізовано для тайванської мандаринської. Підтримка перемикання мов."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "Дуже швидкий. Китайська, англійська, японська, корейська, кантонська."
       },
       "cohere-transcribe-03-2026": {
         "name": "Cohere Transcribe",
@@ -91,14 +47,6 @@
       "nemotron-3.5-asr-streaming-0.6b": {
         "name": "Nemotron Streaming 3.5",
         "description": "Транскрипція в реальному часі 28 мовами."
-      },
-      "nemotron-speech-streaming-en-0.6b": {
-        "name": "Nemotron Speech Streaming EN",
-        "description": "Потокове перетворення англійського мовлення на текст."
-      },
-      "qwen3-asr-0.6b": {
-        "name": "Qwen3-ASR 0.6B",
-        "description": "Багатомовна пакетна транскрипція."
       }
     },
     "errors": {
@@ -131,9 +79,6 @@
     "custom": "Користувацька",
     "active": "Активна",
     "noModelsAvailable": "Немає доступних моделей",
-    "extracting": "Розпакування {{modelName}}...",
-    "extractingMultiple": "Розпакування {{count}} моделей...",
-    "extractingGeneric": "Розпакування...",
     "downloading": "Завантаження {{percentage}}%",
     "downloadingMultiple": "Завантаження {{count}} моделей...",
     "modelReady": "Модель готова",

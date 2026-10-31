@@ -28,57 +28,13 @@
       "speed": "hız"
     },
     "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "Hızlı ve oldukça doğru."
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "İyi doğruluk, orta hız."
-      },
       "turbo": {
         "name": "Whisper Turbo",
         "description": "Dengeli doğruluk ve hız."
       },
-      "large": {
-        "name": "Whisper Large",
-        "description": "İyi doğruluk, ancak yavaş."
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "Yalnızca İngilizce. İngilizce konuşanlar için en iyi model."
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "Hızlı ve doğru."
-      },
       "parakeet-ultra": {
         "name": "Parakeet Ultra",
         "description": "Moondream tarafından iyileştirilen Parakeet. 25 Avrupa dilinde yerel transkripsiyon."
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "Çok hızlı, yalnızca İngilizce. Aksanları iyi işler."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "Ultra hızlı, yalnızca İngilizce"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "Hızlı, yalnızca İngilizce. Hız ve doğruluk arasında iyi denge."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "Yalnızca İngilizce. Yüksek kalite."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "Tayvan Mandarin Çincesi için optimize edilmiş. Dil değiştirme desteği."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "Çok hızlı. Çince, İngilizce, Japonca, Korece, Kantonca."
       },
       "cohere-transcribe-03-2026": {
         "name": "Cohere Transcribe",
@@ -91,14 +47,6 @@
       "nemotron-3.5-asr-streaming-0.6b": {
         "name": "Nemotron Streaming 3.5",
         "description": "28 dilde gerçek zamanlı transkripsiyon."
-      },
-      "nemotron-speech-streaming-en-0.6b": {
-        "name": "Nemotron Speech Streaming EN",
-        "description": "İngilizce konuşmayı akış halinde metne dönüştürme."
-      },
-      "qwen3-asr-0.6b": {
-        "name": "Qwen3-ASR 0.6B",
-        "description": "Çok dilli toplu transkripsiyon."
       }
     },
     "errors": {
@@ -131,9 +79,6 @@
     "custom": "Özel",
     "active": "Aktif",
     "noModelsAvailable": "Kullanılabilir model yok",
-    "extracting": "{{modelName}} çıkarılıyor...",
-    "extractingMultiple": "{{count}} model çıkarılıyor...",
-    "extractingGeneric": "Çıkarılıyor...",
     "downloading": "%{{percentage}} indiriliyor",
     "downloadingMultiple": "{{count}} model indiriliyor...",
     "modelReady": "Model Hazır",

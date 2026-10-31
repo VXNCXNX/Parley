@@ -4,7 +4,6 @@ type ModelStatus =
   | "ready"
   | "loading"
   | "downloading"
-  | "extracting"
   | "error"
   | "unloaded"
   | "none";
@@ -32,8 +31,6 @@ const ModelStatusButton: React.FC<ModelStatusButtonProps> = ({
         return "bg-yellow-400 animate-pulse";
       case "downloading":
         return "bg-logo-primary animate-pulse";
-      case "extracting":
-        return "bg-orange-400 animate-pulse";
       case "error":
         return "bg-red-400";
       case "unloaded":

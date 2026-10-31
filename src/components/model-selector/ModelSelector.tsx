@@ -20,7 +20,6 @@ type ModelStatus =
   | "ready"
   | "loading"
   | "downloading"
-  | "extracting"
   | "error"
   | "unloaded"
   | "none";
@@ -31,14 +30,8 @@ interface ModelSelectorProps {
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({ onError }) => {
   const { t } = useTranslation();
-  const {
-    models,
-    currentModel,
-    downloadProgress,
-    downloadStats,
-    extractingModels,
-    selectModel,
-  } = useModelStore();
+  const { models, currentModel, downloadProgress, downloadStats, selectModel } =
+    useModelStore();
 
   const [modelStatus, setModelStatus] = useState<ModelStatus>("unloaded");
   const [modelError, setModelError] = useState<string | null>(null);
@@ -102,7 +95,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ onError }) => {
       },
     );
 
-    // Auto-select model when download completes (fires after extraction too)
+    // Auto-select model when download completes
     const downloadCompleteUnlisten = listen<string>(
       "model-download-complete",
       (event) => {
@@ -168,22 +161,6 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ onError }) => {
   };
 
   const getModelDisplayText = (): string => {
-    const extractingKeys = Object.keys(extractingModels);
-    if (extractingKeys.length > 0) {
-      if (extractingKeys.length === 1) {
-        const modelId = extractingKeys[0];
-        const model = models.find((m) => m.id === modelId);
-        const modelName = model
-          ? getTranslatedModelName(model, t)
-          : t("modelSelector.extractingGeneric").replace("...", "");
-        return t("modelSelector.extracting", { modelName });
-      } else {
-        return t("modelSelector.extractingMultiple", {
-          count: extractingKeys.length,
-        });
-      }
-    }
-
     const progressValues = Object.values(downloadProgress);
     if (progressValues.length > 0) {
       if (progressValues.length === 1) {
@@ -213,12 +190,6 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ onError }) => {
               modelName: getTranslatedModelName(currentModelInfo, t),
             })
           : t("modelSelector.loadingGeneric");
-      case "extracting":
-        return currentModelInfo
-          ? t("modelSelector.extracting", {
-              modelName: getTranslatedModelName(currentModelInfo, t),
-            })
-          : t("modelSelector.extractingGeneric");
       case "error":
         return modelError || t("modelSelector.modelError");
       case "unloaded":
@@ -236,7 +207,6 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ onError }) => {
 
   // Derive display status from model status + store state
   const getDisplayStatus = (): ModelStatus => {
-    if (Object.keys(extractingModels).length > 0) return "extracting";
     if (Object.keys(downloadProgress).length > 0) return "downloading";
     return modelStatus;
   };

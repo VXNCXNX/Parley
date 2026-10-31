@@ -35,7 +35,6 @@ const getLanguageDisplayText = (
 export type ModelCardStatus =
   | "downloadable"
   | "downloading"
-  | "extracting"
   | "switching"
   | "active"
   | "available";
@@ -236,7 +235,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
         )}
       </div>
 
-      {/* Download/extract progress */}
+      {/* Download progress */}
       {status === "downloading" && downloadProgress !== undefined && (
         <div className="w-full mt-3">
           <div className="w-full h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
@@ -275,16 +274,6 @@ const ModelCard: React.FC<ModelCardProps> = ({
               )}
             </div>
           </div>
-        </div>
-      )}
-      {status === "extracting" && (
-        <div className="w-full mt-3">
-          <div className="w-full h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
-            <div className="h-full bg-logo-primary rounded-full animate-pulse w-full" />
-          </div>
-          <p className="text-xs text-text/50 mt-1">
-            {t("modelSelector.extractingGeneric")}
-          </p>
         </div>
       )}
     </div>

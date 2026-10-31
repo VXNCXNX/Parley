@@ -280,6 +280,11 @@ async setAppPromptMappings(mappings: AppPromptMapping[]) : Promise<Result<null, 
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Seed the user's settings with sensible defaults: standard post-process
+ * actions + window-title -> action mappings for common apps. Existing actions
+ * keyed 1-5 and existing mappings are preserved (we only add what's missing).
+ */
 async applyDefaultAppPresets() : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("apply_default_app_presets") };
@@ -849,8 +854,10 @@ async changeChirpServiceAccountSetting(serviceAccountJson: string) : Promise<Res
 }
 },
 /**
- * Stub implementation for non-macOS platforms
- * Always returns false since laptop detection is macOS-specific
+ * Checks if the Mac is a laptop by detecting battery presence
+ * 
+ * This uses pmset to check for battery information.
+ * Returns true if a battery is detected (laptop), false otherwise (desktop)
  */
 async isLaptop() : Promise<Result<boolean, string>> {
     try {
@@ -872,39 +879,48 @@ async isLaptop() : Promise<Result<boolean, string>> {
 
 /** user-defined types **/
 
+export type AppPromptMapping = { 
+/**
+ * Substring (case-insensitive) matched against the active window title.
+ * e.g. "Slack", "Gmail", "Cursor", "Claude Code".
+ */
+pattern: string; 
+/**
+ * Post-process action key (1-9) to auto-trigger when this pattern matches.
+ */
+action_key: number }
 /**
  * Frontend-safe version of AppSettings that replaces raw API keys with
  * boolean flags indicating whether a key is configured.
  */
-export type AppSettingsResponse = { bindings: Partial<{ [key in string]: ShortcutBinding }>; push_to_talk: boolean; audio_feedback: boolean; audio_feedback_volume: number; sound_theme: SoundTheme; start_hidden: boolean; autostart_enabled: boolean; update_checks_enabled: boolean; selected_model: string; always_on_microphone: boolean; selected_microphone: string | null; clamshell_microphone: string | null; selected_output_device: string | null; translate_to_english: boolean; selected_language: string; overlay_position: OverlayPosition; debug_mode: boolean; log_level: LogLevel; custom_words: string[]; model_unload_timeout: ModelUnloadTimeout; word_correction_threshold: number; history_limit: number; recording_retention_period: RecordingRetentionPeriod; paste_method: PasteMethod; clipboard_handling: ClipboardHandling; auto_submit: boolean; auto_submit_key: AutoSubmitKey; post_process_enabled: boolean; post_process_provider_id: string; post_process_providers: PostProcessProvider[];
+export type AppSettingsResponse = { bindings: Partial<{ [key in string]: ShortcutBinding }>; push_to_talk: boolean; audio_feedback: boolean; audio_feedback_volume: number; sound_theme: SoundTheme; start_hidden: boolean; autostart_enabled: boolean; update_checks_enabled: boolean; selected_model: string; always_on_microphone: boolean; selected_microphone: string | null; clamshell_microphone: string | null; selected_output_device: string | null; translate_to_english: boolean; selected_language: string; overlay_position: OverlayPosition; debug_mode: boolean; log_level: LogLevel; custom_words: string[]; model_unload_timeout: ModelUnloadTimeout; word_correction_threshold: number; history_limit: number; recording_retention_period: RecordingRetentionPeriod; paste_method: PasteMethod; clipboard_handling: ClipboardHandling; auto_submit: boolean; auto_submit_key: AutoSubmitKey; post_process_enabled: boolean; post_process_provider_id: string; post_process_providers: PostProcessProvider[]; 
 /**
  * Maps provider_id -> true if API key is configured (non-empty)
  */
-post_process_api_keys_set: Partial<{ [key in string]: boolean }>; post_process_models: Partial<{ [key in string]: string }>; post_process_prompts: LLMPrompt[]; post_process_selected_prompt_id: string | null; mute_while_recording: boolean; append_trailing_space: boolean; app_language: string; experimental_enabled: boolean; lazy_stream_close: boolean; lazy_stream_close_timeout_seconds: number; keyboard_implementation: KeyboardImplementation; show_tray_icon: boolean; paste_delay_ms: number; typing_tool: TypingTool; external_script_path: string | null; long_audio_model: string | null; long_audio_threshold_seconds: number;
+post_process_api_keys_set: Partial<{ [key in string]: boolean }>; post_process_models: Partial<{ [key in string]: string }>; post_process_prompts: LLMPrompt[]; post_process_selected_prompt_id: string | null; app_prompt_mappings: AppPromptMapping[]; mute_while_recording: boolean; append_trailing_space: boolean; app_language: string; experimental_enabled: boolean; lazy_stream_close: boolean; lazy_stream_close_timeout_seconds: number; keyboard_implementation: KeyboardImplementation; show_tray_icon: boolean; paste_delay_ms: number; typing_tool: TypingTool; external_script_path: string | null; custom_filler_words: string[] | null; long_audio_model: string | null; long_audio_threshold_seconds: number; 
 /**
  * true if gemini_api_key is configured (non-empty)
  */
-gemini_api_key_set: boolean; gemini_model: string; gemini_project_id: string | null; gemini_location: string; chirp_service_account_set: boolean; app_prompt_mappings: AppPromptMapping[]; post_process_actions: PostProcessAction[]; saved_processing_models: SavedProcessingModel[] }
+gemini_api_key_set: boolean; gemini_model: string; gemini_project_id: string | null; gemini_location: string; chirp_service_account_set: boolean; post_process_actions: PostProcessAction[]; saved_processing_models: SavedProcessingModel[] }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type AutoSubmitKey = "enter" | "ctrl_enter" | "cmd_enter"
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
 export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
 export type CustomSounds = { start: boolean; stop: boolean }
-export type EngineType = "Whisper" | "Parakeet" | "Moonshine" | "MoonshineStreaming" | "SenseVoice" | "GeminiApi" | "TranscribeCpp"
+export type EngineType = "Whisper" | "GeminiApi" | "TranscribeCpp"
 export type HistoryEntry = { id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_action_key: number | null }
 /**
  * Result of changing keyboard implementation
  */
-export type ImplementationChangeResult = { success: boolean;
+export type ImplementationChangeResult = { success: boolean; 
 /**
  * List of binding IDs that were reset to defaults due to incompatibility
  */
 reset_bindings: string[] }
 export type KeyboardImplementation = "tauri" | "handy_keys"
 export type LLMPrompt = { id: string; name: string; prompt: string }
-export type AppPromptMapping = { pattern: string; action_key: number }
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
-export type ModelInfo = { id: string; name: string; description: string; filename: string; url: string | null; size_mb: number; is_downloaded: boolean; is_downloading: boolean; partial_size: number; is_directory: boolean; engine_type: EngineType; accuracy_score: number; speed_score: number; supports_translation: boolean; is_recommended: boolean; supported_languages: string[]; is_custom: boolean; sha256?: string | null }
+export type ModelInfo = { id: string; name: string; description: string; filename: string; url: string | null; size_mb: number; is_downloaded: boolean; is_downloading: boolean; partial_size: number; engine_type: EngineType; accuracy_score: number; speed_score: number; supports_translation: boolean; is_recommended: boolean; supported_languages: string[]; is_custom: boolean; sha256?: string | null }
 export type ModelLoadStatus = { is_loaded: boolean; current_model: string | null }
 export type ModelUnloadTimeout = "never" | "immediately" | "min_2" | "min_5" | "min_10" | "min_15" | "hour_1" | "sec_5"
 export type OverlayPosition = "none" | "top" | "bottom"

@@ -39,17 +39,17 @@ Cloud services may charge for usage. Local transcription does not require a clou
 
 ## Local models
 
-The native model catalog includes the following models:
+The catalog has five models. Parakeet Ultra is the default.
 
-| Model                        | Transcription mode                           |
-| ---------------------------- | -------------------------------------------- |
-| Nemotron Streaming 3.5       | Multilingual, with live preview              |
-| Nemotron Speech Streaming EN | English, with live preview                   |
-| Qwen3-ASR 0.6B               | Multilingual batch transcription             |
-| Cohere Transcribe            | Multilingual batch transcription             |
-| Parakeet Ultra               | Batch transcription in 25 European languages |
+| Model                  | Engine                | Transcription mode                            |
+| ---------------------- | --------------------- | --------------------------------------------- |
+| Parakeet Ultra         | Native (GGUF)         | Batch transcription in 25 European languages  |
+| Nemotron Streaming 3.5 | Native (GGUF)         | Multilingual, with live preview               |
+| Cohere Transcribe      | Native (GGUF)         | Multilingual batch transcription              |
+| Whisper Turbo          | whisper.cpp           | Multilingual batch transcription              |
+| Gemini API             | Cloud (Gemini, Chirp) | Cloud transcription with your own credentials |
 
-The catalog also includes Whisper Small, Medium, Turbo, and Large, Breeze ASR, Parakeet V2 and V3, Moonshine Base, Moonshine V2 Tiny, Small, and Medium, and SenseVoice. Supported languages appear in **Settings > Models**.
+Supported languages appear in **Settings > Models**. A saved selection of a model that was removed from the catalog moves to Parakeet Ultra on the next launch. Downloaded files of removed models stay in the `models` folder, and you can delete them by hand.
 
 Native GGUF downloads use pinned model revisions and SHA-256 verification. Parakeet Ultra is [Moondream's refinement](https://huggingface.co/moondream/parakeet-ultra) of [NVIDIA Parakeet V3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3). Parley uses [Nairod785's GGUF conversion](https://huggingface.co/Nairod785/parakeet-ultra-gguf/blob/b03613ba54a195238f0e915359f5a5c78269ddc6/README.md) under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/).
 
@@ -82,7 +82,7 @@ For a macOS app installation, call the bundled binary:
 - For microphone or shortcut issues on macOS, check **System Settings > Privacy & Security > Microphone** and **Accessibility**.
 - macOS ties Accessibility approval to the app's signing requirement. After installing a build with a different signing identity, open **System Settings > Privacy & Security > Accessibility** (**Réglages Système > Confidentialité et sécurité > Accessibilité**). Remove the stale Parley entry, click **+**, select the exact `/Applications/Parley.app`, and enable it. Restart Parley after changing the grant.
 - Open **Settings > About** to find the app data and log directories. Debug mode is available with `Cmd+Shift+D` on macOS or `Ctrl+Shift+D` on Windows and Linux.
-- If automatic downloads are blocked, place model files in the `models` folder inside the app data directory. Keep the catalog filename for GGUF and Whisper files. For directory-based models, keep the catalog directory name. Restart Parley after a manual install.
+- If automatic downloads are blocked, place model files in the `models` folder inside the app data directory. Keep the catalog filename for GGUF and Whisper files. Restart Parley after a manual install.
 - Custom Whisper GGML `.bin` models in that directory appear after restarting the app.
 - On Linux, install `xdotool` for X11 or `wtype` for Wayland. `dotool` is another supported option. Wayland shortcuts can call the CLI through your desktop environment.
 - Linux builds require the `gtk-layer-shell` runtime package. The recording overlay is disabled by default on Linux because some compositors let it take focus from the destination app.

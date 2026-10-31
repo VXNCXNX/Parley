@@ -68,7 +68,7 @@ Handy is a cross-platform desktop speech-to-text app built with Tauri 2.x (Rust 
 
 **Command-Event Architecture:** Frontend → Backend via Tauri commands; Backend → Frontend via events.
 
-**Pipeline Processing:** Audio → VAD → Whisper/Parakeet → Text output → Clipboard/Paste
+**Pipeline Processing:** Audio → VAD → Native (Parakeet Ultra, Nemotron, Cohere) / Whisper Turbo / Gemini → Text output → Clipboard/Paste
 
 **State Flow:** Zustand → Tauri Command → Rust State → Persistence (tauri-plugin-store)
 

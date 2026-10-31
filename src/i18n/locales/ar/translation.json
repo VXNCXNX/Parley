@@ -28,69 +28,17 @@
       "speed": "السرعة"
     },
     "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": ".سريع ودقيق إلى حد ما"
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": ".دقة جيدة، سرعة متوسطة"
-      },
       "turbo": {
         "name": "Whisper Turbo",
         "description": ".توازن بين الدقة والسرعة"
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": ".دقة جيدة، لكنه بطيء"
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": ".الإنجليزية فقط. أفضل نموذج للمتحدثين بالإنجليزية"
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": ".سريع ودقيق"
       },
       "parakeet-ultra": {
         "name": "Parakeet Ultra",
         "description": "نسخة من Parakeet حسّنتها Moondream. تفريغ محلي للكلام بـ25 لغة أوروبية."
       },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": ".سريع جداً، الإنجليزية فقط. يتعامل جيداً مع اللهجات"
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "سريع للغاية، الإنجليزية فقط"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "سريع، الإنجليزية فقط. توازن جيد بين السرعة والدقة."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "الإنجليزية فقط. جودة عالية."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "محسّن للماندرين التايوانية. دعم التبديل بين اللغات."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "سريع جداً. الصينية، الإنجليزية، اليابانية، الكورية، الكانتونية."
-      },
       "nemotron-3.5-asr-streaming-0.6b": {
         "name": "Nemotron Streaming 3.5",
         "description": "تفريغ صوتي مباشر متعدد اللغات يدعم 28 لغة."
-      },
-      "nemotron-speech-streaming-en-0.6b": {
-        "name": "Nemotron Speech Streaming EN",
-        "description": "تحويل الكلام بالإنجليزية إلى نص في الوقت الفعلي."
-      },
-      "qwen3-asr-0.6b": {
-        "name": "Qwen3-ASR 0.6B",
-        "description": "تفريغ صوتي متعدد اللغات على دفعات."
       },
       "cohere-transcribe-03-2026": {
         "name": "Cohere Transcribe",
@@ -131,9 +79,6 @@
     "custom": "مخصص",
     "active": "نشط",
     "noModelsAvailable": "لا توجد نماذج متاحة",
-    "extracting": "...جاري استخراج {{modelName}}",
-    "extractingMultiple": "...جاري استخراج {{count}} من النماذج",
-    "extractingGeneric": "...جاري الاستخراج",
     "downloading": "جاري التنزيل {{percentage}}%",
     "downloadingMultiple": "جاري تنزيل {{count}} من النماذج...",
     "modelReady": "النموذج جاهز",
