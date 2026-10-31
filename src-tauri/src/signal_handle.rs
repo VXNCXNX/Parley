@@ -25,7 +25,8 @@ pub fn setup_signal_handler(app_handle: AppHandle, mut signals: Signals) {
     thread::spawn(move || {
         for sig in signals.forever() {
             let (binding_id, signal_name) = match sig {
-                SIGUSR1 => ("transcribe_with_post_process", "SIGUSR1"),
+                // SIGUSR1 used to start dictation with post-processing; keep it as an alias.
+                SIGUSR1 => ("transcribe", "SIGUSR1"),
                 SIGUSR2 => ("transcribe", "SIGUSR2"),
                 _ => continue,
             };

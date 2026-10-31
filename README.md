@@ -2,7 +2,7 @@
 
 Parley is a desktop speech-to-text app. Press a shortcut, speak, and paste the transcript into the app you are using.
 
-Local models transcribe on your computer after you download them. Optional Gemini and Google Cloud Chirp 3 transcription sends audio to Google. Optional post-processing sends the transcript to your selected provider.
+Local models transcribe on your computer after you download them. Optional Gemini and Google Cloud Chirp 3 transcription sends audio to Google. Optional AI cleanup sends the transcript to Google Gemini.
 
 Parley is a fork of [Melvynx/Parler](https://github.com/Melvynx/Parler), which is based on [cjpais/Handy](https://github.com/cjpais/Handy).
 
@@ -30,12 +30,12 @@ The source supports macOS, Windows, and Linux. Available installers are listed o
 - Use a toggle shortcut or push-to-talk to record and paste text.
 - Enable live dictation to see preview text in the recording overlay with a supported native model.
 - Download local models or configure Gemini or Chirp 3 with your own Google credentials.
-- Choose post-processing actions manually or map them to the active app.
+- Turn on AI cleanup to fix punctuation and filler words with Gemini. It needs a Gemini API key.
 - Add custom words and phrases to the dictionary.
 - Keep the microphone warm between recordings with a configurable timeout.
 - Use a different model for longer recordings. Cloud switching requires configured credentials.
 
-Cloud services may charge for usage. Local transcription does not require a cloud account. To keep transcripts local, also disable cloud post-processing.
+Cloud services may charge for usage. Local transcription does not require a cloud account. To keep transcripts local, also turn off AI cleanup.
 
 ## Local models
 
@@ -65,7 +65,6 @@ Use the `parley` binary to control a running instance:
 
 ```bash
 parley --toggle-transcription
-parley --toggle-post-process
 parley --cancel
 ```
 

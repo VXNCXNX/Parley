@@ -279,90 +279,10 @@
     },
     "postProcessing": {
       "title": "معالجة لاحقة",
-      "hotkey": {
-        "title": "مفتاح الاختصار"
-      },
-      "api": {
-        "title": "API (متوافق مع OpenAI)",
-        "provider": {
-          "title": "المزود",
-          "description": "اختر مزوداً متوافقاً مع OpenAI."
-        },
-        "appleIntelligence": {
-          "title": "Apple Intelligence",
-          "description": "يعمل بالكامل على الجهاز. لا يلزم وجود مفتاح API أو وصول إلى الشبكة.",
-          "requirements": "يتطلب جهاز Mac بمعالج Apple Silicon يعمل بنظام macOS Tahoe (26.0) أو أحدث. يجب تمكين Apple Intelligence في إعدادات النظام.",
-          "unavailable": "Apple Intelligence غير متاح على هذا الجهاز. يتطلب جهاز Mac بمعالج Apple Silicon يعمل بنظام macOS Tahoe (26.0) أو أحدث مع تمكين Apple Intelligence في إعدادات النظام."
-        },
-        "baseUrl": {
-          "title": "URL الأساسي",
-          "description": "URL الأساسي لـ API للمزود المختار. يمكن تعديل المزود المخصص فقط.",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "مفتاح API",
-          "description": "مفتاح API للمزود المختار.",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "النموذج",
-          "descriptionApple": "قدم حداً اختيارياً للرموز الرقمية أو احتفظ بالإعداد المسبق الافتراضي على الجهاز.",
-          "descriptionCustom": "قدم معرف النموذج المتوقع من قبل نقطة النهاية المخصصة الخاصة بك.",
-          "descriptionDefault": "اختر نموذجاً يعرضه المزود المختار.",
-          "placeholderApple": "Apple Intelligence",
-          "placeholderWithOptions": "ابحث عن نموذج أو اختره",
-          "placeholderNoOptions": "اكتب اسم النموذج",
-          "refreshModels": "تحديث النماذج"
-        }
-      },
-      "prompts": {
-        "title": "المطالبة",
-        "selectedPrompt": {
-          "title": "المطالبة المختارة",
-          "description": ".اختر قالباً لتحسين التفريغ الصوتي أو أنشئ قالباً جديداً. استخدم ${output} داخل نص المطالبة للإشارة إلى النص الملتقط"
-        },
-        "noPrompts": "لا توجد مطالبات متاحة",
-        "selectPrompt": "اختر مطالبة",
-        "createNew": "إنشاء مطالبة جديدة",
-        "promptLabel": "تسمية المطالبة",
-        "promptLabelPlaceholder": "أدخل اسم المطالبة",
-        "promptInstructions": "تعليمات المطالبة",
-        "promptInstructionsPlaceholder": ".اكتب التعليمات المراد تشغيلها بعد التفريغ الصوتي. مثال: قم بتحسين القواعد والوضوح للنص التالي: ${output}",
-        "promptTip": "تلميح: استخدم <code>${output}</code> لإدراج النص المفرغ في مطالبتك.",
-        "updatePrompt": "تحديث المطالبة",
-        "deletePrompt": "حذف المطالبة",
-        "createPrompt": "إنشاء مطالبة",
-        "cancel": "إلغاء",
-        "selectToEdit": ".اختر مطالبة أعلاه لعرض وتعديل تفاصيلها",
-        "createFirst": ".انقر على 'إنشاء مطالبة جديدة' أعلاه لإنشاء أول مطالبة معالجة لاحقة لك"
-      },
-      "actions": {
-        "title": "الإجراءات",
-        "description": "اربط مفاتيح Ctrl+رقم (1-9) بمطالبات مخصصة. اضغط على اختصار أثناء التسجيل لتطبيق الإجراء بعد التفريغ الصوتي.",
-        "noActions": "لم تُضبط أي إجراءات بعد.",
-        "createFirst": "أنشئ إجراءك الأول لمعالجة التفريغ الصوتي باستخدام المزود الذي أعددته.",
-        "addAction": "إضافة إجراء",
-        "editAction": "تعديل الإجراء",
-        "key": "المفتاح",
-        "keyLabel": "المفتاح (1-9)",
-        "name": "الاسم",
-        "namePlaceholder": "مثلًا: وضع البريد الإلكتروني",
-        "prompt": "المطالبة",
-        "promptPlaceholder": "مثلًا: نسّق هذا النص كبريد إلكتروني مهني يتضمن تحية وخاتمة. أضف فواصل أسطر بين الفقرات.",
-        "promptTip": "تلميح: استخدم <code>${output}</code> لإدراج النص المفرغ في مطالبتك.",
-        "model": "النموذج (اختياري)",
-        "modelPlaceholder": "اختر نموذجًا",
-        "modelTip": "اختر نموذجًا محددًا لهذا الإجراء أو استخدم النموذج الافتراضي من قسم API.",
-        "defaultModel": "الافتراضي",
-        "save": "حفظ",
-        "cancel": "إلغاء",
-        "delete": "حذف",
-        "maxActionsReached": "تم بلوغ الحد الأقصى وهو 9 إجراءات."
-      },
-      "appMappings": {
-        "presetsDescription": "بداية سريعة: حمّل 5 إجراءات قياسية (نص غير رسمي / بريد إلكتروني / كود / مستند / مطالبة للذكاء الاصطناعي) وروابط للتطبيقات الشائعة.",
-        "loadPresets": "تحميل الإعدادات المسبقة",
-        "noActions": "أنشئ إجراء معالجة لاحقة واحدًا على الأقل أعلاه قبل إضافة رابط."
+      "cleanup": {
+        "label": "تنظيف بالذكاء الاصطناعي",
+        "description": "يصحح علامات الترقيم وكلمات الحشو باستخدام Gemini بعد كل إملاء. يتم إرسال النص المفرّغ إلى Google.",
+        "missingKey": "يحتاج التنظيف إلى مفتاح Gemini API. أضفه في «متقدم» ضمن «النماذج السحابية»."
       }
     },
     "history": {
@@ -379,8 +299,7 @@
       "reprocessing": "جارٍ إعادة المعالجة...",
       "selectModel": "اختر النموذج",
       "originalTranscript": "الأصلي",
-      "postProcessed": "بعد المعالجة اللاحقة",
-      "action": "الإجراء {{key}}"
+      "postProcessed": "بعد المعالجة اللاحقة"
     },
     "debug": {
       "title": "تصحيح الأخطاء",
@@ -426,10 +345,6 @@
       "clamshellMicrophone": {
         "title": "ميكروفون وضع الإغلاق",
         "description": "الميكروفون المراد استخدامه عندما يكون غطاء المحمول مغلقاً"
-      },
-      "postProcessingToggle": {
-        "label": "معالجة لاحقة",
-        "description": "تمكين تحسين النص المدعوم بالذكاء الاصطناعي بعد التفريغ الصوتي"
       },
       "muteWhileRecording": {
         "label": "كتم الصوت أثناء التسجيل",
@@ -503,26 +418,7 @@
         "translation": "ترجمة",
         "allLanguages": "جميع اللغات"
       },
-      "noModelsMatch": "لا توجد نماذج مطابقة لهذا الفلتر.",
-      "tabs": {
-        "transcription": "التفريغ الصوتي",
-        "processing": "المعالجة"
-      },
-      "processingModels": {
-        "title": "نماذج المعالجة",
-        "description": "احفظ النماذج اللغوية الكبيرة لاستخدامها في إجراءات المعالجة اللاحقة.",
-        "noModels": "لا توجد نماذج معالجة محفوظة بعد. أضف نموذجًا لاستخدامه في إجراءاتك.",
-        "addModel": "إضافة نموذج معالجة",
-        "provider": "المزود",
-        "apiKey": "مفتاح API",
-        "apiKeyPlaceholder": "أدخل مفتاح API",
-        "model": "النموذج",
-        "modelPlaceholder": "اختر نموذجًا أو اكتب اسمه",
-        "save": "حفظ",
-        "cancel": "إلغاء",
-        "fetchModels": "جلب النماذج",
-        "alreadySaved": "هذا النموذج محفوظ بالفعل."
-      }
+      "noModelsMatch": "لا توجد نماذج مطابقة لهذا الفلتر."
     },
     "longAudioModel": {
       "title": "نموذج التسجيلات الطويلة",

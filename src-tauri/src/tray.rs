@@ -232,8 +232,6 @@ mod tests {
             title: "Recording".to_string(),
             transcription_text: transcription.to_string(),
             post_processed_text: post_processed.map(|text| text.to_string()),
-            post_process_prompt: None,
-            post_process_action_key: None,
         }
     }
 

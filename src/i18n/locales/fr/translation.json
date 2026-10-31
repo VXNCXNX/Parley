@@ -122,26 +122,7 @@
       },
       "noModelsMatch": "Aucun modèle ne correspond à ce filtre.",
       "yourModels": "Modèles téléchargés",
-      "availableModels": "Disponibles au téléchargement",
-      "tabs": {
-        "transcription": "Transcription",
-        "processing": "Traitement"
-      },
-      "processingModels": {
-        "title": "Modèles de traitement",
-        "description": "Enregistrez des modèles LLM pour les utiliser dans les actions de post-traitement.",
-        "noModels": "Aucun modèle de traitement enregistré. Ajoutez-en un pour l'utiliser dans vos actions.",
-        "addModel": "Ajouter un modèle de traitement",
-        "provider": "Fournisseur",
-        "apiKey": "Clé API",
-        "apiKeyPlaceholder": "Entrez la clé API",
-        "model": "Modèle",
-        "modelPlaceholder": "Sélectionnez ou saisissez un modèle",
-        "save": "Enregistrer",
-        "cancel": "Annuler",
-        "fetchModels": "Récupérer les modèles",
-        "alreadySaved": "Ce modèle est déjà enregistré."
-      }
+      "availableModels": "Disponibles au téléchargement"
     },
     "general": {
       "title": "Général",
@@ -320,90 +301,10 @@
     },
     "postProcessing": {
       "title": "Post-traitement",
-      "hotkey": {
-        "title": "Raccourci clavier"
-      },
-      "api": {
-        "title": "API (Compatible OpenAI)",
-        "provider": {
-          "title": "Fournisseur",
-          "description": "Sélectionnez un fournisseur compatible OpenAI."
-        },
-        "appleIntelligence": {
-          "title": "Apple Intelligence",
-          "description": "Fonctionne entièrement sur l'appareil. Aucune clé API ni accès réseau n'est requis.",
-          "requirements": "Nécessite un Mac Apple Silicon exécutant macOS Tahoe (26.0) ou une version ultérieure. Apple Intelligence doit être activé dans les Préférences Système.",
-          "unavailable": "Apple Intelligence n'est pas disponible sur cet appareil. Nécessite un Mac Apple Silicon exécutant macOS Tahoe (26.0) ou une version ultérieure avec Apple Intelligence activé dans les Préférences Système."
-        },
-        "baseUrl": {
-          "title": "URL de base",
-          "description": "URL de base de l'API pour le fournisseur sélectionné. Seul le fournisseur personnalisé peut être modifié.",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "Clé API",
-          "description": "Clé API pour le fournisseur sélectionné.",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "Modèle",
-          "descriptionApple": "Fournissez une limite de tokens optionnelle ou conservez le préréglage par défaut sur l'appareil.",
-          "descriptionCustom": "Fournissez l'identifiant du modèle attendu par votre point de terminaison personnalisé.",
-          "descriptionDefault": "Choisissez un modèle exposé par le fournisseur sélectionné.",
-          "placeholderApple": "Apple Intelligence",
-          "placeholderWithOptions": "Rechercher ou sélectionner un modèle",
-          "placeholderNoOptions": "Tapez un nom de modèle",
-          "refreshModels": "Actualiser les modèles"
-        }
-      },
-      "prompts": {
-        "title": "Prompt",
-        "selectedPrompt": {
-          "title": "Prompt sélectionné",
-          "description": "Sélectionnez un modèle pour affiner les transcriptions ou créez-en un nouveau. Utilisez ${output} dans le texte du prompt pour référencer la transcription capturée."
-        },
-        "noPrompts": "Aucun prompt disponible",
-        "selectPrompt": "Sélectionner un prompt",
-        "createNew": "Créer un nouveau prompt",
-        "promptLabel": "Libellé du prompt",
-        "promptLabelPlaceholder": "Entrez le nom du prompt",
-        "promptInstructions": "Instructions du prompt",
-        "promptInstructionsPlaceholder": "Écrivez les instructions à exécuter après la transcription. Exemple : Améliorer la grammaire et la clarté du texte suivant : ${output}",
-        "promptTip": "Astuce : Utilisez <code>${output}</code> pour insérer le texte transcrit dans votre prompt.",
-        "updatePrompt": "Mettre à jour le prompt",
-        "deletePrompt": "Supprimer le prompt",
-        "createPrompt": "Créer le prompt",
-        "cancel": "Annuler",
-        "selectToEdit": "Sélectionnez un prompt ci-dessus pour voir et modifier ses détails.",
-        "createFirst": "Cliquez sur 'Créer un nouveau prompt' ci-dessus pour créer votre premier prompt de post-traitement."
-      },
-      "actions": {
-        "title": "Actions",
-        "description": "Associez les touches Ctrl+chiffre (1-9) à des prompts personnalisés. Appuyez sur un raccourci pendant l'enregistrement pour appliquer l'action après la transcription.",
-        "noActions": "Aucune action configurée.",
-        "createFirst": "Créez votre première action pour traiter les transcriptions avec le fournisseur configuré.",
-        "addAction": "Ajouter une action",
-        "editAction": "Modifier une action",
-        "key": "Touche",
-        "keyLabel": "Touche (1-9)",
-        "name": "Nom",
-        "namePlaceholder": "Ex. Mode e-mail",
-        "prompt": "Prompt",
-        "promptPlaceholder": "Ex. Présente ce texte comme un e-mail professionnel avec une formule de salutation et une formule de politesse. Ajoute des sauts de ligne entre les paragraphes.",
-        "promptTip": "Utilisez <code>${output}</code> pour insérer le texte transcrit dans votre prompt.",
-        "model": "Modèle (facultatif)",
-        "modelPlaceholder": "Sélectionnez un modèle",
-        "modelTip": "Sélectionnez un modèle spécifique pour cette action ou utilisez celui défini par défaut dans la section API.",
-        "defaultModel": "Par défaut",
-        "save": "Enregistrer",
-        "cancel": "Annuler",
-        "delete": "Supprimer",
-        "maxActionsReached": "La limite de 9 actions est atteinte."
-      },
-      "appMappings": {
-        "presetsDescription": "Pour démarrer, chargez 5 actions standard (informel, e-mail, code, document et prompt IA) et des associations pour les applications courantes.",
-        "loadPresets": "Charger les préréglages",
-        "noActions": "Créez au moins une action de post-traitement ci-dessus avant d'ajouter une association."
+      "cleanup": {
+        "label": "Nettoyer avec l'IA",
+        "description": "Corrige la ponctuation et les mots de remplissage avec Gemini après chaque dictée. Votre transcription est envoyée à Google.",
+        "missingKey": "Le nettoyage demande une clé API Gemini. Ajoutez-en une dans Avancé, sous Modèles dans le cloud."
       }
     },
     "history": {
@@ -418,7 +319,6 @@
       "deleteError": "Échec de la suppression de l'entrée. Veuillez réessayer.",
       "originalTranscript": "Original",
       "postProcessed": "Post-traitement",
-      "action": "Action {{key}}",
       "reprocess": "Retraiter avec un autre modèle",
       "reprocessing": "Retraitement en cours...",
       "selectModel": "Sélectionner un modèle"
@@ -467,10 +367,6 @@
       "clamshellMicrophone": {
         "title": "Microphone en mode fermé",
         "description": "Microphone à utiliser lorsque le couvercle du portable est fermé"
-      },
-      "postProcessingToggle": {
-        "label": "Post-traitement",
-        "description": "Activer l'affinage du texte par IA après la transcription"
       },
       "muteWhileRecording": {
         "label": "Muet pendant l'enregistrement",
