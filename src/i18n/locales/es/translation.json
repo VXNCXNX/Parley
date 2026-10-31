@@ -431,12 +431,15 @@
       "seconds": "{{value}}s"
     },
     "gemini": {
-      "title": "Gemini API",
       "description": "Usa la API Gemini de Google para transcribir en la nube. Requiere una clave API.",
       "apiKey": "Clave API",
       "apiKeyPlaceholder": "Introduce tu clave API de Gemini",
       "model": "Modelo",
       "modelDescription": "Selecciona el modelo Gemini que quieres usar para transcribir",
+      "models": {
+        "gemini35Transcribe": "Gemini 3.5 Transcribe",
+        "chirp3": "Chirp 3"
+      },
       "apiKeyRequired": "Se requiere una clave API",
       "apiKeyRequiredDescription": "Introduce tu clave API de Google Gemini para usar la transcripción en la nube.",
       "save": "Guardar",

@@ -555,8 +555,26 @@ fn default_long_audio_threshold_seconds() -> f32 {
     10.0
 }
 
+const GEMINI_TRANSCRIBE_MODEL: &str = crate::gemini_transcribe_client::MODEL_ID;
+const CHIRP_MODEL: &str = "chirp_3";
+
 fn default_gemini_model() -> String {
-    "gemini-2.5-flash".to_string()
+    GEMINI_TRANSCRIBE_MODEL.to_string()
+}
+
+/// Cloud transcription offers only `gemini-3.5-transcribe` and `chirp_3`.
+/// Settings saved with a removed general Gemini model move to the default.
+/// Returns true if the value changed.
+fn migrate_gemini_model(settings: &mut AppSettings) -> bool {
+    if settings.gemini_model == GEMINI_TRANSCRIBE_MODEL || settings.gemini_model == CHIRP_MODEL {
+        return false;
+    }
+    debug!(
+        "Migrating unsupported gemini_model '{}' to '{}'",
+        settings.gemini_model, GEMINI_TRANSCRIBE_MODEL
+    );
+    settings.gemini_model = default_gemini_model();
+    true
 }
 
 fn default_gemini_location() -> String {
@@ -777,6 +795,10 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
         default_settings
     };
 
+    if migrate_gemini_model(&mut settings) {
+        store.set("settings", serde_json::to_value(&settings).unwrap());
+    }
+
     // Migrate plaintext API keys and old hostname-derived secrets to enc2.
     if normalize_secret_encryption(&mut settings) {
         store.set("settings", serde_json::to_value(&settings).unwrap());
@@ -832,7 +854,7 @@ pub fn get_settings(app: &AppHandle) -> AppSettings {
         .store(SETTINGS_STORE_PATH)
         .expect("Failed to initialize store");
 
-    if let Some(settings_value) = store.get("settings") {
+    let mut settings = if let Some(settings_value) = store.get("settings") {
         serde_json::from_value::<AppSettings>(settings_value).unwrap_or_else(|_| {
             let default_settings = get_default_settings();
             store.set("settings", serde_json::to_value(&default_settings).unwrap());
@@ -842,7 +864,13 @@ pub fn get_settings(app: &AppHandle) -> AppSettings {
         let default_settings = get_default_settings();
         store.set("settings", serde_json::to_value(&default_settings).unwrap());
         default_settings
+    };
+
+    if migrate_gemini_model(&mut settings) {
+        store.set("settings", serde_json::to_value(&settings).unwrap());
     }
+
+    settings
 }
 
 pub fn write_settings(app: &AppHandle, settings: AppSettings) {

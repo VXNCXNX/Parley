@@ -242,7 +242,7 @@ impl ModelManager {
                 id: "gemini-api".to_string(),
                 name: "Gemini API".to_string(),
                 description:
-                    "Cloud-based transcription via Google Gemini. Requires API key and internet."
+                    "Cloud-based transcription via Google (Gemini 3.5 Transcribe or Chirp 3). Requires API key and internet."
                         .to_string(),
                 filename: "".to_string(),
                 url: None,

@@ -431,12 +431,15 @@
       "seconds": "{{value}} s"
     },
     "gemini": {
-      "title": "Gemini API",
       "description": "Použijte Gemini API od společnosti Google pro cloudový přepis. Vyžaduje API klíč.",
       "apiKey": "API klíč",
       "apiKeyPlaceholder": "Zadejte svůj API klíč pro Gemini",
       "model": "Model",
       "modelDescription": "Vyberte model Gemini pro přepis",
+      "models": {
+        "gemini35Transcribe": "Gemini 3.5 Transcribe",
+        "chirp3": "Chirp 3"
+      },
       "apiKeyRequired": "Je vyžadován API klíč",
       "apiKeyRequiredDescription": "Pro cloudový přepis zadejte svůj API klíč pro Google Gemini.",
       "save": "Uložit",

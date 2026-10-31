@@ -429,8 +429,11 @@
       "description": "Bulut tabanlı transkripsiyon için Google Gemini API'yi kullanın. API anahtarı gerektirir.",
       "model": "Model",
       "modelDescription": "Transkripsiyon için kullanılacak Gemini modelini seçin",
+      "models": {
+        "gemini35Transcribe": "Gemini 3.5 Transcribe",
+        "chirp3": "Chirp 3"
+      },
       "save": "Kaydet",
-      "title": "Gemini API",
       "saved": "Kaydedildi ✓",
       "apiKeyConfigured": "API anahtarı yapılandırıldı ✓",
       "serviceAccountConfigured": "Hizmet hesabı yapılandırıldı ✓"

@@ -429,8 +429,11 @@
       "description": "Використовуйте Gemini API від Google для хмарної транскрипції. Потрібен API-ключ.",
       "model": "Модель",
       "modelDescription": "Виберіть модель Gemini для транскрипції",
+      "models": {
+        "gemini35Transcribe": "Gemini 3.5 Transcribe",
+        "chirp3": "Chirp 3"
+      },
       "save": "Зберегти",
-      "title": "Gemini API",
       "saved": "Збережено ✓",
       "apiKeyConfigured": "API-ключ налаштовано ✓",
       "serviceAccountConfigured": "Сервісний обліковий запис налаштовано ✓"
