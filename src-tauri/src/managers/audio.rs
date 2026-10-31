@@ -590,7 +590,7 @@ impl AudioRecordingManager {
         if let Some(rec) = self.recorder.lock().unwrap().as_mut() {
             // If still recording, stop first.
             if *self.is_recording.lock().unwrap() {
-                let _ = rec.stop();
+                let _ = rec.cancel();
                 *self.is_recording.lock().unwrap() = false;
             }
             let _ = rec.close();
@@ -778,7 +778,7 @@ impl AudioRecordingManager {
             drop(state);
 
             if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
-                let _ = rec.stop(); // Discard the result
+                let _ = rec.cancel(); // Discard the result, no tail
             }
 
             *self.is_recording.lock().unwrap() = false;
