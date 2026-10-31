@@ -177,26 +177,7 @@
       },
       "noModelsMatch": "Bu filtreyle eşleşen model yok.",
       "yourModels": "İndirilen modeller",
-      "availableModels": "İndirilebilir",
-      "processingModels": {
-        "addModel": "İşleme Modeli Ekle",
-        "alreadySaved": "Bu model zaten kayıtlı.",
-        "apiKey": "API Anahtarı",
-        "apiKeyPlaceholder": "API anahtarını girin",
-        "cancel": "İptal",
-        "description": "Son işlem eylemlerinde kullanmak üzere LLM modellerini kaydedin.",
-        "fetchModels": "Modelleri getir",
-        "model": "Model",
-        "modelPlaceholder": "Bir model seçin veya yazın",
-        "noModels": "Henüz kayıtlı işleme modeli yok. Eylemlerinizde kullanmak için bir model ekleyin.",
-        "provider": "Sağlayıcı",
-        "save": "Kaydet",
-        "title": "İşleme Modelleri"
-      },
-      "tabs": {
-        "processing": "İşleme",
-        "transcription": "Transkripsiyon"
-      }
+      "availableModels": "İndirilebilir"
     },
     "general": {
       "title": "Genel",
@@ -375,90 +356,10 @@
     },
     "postProcessing": {
       "title": "Son İşlem",
-      "hotkey": {
-        "title": "Kısayol Tuşu"
-      },
-      "api": {
-        "title": "API (OpenAI Uyumlu)",
-        "provider": {
-          "title": "Sağlayıcı",
-          "description": "OpenAI uyumlu bir sağlayıcı seçin."
-        },
-        "appleIntelligence": {
-          "title": "Apple Intelligence",
-          "description": "Tamamen cihaz üzerinde çalışır. API anahtarı veya ağ erişimi gerekmez.",
-          "requirements": "macOS Tahoe (26.0) veya üzeri çalıştıran bir Apple Silicon Mac gerektirir. Sistem Ayarları'nda Apple Intelligence etkin olmalıdır.",
-          "unavailable": "Apple Intelligence bu cihazda kullanılamıyor. macOS Tahoe (26.0) veya üzeri ve Sistem Ayarları'nda Apple Intelligence etkin olan bir Apple Silicon Mac gerektirir."
-        },
-        "baseUrl": {
-          "title": "Temel URL",
-          "description": "Seçili sağlayıcı için API temel URL'si. Yalnızca özel sağlayıcı düzenlenebilir.",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "API Anahtarı",
-          "description": "Seçili sağlayıcı için API anahtarı.",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "Model",
-          "descriptionApple": "İsteğe bağlı bir sayısal token sınırı belirleyin veya varsayılan cihaz içi ön ayarı kullanın.",
-          "descriptionCustom": "Özel uç noktanızın beklediği model tanımlayıcısını girin.",
-          "descriptionDefault": "Seçili sağlayıcının sunduğu bir modeli seçin.",
-          "placeholderApple": "Apple Intelligence",
-          "placeholderWithOptions": "Model ara veya seç",
-          "placeholderNoOptions": "Model adı yazın",
-          "refreshModels": "Modelleri Yenile"
-        }
-      },
-      "prompts": {
-        "title": "Prompt",
-        "selectedPrompt": {
-          "title": "Seçili Prompt",
-          "description": "Transkripsiyonları iyileştirmek için bir şablon seçin veya yeni bir tane oluşturun. Yakalanan transkripte referans vermek için prompt metni içinde ${output} kullanın."
-        },
-        "noPrompts": "Kullanılabilir prompt yok",
-        "selectPrompt": "Prompt Seç",
-        "createNew": "Yeni Prompt Oluştur",
-        "promptLabel": "Prompt Etiketi",
-        "promptLabelPlaceholder": "Prompt adı girin",
-        "promptInstructions": "Prompt Talimatları",
-        "promptInstructionsPlaceholder": "Transkripsiyondan sonra çalıştırılacak talimatları yazın. Örnek: Aşağıdaki metnin dilbilgisini ve açıklığını iyileştir: ${output}",
-        "promptTip": "İpucu: Transkribe edilen metni promptunuza eklemek için <code>${output}</code> kullanın.",
-        "updatePrompt": "Promptu Güncelle",
-        "deletePrompt": "Promptu Sil",
-        "createPrompt": "Prompt Oluştur",
-        "cancel": "İptal",
-        "selectToEdit": "Ayrıntılarını görüntülemek ve düzenlemek için yukarıdan bir prompt seçin.",
-        "createFirst": "İlk son işlem prompt'unuzu oluşturmak için yukarıdaki “Yeni Prompt Oluştur” seçeneğine tıklayın."
-      },
-      "actions": {
-        "addAction": "Eylem Ekle",
-        "cancel": "İptal",
-        "createFirst": "Yapılandırdığınız sağlayıcıyla transkripsiyonları işlemek için ilk eyleminizi oluşturun.",
-        "defaultModel": "Varsayılan",
-        "delete": "Sil",
-        "description": "Özel promptlarınızı Ctrl+sayı (1-9) tuşlarına atayın. Eylemi transkripsiyondan sonra uygulamak için kayıt sırasında kısayola basın.",
-        "editAction": "Eylemi Düzenle",
-        "key": "Tuş",
-        "keyLabel": "Tuş (1-9)",
-        "maxActionsReached": "En fazla 9 eylem eklenebilir.",
-        "model": "Model (isteğe bağlı)",
-        "modelPlaceholder": "Bir model seçin",
-        "modelTip": "Bu eylem için belirli bir model seçin veya API bölümündeki varsayılan modeli kullanın.",
-        "name": "Ad",
-        "namePlaceholder": "Örn. E-posta modu",
-        "noActions": "Henüz yapılandırılmış eylem yok.",
-        "prompt": "Prompt",
-        "promptPlaceholder": "Örn. Bu metni selamlama ve kapanış içeren profesyonel bir e-posta olarak biçimlendir. Paragraflar arasına satır sonları ekle.",
-        "promptTip": "İpucu: Transkripsiyon metnini promptunuza eklemek için <code>${output}</code> kullanın.",
-        "save": "Kaydet",
-        "title": "Eylemler"
-      },
-      "appMappings": {
-        "presetsDescription": "Hızlı başlangıç: 5 standart eylemi (gündelik dil / e-posta / kod / belge / yapay zekâ promptu) ve yaygın uygulamalar için eşleştirmeleri yükleyin.",
-        "loadPresets": "Hazır ayarları yükle",
-        "noActions": "Eşleştirme eklemeden önce yukarıda en az bir son işlem eylemi oluşturun."
+      "cleanup": {
+        "label": "Yapay zekâyla temizle",
+        "description": "Her dikteden sonra Gemini ile noktalamayı ve dolgu sözcüklerini düzeltir. Transkriptiniz Google'a gönderilir.",
+        "missingKey": "Temizleme için bir Gemini API anahtarı gerekir. Gelişmiş bölümünde, Bulut Modelleri altında ekleyin."
       }
     },
     "history": {
@@ -471,7 +372,6 @@
       "unsave": "Kaydedilenlerden kaldır",
       "delete": "Kaydı sil",
       "deleteError": "Kayıt silinemedi. Lütfen tekrar deneyin.",
-      "action": "Eylem {{key}}",
       "originalTranscript": "Orijinal",
       "postProcessed": "Son işlem uygulandı",
       "reprocess": "Farklı bir modelle yeniden işle",
@@ -522,10 +422,6 @@
       "clamshellMicrophone": {
         "title": "Kapalı Kapak Mikrofonu",
         "description": "Dizüstü bilgisayar kapağı kapalıyken kullanılacak mikrofon"
-      },
-      "postProcessingToggle": {
-        "label": "Son İşlem",
-        "description": "Transkripsiyon sonrası yapay zekâ destekli metin iyileştirmeyi etkinleştirir"
       },
       "muteWhileRecording": {
         "label": "Kayıt Sırasında Sessize Al",

@@ -108,10 +108,50 @@ jobs:
       release-id: ${{ needs.prepare-release.outputs.release-id }}
     secrets: inherit
 
+  build-linux:
+    permissions:
+      contents: write
+    needs: prepare-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "ubuntu-22.04"
+            target: "x86_64-unknown-linux-gnu"
+          - platform: "ubuntu-24.04-arm"
+            target: "aarch64-unknown-linux-gnu"
+    uses: ./.github/workflows/build.yml
+    with:
+      platform: ${{ matrix.platform }}
+      target: ${{ matrix.target }}
+      ref: ${{ github.sha }}
+      build-args: "--bundles appimage,deb,rpm"
+      sign-binaries: false
+      upload-artifacts: true
+      release-id: ${{ needs.prepare-release.outputs.release-id }}
+    secrets: inherit
+
+  # Windows is unsigned until a signer exists. The sign-binaries input only covers the Apple
+  # secrets, so it is not forwarded here. See the Windows signing note in build.yml.
+  build-windows:
+    permissions:
+      contents: write
+    needs: prepare-release
+    uses: ./.github/workflows/build.yml
+    with:
+      platform: "windows-latest"
+      target: "x86_64-pc-windows-msvc"
+      ref: ${{ github.sha }}
+      build-args: "--bundles nsis"
+      sign-binaries: false
+      upload-artifacts: true
+      release-id: ${{ needs.prepare-release.outputs.release-id }}
+    secrets: inherit
+
   verify-downloads:
     permissions:
       contents: read
-    needs: [prepare-release, build-macos]
+    needs: [prepare-release, build-macos, build-linux, build-windows]
     runs-on: ubuntu-latest
     steps:
       - name: Check draft downloads
@@ -138,6 +178,13 @@ jobs:
               `Parley_${version}_x64.dmg`,
               'Parley_aarch64.app.tar.gz',
               'Parley_x64.app.tar.gz',
+              `Parley_${version}_amd64.AppImage`,
+              `Parley_${version}_aarch64.AppImage`,
+              `Parley_${version}_amd64.deb`,
+              `Parley_${version}_arm64.deb`,
+              `Parley-${version}-1.x86_64.rpm`,
+              `Parley-${version}-1.aarch64.rpm`,
+              `Parley_${version}_x64-setup.exe`,
             ];
             for (const name of required) {
               if (!assets.some(asset => asset.name === name && asset.state === 'uploaded' && asset.size > 0)) {

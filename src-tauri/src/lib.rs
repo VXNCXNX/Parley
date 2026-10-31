@@ -1,10 +1,8 @@
 mod actions;
-mod active_app;
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-mod apple_intelligence;
 mod audio_feedback;
 pub mod audio_toolkit;
 pub mod chirp_client;
+mod cleanup;
 pub mod cli;
 mod clipboard;
 mod commands;
@@ -14,7 +12,6 @@ pub mod gemini_client;
 pub mod gemini_transcribe_client;
 mod helpers;
 mod input;
-mod llm_client;
 mod managers;
 mod native_runtime;
 mod overlay;
@@ -25,7 +22,6 @@ mod signal_handle;
 mod transcription_coordinator;
 mod tray;
 mod tray_i18n;
-mod url_validation;
 mod utils;
 
 pub use cli::CliArgs;
@@ -288,22 +284,6 @@ pub fn run(cli_args: CliArgs) {
         shortcut::change_auto_submit_key_setting,
         shortcut::change_post_process_enabled_setting,
         shortcut::change_experimental_enabled_setting,
-        shortcut::change_post_process_base_url_setting,
-        shortcut::change_post_process_api_key_setting,
-        shortcut::change_post_process_model_setting,
-        shortcut::set_post_process_provider,
-        shortcut::fetch_post_process_models,
-        shortcut::add_post_process_prompt,
-        shortcut::update_post_process_prompt,
-        shortcut::delete_post_process_prompt,
-        shortcut::set_post_process_selected_prompt,
-        shortcut::add_post_process_action,
-        shortcut::update_post_process_action,
-        shortcut::delete_post_process_action,
-        shortcut::set_app_prompt_mappings,
-        shortcut::apply_default_app_presets,
-        shortcut::add_saved_processing_model,
-        shortcut::delete_saved_processing_model,
         shortcut::update_custom_words,
         shortcut::suspend_binding,
         shortcut::resume_binding,
@@ -330,7 +310,6 @@ pub fn run(cli_args: CliArgs) {
         commands::open_recordings_folder,
         commands::open_log_dir,
         commands::open_app_data_dir,
-        commands::check_apple_intelligence_available,
         commands::initialize_enigo,
         commands::initialize_shortcuts,
         commands::models::get_available_models,
@@ -419,8 +398,6 @@ pub fn run(cli_args: CliArgs) {
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if args.iter().any(|a| a == "--toggle-transcription") {
                 signal_handle::send_transcription_input(app, "transcribe", "CLI");
-            } else if args.iter().any(|a| a == "--toggle-post-process") {
-                signal_handle::send_transcription_input(app, "transcribe_with_post_process", "CLI");
             } else if args.iter().any(|a| a == "--cancel") {
                 crate::utils::cancel_current_operation(app);
             } else {
@@ -461,7 +438,6 @@ pub fn run(cli_args: CliArgs) {
             FILE_LOG_LEVEL.store(file_log_level.to_level_filter() as u8, Ordering::Relaxed);
             let app_handle = app.handle().clone();
             app.manage(TranscriptionCoordinator::new(app_handle.clone()));
-            app.manage(actions::ActiveActionState(std::sync::Mutex::new(None)));
 
             initialize_core_logic(&app_handle);
 

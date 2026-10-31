@@ -177,26 +177,7 @@
       },
       "noModelsMatch": "没有符合此筛选条件的模型。",
       "yourModels": "已下载的模型",
-      "availableModels": "可供下载",
-      "tabs": {
-        "transcription": "转录",
-        "processing": "后处理"
-      },
-      "processingModels": {
-        "title": "后处理模型",
-        "description": "保存用于后处理操作的大语言模型（LLM）。",
-        "noModels": "尚未保存后处理模型。添加模型后即可用于操作。",
-        "addModel": "添加后处理模型",
-        "provider": "服务提供商",
-        "apiKey": "API密钥",
-        "apiKeyPlaceholder": "输入API密钥",
-        "model": "模型",
-        "modelPlaceholder": "选择或输入模型",
-        "save": "保存",
-        "cancel": "取消",
-        "fetchModels": "获取模型列表",
-        "alreadySaved": "此模型已保存。"
-      }
+      "availableModels": "可供下载"
     },
     "general": {
       "title": "通用",
@@ -375,90 +356,10 @@
     },
     "postProcessing": {
       "title": "后处理",
-      "hotkey": {
-        "title": "快捷键"
-      },
-      "api": {
-        "title": "API（兼容 OpenAI）",
-        "provider": {
-          "title": "提供商",
-          "description": "选择一个兼容 OpenAI 的提供商。"
-        },
-        "appleIntelligence": {
-          "title": "Apple Intelligence",
-          "description": "完全在设备上运行。无需 API 密钥或网络访问。",
-          "requirements": "需要运行 macOS Tahoe（26.0）或更高版本的 Apple Silicon Mac。必须在系统设置中启用 Apple Intelligence。",
-          "unavailable": "Apple Intelligence 在此设备上不可用。需要运行 macOS Tahoe（26.0）或更高版本的 Apple Silicon Mac，并在系统设置中启用 Apple Intelligence。"
-        },
-        "baseUrl": {
-          "title": "基础 URL",
-          "description": "所选提供商的 API 基础 URL。仅自定义提供商可编辑。",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "API 密钥",
-          "description": "所选提供商的 API 密钥。",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "模型",
-          "descriptionApple": "提供可选的数字令牌限制或保持默认的设备预设。",
-          "descriptionCustom": "提供自定义端点期望的模型标识符。",
-          "descriptionDefault": "选择所选提供商提供的模型。",
-          "placeholderApple": "Apple Intelligence",
-          "placeholderWithOptions": "搜索或选择模型",
-          "placeholderNoOptions": "输入模型名称",
-          "refreshModels": "刷新模型"
-        }
-      },
-      "prompts": {
-        "title": "提示词",
-        "selectedPrompt": {
-          "title": "已选提示词",
-          "description": "选择用于优化转录的模板或创建新模板。在提示词文本中使用 ${output} 来引用捕获的转录。"
-        },
-        "noPrompts": "没有可用的提示词",
-        "selectPrompt": "选择提示词",
-        "createNew": "创建新提示词",
-        "promptLabel": "提示词名称",
-        "promptLabelPlaceholder": "输入提示词名称",
-        "promptInstructions": "提示词指令",
-        "promptInstructionsPlaceholder": "编写转录后要执行的指令。示例：改进以下文本的语法和清晰度: ${output}",
-        "promptTip": "提示：使用 <code>${output}</code> 将转录文本插入到您的提示词中。",
-        "updatePrompt": "更新提示词",
-        "deletePrompt": "删除提示词",
-        "createPrompt": "创建提示词",
-        "cancel": "取消",
-        "selectToEdit": "选择上方的提示词以查看和编辑其详细信息。",
-        "createFirst": "点击上方的「创建新提示词」来创建您的第一个后处理提示词。"
-      },
-      "actions": {
-        "title": "操作",
-        "description": "将自定义提示词绑定到Ctrl+数字键（1-9）。录音时按下快捷键，转录完成后就会应用对应操作。",
-        "noActions": "尚未配置操作。",
-        "createFirst": "创建第一个操作，即可使用已配置的服务提供商处理转录文本。",
-        "addAction": "添加操作",
-        "editAction": "编辑操作",
-        "key": "按键",
-        "keyLabel": "按键（1-9）",
-        "name": "名称",
-        "namePlaceholder": "例如：邮件模式",
-        "prompt": "提示词",
-        "promptPlaceholder": "例如：将这段内容整理为包含问候语和结束语的正式邮件。在段落之间添加换行。",
-        "promptTip": "提示：使用<code>${output}</code>将转录文本插入提示词。",
-        "model": "模型（可选）",
-        "modelPlaceholder": "选择模型",
-        "modelTip": "为此操作选择特定模型，或使用API部分设置的默认模型。",
-        "defaultModel": "默认",
-        "save": "保存",
-        "cancel": "取消",
-        "delete": "删除",
-        "maxActionsReached": "已达到9个操作的上限。"
-      },
-      "appMappings": {
-        "presetsDescription": "快速开始：加载5个标准操作（口语 / 邮件 / 代码 / 文档 / AI提示词）以及常用应用的映射。",
-        "loadPresets": "加载预设",
-        "noActions": "添加映射前，请先在上方创建至少一个后处理操作。"
+      "cleanup": {
+        "label": "使用 AI 清理",
+        "description": "每次听写后，使用 Gemini 修正标点和语气词。你的转录文本会发送给 Google。",
+        "missingKey": "清理功能需要 Gemini API 密钥。请在“高级”的“云端模型”中添加。"
       }
     },
     "history": {
@@ -475,8 +376,7 @@
       "reprocessing": "正在重新处理...",
       "selectModel": "选择模型",
       "originalTranscript": "原始文本",
-      "postProcessed": "后处理结果",
-      "action": "操作 {{key}}"
+      "postProcessed": "后处理结果"
     },
     "debug": {
       "title": "调试",
@@ -522,10 +422,6 @@
       "clamshellMicrophone": {
         "title": "合盖麦克风",
         "description": "笔记本电脑盖子关闭时使用的麦克风"
-      },
-      "postProcessingToggle": {
-        "label": "后处理",
-        "description": "启用转录后的 AI 文本优化"
       },
       "muteWhileRecording": {
         "label": "录制时静音",

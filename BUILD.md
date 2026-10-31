@@ -12,11 +12,11 @@ Install the Xcode command-line tools:
 xcode-select --install
 ```
 
-The Apple Silicon build uses a Swift bridge for Apple Intelligence. Enabling Apple Intelligence requires an Xcode SDK with the FoundationModels framework. Builds without that SDK use a stub. The release workflow uses macOS 26 for Apple Silicon and a native Intel runner for Intel builds.
+The release workflow uses macOS 26 for Apple Silicon and a native Intel runner for Intel builds.
 
 ### Windows
 
-Install Visual Studio 2022 or its Build Tools with the C++ desktop development workload. The Windows x64 build uses CUDA for Whisper, so install a compatible NVIDIA CUDA Toolkit.
+Install Visual Studio 2022 or its Build Tools with the C++ desktop development workload. Whisper uses Vulkan on Windows and Linux, so install the Vulkan SDK. On an NVIDIA machine you can add CUDA with `bun run tauri build -- --features cuda`, which needs a compatible NVIDIA CUDA Toolkit. Release builds stay on Vulkan.
 
 ### Linux
 

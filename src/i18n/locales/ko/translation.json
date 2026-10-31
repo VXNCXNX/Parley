@@ -242,26 +242,7 @@
         "translation": "번역",
         "allLanguages": "모든 언어"
       },
-      "noModelsMatch": "이 필터에 맞는 모델이 없습니다.",
-      "tabs": {
-        "transcription": "음성 인식",
-        "processing": "후처리"
-      },
-      "processingModels": {
-        "title": "후처리 모델",
-        "description": "후처리 작업에 사용할 LLM 모델을 저장합니다.",
-        "noModels": "저장된 후처리 모델이 없습니다. 모델을 추가하면 작업에 사용할 수 있습니다.",
-        "addModel": "후처리 모델 추가",
-        "provider": "제공업체",
-        "apiKey": "API 키",
-        "apiKeyPlaceholder": "API 키 입력",
-        "model": "모델",
-        "modelPlaceholder": "모델 선택 또는 입력",
-        "save": "저장",
-        "cancel": "취소",
-        "fetchModels": "모델 목록 가져오기",
-        "alreadySaved": "이미 저장된 모델입니다."
-      }
+      "noModelsMatch": "이 필터에 맞는 모델이 없습니다."
     },
     "advanced": {
       "title": "고급",
@@ -375,90 +356,10 @@
     },
     "postProcessing": {
       "title": "후처리",
-      "hotkey": {
-        "title": "단축키"
-      },
-      "api": {
-        "title": "API (OpenAI 호환)",
-        "provider": {
-          "title": "제공자",
-          "description": "OpenAI 호환 제공자를 선택하세요."
-        },
-        "appleIntelligence": {
-          "title": "Apple Intelligence",
-          "description": "완전히 기기에서 실행됩니다. API 키나 네트워크 접근이 필요하지 않습니다.",
-          "requirements": "macOS Tahoe (26.0) 이상을 실행하는 Apple Silicon Mac이 필요합니다. 시스템 설정에서 Apple Intelligence가 활성화되어 있어야 합니다.",
-          "unavailable": "이 기기에서는 Apple Intelligence를 사용할 수 없습니다. macOS Tahoe (26.0) 이상을 실행하고 시스템 설정에서 Apple Intelligence가 활성화된 Apple Silicon Mac이 필요합니다."
-        },
-        "baseUrl": {
-          "title": "기본 URL",
-          "description": "선택한 제공자의 API 기본 URL입니다. 사용자 정의 제공자만 편집할 수 있습니다.",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "API 키",
-          "description": "선택한 제공자의 API 키입니다.",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "모델",
-          "descriptionApple": "선택적 숫자 토큰 제한을 제공하거나 기본 기기 내 프리셋을 유지하세요.",
-          "descriptionCustom": "사용자 정의 엔드포인트에서 예상하는 모델 식별자를 제공하세요.",
-          "descriptionDefault": "선택한 제공자가 제공하는 모델을 선택하세요.",
-          "placeholderApple": "Apple Intelligence",
-          "placeholderWithOptions": "모델 검색 또는 선택",
-          "placeholderNoOptions": "모델 이름 입력",
-          "refreshModels": "모델 새로고침"
-        }
-      },
-      "prompts": {
-        "title": "프롬프트",
-        "selectedPrompt": {
-          "title": "선택된 프롬프트",
-          "description": "텍스트 변환을 개선하기 위한 템플릿을 선택하거나 새로 만드세요. 프롬프트 텍스트 내에서 ${output}를 사용하여 캡처된 텍스트를 참조하세요."
-        },
-        "noPrompts": "사용 가능한 프롬프트 없음",
-        "selectPrompt": "프롬프트 선택",
-        "createNew": "새 프롬프트 만들기",
-        "promptLabel": "프롬프트 레이블",
-        "promptLabelPlaceholder": "프롬프트 이름 입력",
-        "promptInstructions": "프롬프트 지시사항",
-        "promptInstructionsPlaceholder": "텍스트 변환 후 실행할 지시사항을 작성하세요. 예: 다음 텍스트의 문법과 명확성을 개선하세요: ${output}",
-        "promptTip": "팁: 프롬프트에서 변환된 텍스트를 삽입하려면 <code>${output}</code>을 사용하세요.",
-        "updatePrompt": "프롬프트 업데이트",
-        "deletePrompt": "프롬프트 삭제",
-        "createPrompt": "프롬프트 만들기",
-        "cancel": "취소",
-        "selectToEdit": "세부 정보를 보고 편집하려면 위에서 프롬프트를 선택하세요.",
-        "createFirst": "첫 번째 후처리 프롬프트를 만들려면 위의 '새 프롬프트 만들기'를 클릭하세요."
-      },
-      "actions": {
-        "title": "작업",
-        "description": "Ctrl+숫자 키(1-9)에 사용자 지정 프롬프트를 연결합니다. 녹음 중 단축키를 누르면 음성 텍스트 변환 후 해당 작업을 적용합니다.",
-        "noActions": "아직 설정된 작업이 없습니다.",
-        "createFirst": "첫 작업을 만들면 설정한 제공업체를 통해 음성 텍스트 변환 결과를 처리할 수 있습니다.",
-        "addAction": "작업 추가",
-        "editAction": "작업 편집",
-        "key": "키",
-        "keyLabel": "키(1-9)",
-        "name": "이름",
-        "namePlaceholder": "예: 이메일 모드",
-        "prompt": "프롬프트",
-        "promptPlaceholder": "예: 인사말과 맺음말을 포함한 업무용 이메일로 정리해 주세요. 문단 사이에 줄바꿈을 넣어 주세요.",
-        "promptTip": "팁: <code>${output}</code>을 사용하면 음성 텍스트 변환 결과를 프롬프트에 삽입할 수 있습니다.",
-        "model": "모델(선택 사항)",
-        "modelPlaceholder": "모델 선택",
-        "modelTip": "이 작업에 사용할 모델을 선택하거나 API 섹션의 기본 모델을 사용하세요.",
-        "defaultModel": "기본",
-        "save": "저장",
-        "cancel": "취소",
-        "delete": "삭제",
-        "maxActionsReached": "작업은 최대 9개까지 설정할 수 있습니다."
-      },
-      "appMappings": {
-        "presetsDescription": "빠른 시작: 표준 작업 5개(일상 대화 / 이메일 / 코드 / 문서 / AI 프롬프트)와 자주 사용하는 앱 연결 설정을 불러옵니다.",
-        "loadPresets": "프리셋 불러오기",
-        "noActions": "앱 연결을 추가하기 전에 위에서 후처리 작업을 하나 이상 만드세요."
+      "cleanup": {
+        "label": "AI로 정리",
+        "description": "받아쓰기를 할 때마다 Gemini로 문장 부호와 군더더기 말을 고칩니다. 전사 내용이 Google로 전송됩니다.",
+        "missingKey": "정리 기능에는 Gemini API 키가 필요합니다. '고급'의 '클라우드 모델'에서 추가하세요."
       }
     },
     "history": {
@@ -475,8 +376,7 @@
       "reprocessing": "다시 처리 중...",
       "selectModel": "모델 선택",
       "originalTranscript": "원본",
-      "postProcessed": "후처리 결과",
-      "action": "작업 {{key}}"
+      "postProcessed": "후처리 결과"
     },
     "debug": {
       "title": "디버그",
@@ -522,10 +422,6 @@
       "clamshellMicrophone": {
         "title": "클램셸 마이크",
         "description": "노트북 덮개가 닫혀 있을 때 사용할 마이크"
-      },
-      "postProcessingToggle": {
-        "label": "후처리",
-        "description": "텍스트 변환 후 AI 기반 텍스트 개선 활성화"
       },
       "muteWhileRecording": {
         "label": "녹음 중 음소거",

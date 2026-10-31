@@ -3,12 +3,8 @@ use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use specta::Type;
 use std::collections::HashMap;
-use std::fmt;
 use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
-
-pub const APPLE_INTELLIGENCE_PROVIDER_ID: &str = "apple_intelligence";
-pub const APPLE_INTELLIGENCE_DEFAULT_MODEL_ID: &str = "Apple Intelligence";
 
 #[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[serde(rename_all = "lowercase")]
@@ -84,54 +80,6 @@ pub struct ShortcutBinding {
     pub description: String,
     pub default_binding: String,
     pub current_binding: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Type)]
-pub struct LLMPrompt {
-    pub id: String,
-    pub name: String,
-    pub prompt: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Type)]
-pub struct AppPromptMapping {
-    /// Substring (case-insensitive) matched against the active window title.
-    /// e.g. "Slack", "Gmail", "Cursor", "Claude Code".
-    pub pattern: String,
-    /// Post-process action key (1-9) to auto-trigger when this pattern matches.
-    pub action_key: u8,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Type)]
-pub struct PostProcessAction {
-    pub key: u8,
-    pub name: String,
-    pub prompt: String,
-    #[serde(default)]
-    pub model: Option<String>,
-    #[serde(default)]
-    pub provider_id: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Type)]
-pub struct SavedProcessingModel {
-    pub id: String,
-    pub provider_id: String,
-    pub model_id: String,
-    pub label: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Type)]
-pub struct PostProcessProvider {
-    pub id: String,
-    pub label: String,
-    pub base_url: String,
-    #[serde(default)]
-    pub allow_base_url_edit: bool,
-    #[serde(default)]
-    pub models_endpoint: Option<String>,
-    #[serde(default)]
-    pub supports_structured_output: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
@@ -304,34 +252,6 @@ impl Default for TypingTool {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Type)]
-#[serde(transparent)]
-pub(crate) struct SecretMap(HashMap<String, String>);
-
-impl fmt::Debug for SecretMap {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let redacted: HashMap<&String, &str> = self
-            .0
-            .iter()
-            .map(|(k, v)| (k, if v.is_empty() { "" } else { "[REDACTED]" }))
-            .collect();
-        redacted.fmt(f)
-    }
-}
-
-impl std::ops::Deref for SecretMap {
-    type Target = HashMap<String, String>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl std::ops::DerefMut for SecretMap {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
 /* still handy for composing the initial JSON in the store ------------- */
 #[derive(Serialize, Deserialize, Debug, Clone, Type)]
 pub struct AppSettings {
@@ -386,22 +306,8 @@ pub struct AppSettings {
     pub auto_submit: bool,
     #[serde(default)]
     pub auto_submit_key: AutoSubmitKey,
-    #[serde(default = "default_post_process_enabled")]
+    #[serde(default)]
     pub post_process_enabled: bool,
-    #[serde(default = "default_post_process_provider_id")]
-    pub post_process_provider_id: String,
-    #[serde(default = "default_post_process_providers")]
-    pub post_process_providers: Vec<PostProcessProvider>,
-    #[serde(default = "default_post_process_api_keys")]
-    pub post_process_api_keys: SecretMap,
-    #[serde(default = "default_post_process_models")]
-    pub post_process_models: HashMap<String, String>,
-    #[serde(default = "default_post_process_prompts")]
-    pub post_process_prompts: Vec<LLMPrompt>,
-    #[serde(default)]
-    pub post_process_selected_prompt_id: Option<String>,
-    #[serde(default)]
-    pub app_prompt_mappings: Vec<AppPromptMapping>,
     #[serde(default)]
     pub mute_while_recording: bool,
     #[serde(default)]
@@ -441,10 +347,6 @@ pub struct AppSettings {
     pub gemini_location: String,
     #[serde(default)]
     pub chirp_service_account: Option<String>,
-    #[serde(default)]
-    pub post_process_actions: Vec<PostProcessAction>,
-    #[serde(default)]
-    pub saved_processing_models: Vec<SavedProcessingModel>,
 }
 
 /// Frontend-safe version of AppSettings that replaces raw API keys with
@@ -479,14 +381,6 @@ pub struct AppSettingsResponse {
     pub auto_submit: bool,
     pub auto_submit_key: AutoSubmitKey,
     pub post_process_enabled: bool,
-    pub post_process_provider_id: String,
-    pub post_process_providers: Vec<PostProcessProvider>,
-    /// Maps provider_id -> true if API key is configured (non-empty)
-    pub post_process_api_keys_set: HashMap<String, bool>,
-    pub post_process_models: HashMap<String, String>,
-    pub post_process_prompts: Vec<LLMPrompt>,
-    pub post_process_selected_prompt_id: Option<String>,
-    pub app_prompt_mappings: Vec<AppPromptMapping>,
     pub mute_while_recording: bool,
     pub append_trailing_space: bool,
     pub app_language: String,
@@ -507,23 +401,11 @@ pub struct AppSettingsResponse {
     pub gemini_project_id: Option<String>,
     pub gemini_location: String,
     pub chirp_service_account_set: bool,
-    pub post_process_actions: Vec<PostProcessAction>,
-    pub saved_processing_models: Vec<SavedProcessingModel>,
 }
 
 impl AppSettings {
     /// Convert to a frontend-safe response that redacts API keys.
     pub fn to_response(&self) -> AppSettingsResponse {
-        let post_process_api_keys_set = self
-            .post_process_api_keys
-            .iter()
-            .map(|(k, v)| {
-                // Encrypted keys are always non-empty (marker + ciphertext).
-                // Plaintext keys just need a non-empty check. No need to decrypt.
-                (k.clone(), !v.is_empty())
-            })
-            .collect();
-
         let gemini_api_key_set = self.get_decrypted_gemini_api_key().is_some();
 
         let chirp_service_account_set = self.get_decrypted_chirp_service_account().is_some();
@@ -557,13 +439,6 @@ impl AppSettings {
             auto_submit: self.auto_submit,
             auto_submit_key: self.auto_submit_key,
             post_process_enabled: self.post_process_enabled,
-            post_process_provider_id: self.post_process_provider_id.clone(),
-            post_process_providers: self.post_process_providers.clone(),
-            post_process_api_keys_set,
-            post_process_models: self.post_process_models.clone(),
-            post_process_prompts: self.post_process_prompts.clone(),
-            post_process_selected_prompt_id: self.post_process_selected_prompt_id.clone(),
-            app_prompt_mappings: self.app_prompt_mappings.clone(),
             mute_while_recording: self.mute_while_recording,
             append_trailing_space: self.append_trailing_space,
             app_language: self.app_language.clone(),
@@ -583,8 +458,6 @@ impl AppSettings {
             gemini_project_id: self.gemini_project_id.clone(),
             gemini_location: self.gemini_location.clone(),
             chirp_service_account_set,
-            post_process_actions: self.post_process_actions.clone(),
-            saved_processing_models: self.saved_processing_models.clone(),
         }
     }
 }
@@ -664,10 +537,6 @@ fn default_sound_theme() -> SoundTheme {
     SoundTheme::Marimba
 }
 
-fn default_post_process_enabled() -> bool {
-    false
-}
-
 fn default_app_language() -> String {
     tauri_plugin_os::locale()
         .map(|l| l.replace('_', "-"))
@@ -676,134 +545,6 @@ fn default_app_language() -> String {
 
 fn default_show_tray_icon() -> bool {
     true
-}
-
-fn default_post_process_provider_id() -> String {
-    "openai".to_string()
-}
-
-fn default_post_process_providers() -> Vec<PostProcessProvider> {
-    let mut providers = vec![
-        PostProcessProvider {
-            id: "openai".to_string(),
-            label: "OpenAI".to_string(),
-            base_url: "https://api.openai.com/v1".to_string(),
-            allow_base_url_edit: false,
-            models_endpoint: Some("/models".to_string()),
-            supports_structured_output: true,
-        },
-        PostProcessProvider {
-            id: "zai".to_string(),
-            label: "Z.AI".to_string(),
-            base_url: "https://api.z.ai/api/paas/v4".to_string(),
-            allow_base_url_edit: false,
-            models_endpoint: Some("/models".to_string()),
-            supports_structured_output: true,
-        },
-        PostProcessProvider {
-            id: "openrouter".to_string(),
-            label: "OpenRouter".to_string(),
-            base_url: "https://openrouter.ai/api/v1".to_string(),
-            allow_base_url_edit: false,
-            models_endpoint: Some("/models".to_string()),
-            supports_structured_output: true,
-        },
-        PostProcessProvider {
-            id: "anthropic".to_string(),
-            label: "Anthropic".to_string(),
-            base_url: "https://api.anthropic.com/v1".to_string(),
-            allow_base_url_edit: false,
-            models_endpoint: Some("/models".to_string()),
-            supports_structured_output: false,
-        },
-        PostProcessProvider {
-            id: "groq".to_string(),
-            label: "Groq".to_string(),
-            base_url: "https://api.groq.com/openai/v1".to_string(),
-            allow_base_url_edit: false,
-            models_endpoint: Some("/models".to_string()),
-            supports_structured_output: false,
-        },
-        PostProcessProvider {
-            id: "cerebras".to_string(),
-            label: "Cerebras".to_string(),
-            base_url: "https://api.cerebras.ai/v1".to_string(),
-            allow_base_url_edit: false,
-            models_endpoint: Some("/models".to_string()),
-            supports_structured_output: true,
-        },
-    ];
-
-    // Note: We always include Apple Intelligence on macOS ARM64 without checking availability
-    // at startup. The availability check is deferred to when the user actually tries to use it
-    // (in actions.rs). This prevents crashes on macOS 26.x beta where accessing
-    // SystemLanguageModel.default during early app initialization causes SIGABRT.
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    {
-        providers.push(PostProcessProvider {
-            id: APPLE_INTELLIGENCE_PROVIDER_ID.to_string(),
-            label: "Apple Intelligence".to_string(),
-            base_url: "apple-intelligence://local".to_string(),
-            allow_base_url_edit: false,
-            models_endpoint: None,
-            supports_structured_output: true,
-        });
-    }
-
-    providers.push(PostProcessProvider {
-        id: "gemini".to_string(),
-        label: "Gemini".to_string(),
-        base_url: "https://generativelanguage.googleapis.com/v1beta".to_string(),
-        allow_base_url_edit: false,
-        models_endpoint: None,
-        supports_structured_output: false,
-    });
-
-    // Custom provider always comes last
-    providers.push(PostProcessProvider {
-        id: "custom".to_string(),
-        label: "Custom".to_string(),
-        base_url: "http://localhost:11434/v1".to_string(),
-        allow_base_url_edit: true,
-        models_endpoint: Some("/models".to_string()),
-        supports_structured_output: false,
-    });
-
-    providers
-}
-
-fn default_post_process_api_keys() -> SecretMap {
-    let mut map = HashMap::new();
-    for provider in default_post_process_providers() {
-        map.insert(provider.id, String::new());
-    }
-    SecretMap(map)
-}
-
-fn default_model_for_provider(provider_id: &str) -> String {
-    if provider_id == APPLE_INTELLIGENCE_PROVIDER_ID {
-        return APPLE_INTELLIGENCE_DEFAULT_MODEL_ID.to_string();
-    }
-    String::new()
-}
-
-fn default_post_process_models() -> HashMap<String, String> {
-    let mut map = HashMap::new();
-    for provider in default_post_process_providers() {
-        map.insert(
-            provider.id.clone(),
-            default_model_for_provider(&provider.id),
-        );
-    }
-    map
-}
-
-fn default_post_process_prompts() -> Vec<LLMPrompt> {
-    vec![LLMPrompt {
-        id: "default_improve_transcriptions".to_string(),
-        name: "Improve Transcriptions".to_string(),
-        prompt: "Clean this transcript:\n1. Fix spelling, capitalization, and punctuation errors\n2. Convert number words to digits (twenty-five → 25, ten percent → 10%, five dollars → $5)\n3. Replace spoken punctuation with symbols (period → ., comma → ,, question mark → ?)\n4. Remove filler words (um, uh, like as filler)\n5. Keep the language in the original version (if it was french, keep it in french for example)\n\nPreserve exact meaning and word order. Do not paraphrase or reorder content.\n\nReturn only the cleaned transcript.\n\nTranscript:\n${output}".to_string(),
-    }]
 }
 
 fn default_typing_tool() -> TypingTool {
@@ -840,62 +581,6 @@ fn default_gemini_location() -> String {
     "europe-west2".to_string()
 }
 
-fn ensure_post_process_defaults(settings: &mut AppSettings) -> bool {
-    let mut changed = false;
-    for provider in default_post_process_providers() {
-        // Use match to do a single lookup - either sync existing or add new
-        match settings
-            .post_process_providers
-            .iter_mut()
-            .find(|p| p.id == provider.id)
-        {
-            Some(existing) => {
-                // Sync supports_structured_output field for existing providers (migration)
-                if existing.supports_structured_output != provider.supports_structured_output {
-                    debug!(
-                        "Updating supports_structured_output for provider '{}' from {} to {}",
-                        provider.id,
-                        existing.supports_structured_output,
-                        provider.supports_structured_output
-                    );
-                    existing.supports_structured_output = provider.supports_structured_output;
-                    changed = true;
-                }
-            }
-            None => {
-                // Provider doesn't exist, add it
-                settings.post_process_providers.push(provider.clone());
-                changed = true;
-            }
-        }
-
-        if !settings.post_process_api_keys.contains_key(&provider.id) {
-            settings
-                .post_process_api_keys
-                .insert(provider.id.clone(), String::new());
-            changed = true;
-        }
-
-        let default_model = default_model_for_provider(&provider.id);
-        match settings.post_process_models.get_mut(&provider.id) {
-            Some(existing) => {
-                if existing.is_empty() && !default_model.is_empty() {
-                    *existing = default_model.clone();
-                    changed = true;
-                }
-            }
-            None => {
-                settings
-                    .post_process_models
-                    .insert(provider.id.clone(), default_model);
-                changed = true;
-            }
-        }
-    }
-
-    changed
-}
-
 pub const SETTINGS_STORE_PATH: &str = "settings_store.json";
 
 pub fn get_default_settings() -> AppSettings {
@@ -917,26 +602,6 @@ pub fn get_default_settings() -> AppSettings {
             description: "Converts your speech into text.".to_string(),
             default_binding: default_shortcut.to_string(),
             current_binding: default_shortcut.to_string(),
-        },
-    );
-    #[cfg(target_os = "windows")]
-    let default_post_process_shortcut = "ctrl+shift+space";
-    #[cfg(target_os = "macos")]
-    let default_post_process_shortcut = "option+shift+space";
-    #[cfg(target_os = "linux")]
-    let default_post_process_shortcut = "ctrl+shift+space";
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    let default_post_process_shortcut = "alt+shift+space";
-
-    bindings.insert(
-        "transcribe_with_post_process".to_string(),
-        ShortcutBinding {
-            id: "transcribe_with_post_process".to_string(),
-            name: "Transcribe with Post-Processing".to_string(),
-            description: "Converts your speech into text and applies AI post-processing."
-                .to_string(),
-            default_binding: default_post_process_shortcut.to_string(),
-            current_binding: default_post_process_shortcut.to_string(),
         },
     );
     bindings.insert(
@@ -1008,14 +673,7 @@ pub fn get_default_settings() -> AppSettings {
         clipboard_handling: ClipboardHandling::default(),
         auto_submit: default_auto_submit(),
         auto_submit_key: AutoSubmitKey::default(),
-        post_process_enabled: default_post_process_enabled(),
-        post_process_provider_id: default_post_process_provider_id(),
-        post_process_providers: default_post_process_providers(),
-        post_process_api_keys: default_post_process_api_keys(),
-        post_process_models: default_post_process_models(),
-        post_process_prompts: default_post_process_prompts(),
-        post_process_selected_prompt_id: None,
-        app_prompt_mappings: Vec::new(),
+        post_process_enabled: false,
         mute_while_recording: false,
         append_trailing_space: false,
         app_language: default_app_language(),
@@ -1036,48 +694,10 @@ pub fn get_default_settings() -> AppSettings {
         gemini_project_id: None,
         gemini_location: default_gemini_location(),
         chirp_service_account: None,
-        post_process_actions: Vec::new(),
-        saved_processing_models: Vec::new(),
     }
 }
 
 impl AppSettings {
-    pub fn active_post_process_provider(&self) -> Option<&PostProcessProvider> {
-        self.post_process_providers
-            .iter()
-            .find(|provider| provider.id == self.post_process_provider_id)
-    }
-
-    pub fn post_process_provider(&self, provider_id: &str) -> Option<&PostProcessProvider> {
-        self.post_process_providers
-            .iter()
-            .find(|provider| provider.id == provider_id)
-    }
-
-    pub fn post_process_provider_mut(
-        &mut self,
-        provider_id: &str,
-    ) -> Option<&mut PostProcessProvider> {
-        self.post_process_providers
-            .iter_mut()
-            .find(|provider| provider.id == provider_id)
-    }
-
-    /// Get decrypted post-process API key for a provider.
-    pub fn get_decrypted_api_key(&self, provider_id: &str) -> String {
-        let key = self
-            .post_process_api_keys
-            .get(provider_id)
-            .map(|k| crate::secret_store::decrypt_api_key(k))
-            .unwrap_or_default();
-
-        if key.trim().is_empty() && provider_id == "gemini" {
-            return self.get_decrypted_gemini_api_key().unwrap_or_default();
-        }
-
-        key
-    }
-
     /// Get decrypted Gemini API key.
     pub fn get_decrypted_gemini_api_key(&self) -> Option<String> {
         self.gemini_api_key
@@ -1111,17 +731,39 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
         .expect("Failed to initialize store");
 
     let mut settings = if let Some(settings_value) = store.get("settings") {
+        // Settings saved before AI cleanup was a single Gemini switch still carry the old
+        // provider field. The old switch could mean an on-device provider or only the separate
+        // post-process shortcut, so it is not carried over as consent to send every dictation
+        // to Google. Saving below drops the old field, so this runs once.
+        let legacy_post_process = settings_value.get("post_process_provider_id").is_some();
         // Parse the entire settings object
         match serde_json::from_value::<AppSettings>(settings_value) {
             Ok(mut settings) => {
                 debug!(
-                    "Found existing settings (model={}, provider={}, bindings={})",
+                    "Found existing settings (model={}, bindings={})",
                     settings.selected_model,
-                    settings.post_process_provider_id,
                     settings.bindings.len()
                 );
                 let default_settings = get_default_settings();
                 let mut updated = false;
+
+                // The separate post-processing binding no longer exists.
+                if settings
+                    .bindings
+                    .remove("transcribe_with_post_process")
+                    .is_some()
+                {
+                    debug!("Removed obsolete transcribe_with_post_process binding");
+                    updated = true;
+                }
+
+                if legacy_post_process {
+                    if settings.post_process_enabled {
+                        debug!("Turned AI cleanup off: the old post-processing setting needs a new opt-in");
+                        settings.post_process_enabled = false;
+                    }
+                    updated = true;
+                }
 
                 // Merge default bindings into existing settings
                 for (key, value) in default_settings.bindings {
@@ -1133,7 +775,7 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
                 }
 
                 if updated {
-                    debug!("Settings updated with new bindings");
+                    debug!("Settings updated with binding changes");
                     store.set("settings", serde_json::to_value(&settings).unwrap());
                 }
 
@@ -1153,10 +795,6 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
         default_settings
     };
 
-    if ensure_post_process_defaults(&mut settings) {
-        store.set("settings", serde_json::to_value(&settings).unwrap());
-    }
-
     if migrate_gemini_model(&mut settings) {
         store.set("settings", serde_json::to_value(&settings).unwrap());
     }
@@ -1174,10 +812,6 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
 /// Returns true if any value changed.
 fn normalize_secret_encryption(settings: &mut AppSettings) -> bool {
     let mut changed = false;
-
-    for value in settings.post_process_api_keys.values_mut() {
-        changed |= normalize_secret_value(value);
-    }
 
     if let Some(ref mut key) = settings.gemini_api_key {
         changed |= normalize_secret_value(key);
@@ -1231,10 +865,6 @@ pub fn get_settings(app: &AppHandle) -> AppSettings {
         store.set("settings", serde_json::to_value(&default_settings).unwrap());
         default_settings
     };
-
-    if ensure_post_process_defaults(&mut settings) {
-        store.set("settings", serde_json::to_value(&settings).unwrap());
-    }
 
     if migrate_gemini_model(&mut settings) {
         store.set("settings", serde_json::to_value(&settings).unwrap());

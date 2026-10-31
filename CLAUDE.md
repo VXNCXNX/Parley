@@ -135,7 +135,6 @@ Handy supports command-line parameters on all platforms for integration with scr
 | Flag                     | Description                                                                        |
 | ------------------------ | ---------------------------------------------------------------------------------- |
 | `--toggle-transcription` | Toggle recording on/off on a running instance (via `tauri_plugin_single_instance`) |
-| `--toggle-post-process`  | Toggle recording with post-processing on/off on a running instance                 |
 | `--cancel`               | Cancel the current operation on a running instance                                 |
 | `--start-hidden`         | Launch without showing the main window (tray icon still visible)                   |
 | `--no-tray`              | Launch without the system tray icon (closing window quits the app)                 |
@@ -144,7 +143,7 @@ Handy supports command-line parameters on all platforms for integration with scr
 **Key design decisions:**
 
 - CLI flags are runtime-only overrides — they do NOT modify persisted settings
-- Remote control flags (`--toggle-transcription`, `--toggle-post-process`, `--cancel`) work by launching a second instance that sends its args to the running instance via `tauri_plugin_single_instance`, then exits
+- Remote control flags (`--toggle-transcription`, `--cancel`) work by launching a second instance that sends its args to the running instance via `tauri_plugin_single_instance`, then exits
 - `send_transcription_input()` in `signal_handle.rs` is shared between signal handlers and CLI to avoid code duplication
 - `CliArgs` is stored in Tauri managed state (`.manage()`) so it's accessible in `on_window_event` and other handlers
 
@@ -170,3 +169,10 @@ Access debug features: `Cmd+Shift+D` (macOS) or `Ctrl+Shift+D` (Windows/Linux)
 - **Known constraint**: Chirp 3 returns 404 NOT_FOUND when phrase-set adaptation (`custom_words`) is combined with `languageCodes=["auto"]`. The client drops adaptation in that case. To get phrase boosts, set a specific language instead of auto-detect.
 - The "long audio" auto-switch in `actions.rs` (audio > `long_audio_threshold_seconds` swaps to `long_audio_model`) does a pre-flight credentials check; it stays on the local model when Gemini/Chirp credentials are missing.
 - Errors during transcription are emitted as a Tauri `transcription-error` event and surfaced as a sonner toast in `App.tsx`.
+
+## AI cleanup ("Clean up with AI")
+
+- One switch, `post_process_enabled`, decides for every dictation. There are no prompts, actions, providers or app mappings.
+- Implementation: `src-tauri/src/cleanup.rs` (fixed system instruction, `<transcript>` delimiters, output guards) calling `gemini_client::generate_text` with model `gemini-3.5-flash-lite`, `thinkingLevel` `MINIMAL`, default temperature (Google advises leaving Gemini 3 at 1.0) and an 8 s deadline without retries. It uses `gemini_api_key`.
+- Every guard falls back to the raw transcript and logs the reason at debug: switch off, no Gemini key, under 3 words, HTTP error or timeout, empty output, output length outside 0.5x to 1.6x of the input, output starting with a preamble.
+- `actions.rs` runs it after the Chinese variant conversion and shows the "Processing..." overlay only when a request is sent.
