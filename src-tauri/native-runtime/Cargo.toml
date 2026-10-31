@@ -6,22 +6,25 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib"]
 
+# Parakeet vocabulary biasing lives on anomalyco/transcribe.cpp branch
+# hex/parakeet-vocabulary-tree (v0.4.1 plus the decoder work). Keep every
+# target section on the same rev. Drop the git pin once a release carries it.
 [dependencies]
-transcribe-cpp = { version = "=0.2.3", default-features = false }
-transcribe-cpp-sys = { version = "=0.2.3", default-features = false }
+transcribe-cpp = { git = "https://github.com/anomalyco/transcribe.cpp", rev = "7045d1c0fe7cee37747b2792977421d435e75fca", default-features = false }
+transcribe-cpp-sys = { git = "https://github.com/anomalyco/transcribe.cpp", rev = "7045d1c0fe7cee37747b2792977421d435e75fca", default-features = false }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-transcribe-cpp = { version = "=0.2.3", default-features = false, features = ["metal"] }
-transcribe-cpp-sys = { version = "=0.2.3", default-features = false, features = ["metal"] }
+transcribe-cpp = { git = "https://github.com/anomalyco/transcribe.cpp", rev = "7045d1c0fe7cee37747b2792977421d435e75fca", default-features = false, features = ["metal"] }
+transcribe-cpp-sys = { git = "https://github.com/anomalyco/transcribe.cpp", rev = "7045d1c0fe7cee37747b2792977421d435e75fca", default-features = false, features = ["metal"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-transcribe-cpp = { version = "=0.2.3", default-features = false, features = [] }
-transcribe-cpp-sys = { version = "=0.2.3", default-features = false, features = [] }
+transcribe-cpp = { git = "https://github.com/anomalyco/transcribe.cpp", rev = "7045d1c0fe7cee37747b2792977421d435e75fca", default-features = false, features = [] }
+transcribe-cpp-sys = { git = "https://github.com/anomalyco/transcribe.cpp", rev = "7045d1c0fe7cee37747b2792977421d435e75fca", default-features = false, features = [] }
 
 [target.'cfg(all(windows, target_arch = "x86_64"))'.dependencies]
-transcribe-cpp = { version = "=0.2.3", default-features = false, features = [] }
-transcribe-cpp-sys = { version = "=0.2.3", default-features = false, features = [] }
+transcribe-cpp = { git = "https://github.com/anomalyco/transcribe.cpp", rev = "7045d1c0fe7cee37747b2792977421d435e75fca", default-features = false, features = [] }
+transcribe-cpp-sys = { git = "https://github.com/anomalyco/transcribe.cpp", rev = "7045d1c0fe7cee37747b2792977421d435e75fca", default-features = false, features = [] }
 
 [target.'cfg(all(windows, target_arch = "aarch64"))'.dependencies]
-transcribe-cpp = { version = "=0.2.3", default-features = false }
-transcribe-cpp-sys = { version = "=0.2.3", default-features = false }
+transcribe-cpp = { git = "https://github.com/anomalyco/transcribe.cpp", rev = "7045d1c0fe7cee37747b2792977421d435e75fca", default-features = false }
+transcribe-cpp-sys = { git = "https://github.com/anomalyco/transcribe.cpp", rev = "7045d1c0fe7cee37747b2792977421d435e75fca", default-features = false }

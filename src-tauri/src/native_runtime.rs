@@ -18,6 +18,7 @@ type TranscribeBatch = unsafe extern "C" fn(
     usize,
     *const c_char,
     c_int,
+    *const c_char,
     *mut *mut c_char,
     *mut *mut c_char,
 ) -> c_int;
@@ -25,6 +26,7 @@ type WorkerBegin = unsafe extern "C" fn(
     *const c_char,
     *const c_char,
     c_int,
+    *const c_char,
     *mut *mut std::ffi::c_void,
     *mut *mut c_char,
 ) -> c_int;
@@ -113,15 +115,33 @@ fn api() -> Result<&'static NativeApi> {
     Ok(API.get().unwrap())
 }
 
+/// Packs custom words for the native runtime: one term per line. The runtime
+/// applies them to Parakeet-family models only and caps them at 64.
+fn vocabulary_cstring(vocabulary: &[String]) -> Result<Option<CString>> {
+    let terms: Vec<&str> = vocabulary
+        .iter()
+        .map(|term| term.trim())
+        .filter(|term| !term.is_empty() && !term.contains(['\n', '\r']))
+        .collect();
+    if terms.is_empty() {
+        return Ok(None);
+    }
+    CString::new(terms.join("\n"))
+        .map(Some)
+        .map_err(|_| anyhow!("vocabulary contains nul"))
+}
+
 pub fn transcribe_native_batch(
     path: &Path,
     pcm: &[f32],
     language: Option<&str>,
     live_backend: bool,
+    vocabulary: &[String],
 ) -> Result<String> {
     let api = api()?;
     let path = CString::new(path.to_string_lossy().as_bytes())
         .map_err(|_| anyhow!("model path contains nul"))?;
+    let vocabulary = vocabulary_cstring(vocabulary)?;
     let language = language
         .map(CString::new)
         .transpose()
@@ -137,6 +157,9 @@ pub fn transcribe_native_batch(
                 .as_ref()
                 .map_or(std::ptr::null(), |value| value.as_ptr()),
             c_int::from(live_backend),
+            vocabulary
+                .as_ref()
+                .map_or(std::ptr::null(), |value| value.as_ptr()),
             &mut text_out,
             &mut error_out,
         )
@@ -243,10 +266,10 @@ mod tests {
             .samples::<i16>()
             .map(|sample| sample.unwrap() as f32 / 32768.0)
             .collect();
-        let text = transcribe_native_batch(&model, &pcm, Some("fr"), false).unwrap();
+        let text = transcribe_native_batch(&model, &pcm, Some("fr"), false, &[]).unwrap();
         assert!(text.contains("Bonjour"), "{text}");
         assert!(text.split_whitespace().count() > 8, "{text}");
-        let auto_text = transcribe_native_batch(&model, &pcm, None, false).unwrap();
+        let auto_text = transcribe_native_batch(&model, &pcm, None, false, &[]).unwrap();
         assert!(auto_text.contains("Bonjour"), "{auto_text}");
         assert!(auto_text.split_whitespace().count() > 8, "{auto_text}");
     }
@@ -258,10 +281,16 @@ pub struct NativeDictation {
 }
 unsafe impl Send for NativeDictation {}
 impl NativeDictation {
-    pub fn begin(path: &Path, language: Option<&str>, live: bool) -> Result<Self> {
+    pub fn begin(
+        path: &Path,
+        language: Option<&str>,
+        live: bool,
+        vocabulary: &[String],
+    ) -> Result<Self> {
         let api = api()?;
         let path = CString::new(path.to_string_lossy().as_bytes())
             .map_err(|_| anyhow!("model path contains nul"))?;
+        let vocabulary = vocabulary_cstring(vocabulary)?;
         let language = language
             .map(CString::new)
             .transpose()
@@ -275,6 +304,9 @@ impl NativeDictation {
                     .as_ref()
                     .map_or(std::ptr::null(), |value| value.as_ptr()),
                 c_int::from(live),
+                vocabulary
+                    .as_ref()
+                    .map_or(std::ptr::null(), |value| value.as_ptr()),
                 &mut worker,
                 &mut error_out,
             )
