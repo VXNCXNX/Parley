@@ -4310,7 +4310,6 @@ dependencies = [
  "enigo",
  "env_filter",
  "ferrous-opencc",
- "flate2",
  "futures-util",
  "gtk",
  "gtk-layer-shell",
@@ -4339,7 +4338,6 @@ dependencies = [
  "specta",
  "specta-typescript",
  "strsim",
- "tar",
  "tauri",
  "tauri-build",
  "tauri-nspanel",
@@ -7320,16 +7318,10 @@ dependencies = [
 name = "transcribe-rs"
 version = "0.2.5"
 dependencies = [
- "base64 0.22.1",
  "derive_builder",
  "env_logger",
  "hound",
  "log",
- "ndarray",
- "once_cell",
- "ort",
- "regex",
- "rustfft",
  "serde",
  "serde_json",
  "thiserror 2.0.17",

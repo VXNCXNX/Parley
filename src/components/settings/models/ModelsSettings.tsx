@@ -40,7 +40,6 @@ export const ModelsSettings: React.FC = () => {
     downloadingModels,
     downloadProgress,
     downloadStats,
-    extractingModels,
     loading,
     downloadModel,
     cancelDownload,
@@ -92,9 +91,6 @@ export const ModelsSettings: React.FC = () => {
     | undefined);
 
   const getModelStatus = (modelId: string): ModelCardStatus => {
-    if (modelId in extractingModels) {
-      return "extracting";
-    }
     if (modelId in downloadingModels) {
       return "downloading";
     }
@@ -209,8 +205,7 @@ export const ModelsSettings: React.FC = () => {
         !isGeminiWithoutKey &&
         (model.is_custom ||
           model.is_downloaded ||
-          model.id in downloadingModels ||
-          model.id in extractingModels)
+          model.id in downloadingModels)
       ) {
         downloaded.push(model);
       } else {
@@ -230,13 +225,7 @@ export const ModelsSettings: React.FC = () => {
       downloadedModels: downloaded,
       availableModels: available,
     };
-  }, [
-    filteredModels,
-    downloadingModels,
-    extractingModels,
-    currentModel,
-    hasGeminiKey,
-  ]);
+  }, [filteredModels, downloadingModels, currentModel, hasGeminiKey]);
 
   if (loading) {
     return (

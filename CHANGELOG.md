@@ -6,11 +6,13 @@
 
 - Replace post-processing with one "Clean up with AI" switch that runs a fixed cleanup pass on Gemini (`gemini-3.5-flash-lite`), using the Gemini API key from Advanced settings. The transcript is now sent inside `<transcript>` tags, so a dictated question or instruction is cleaned instead of answered.
 - Fall back to the raw transcript when the cleanup is unavailable, times out after 8 seconds, or returns something that does not look like a cleaned version of the input.
+- Make Parakeet Ultra the recommended model. A saved model or long recording model that names a removed model moves to Parakeet Ultra.
 
 ### Removed
 
 - Post-processing providers, prompts, actions, per-app mappings, processing models, the `Ctrl+1` to `Ctrl+9` action shortcuts, the separate "Transcribe with Post-Processing" shortcut and the `--toggle-post-process` flag. Existing settings files still load.
 - The Apple Intelligence bridge.
+- Trim the model catalog to Parakeet Ultra, Nemotron Streaming 3.5, Cohere Transcribe, Whisper Turbo, and the Gemini API. Whisper Small, Medium, and Large, Breeze ASR, Parakeet V2 and V3, the Moonshine models, SenseVoice, Qwen3-ASR 0.6B, and Nemotron Speech Streaming EN are gone, along with the ONNX engines that ran them. Downloaded files stay on disk.
 
 ### Fixed
 
