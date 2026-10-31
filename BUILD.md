@@ -16,7 +16,7 @@ The Apple Silicon build uses a Swift bridge for Apple Intelligence. Enabling App
 
 ### Windows
 
-Install Visual Studio 2022 or its Build Tools with the C++ desktop development workload. The Windows x64 build uses CUDA for Whisper, so install a compatible NVIDIA CUDA Toolkit.
+Install Visual Studio 2022 or its Build Tools with the C++ desktop development workload. Whisper uses Vulkan on Windows and Linux, so install the Vulkan SDK. On an NVIDIA machine you can add CUDA with `bun run tauri build -- --features cuda`, which needs a compatible NVIDIA CUDA Toolkit. Release builds stay on Vulkan.
 
 ### Linux
 

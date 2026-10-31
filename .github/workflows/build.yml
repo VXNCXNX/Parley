@@ -181,9 +181,12 @@ jobs:
           vulkan-components: Vulkan-Headers, Vulkan-Loader
           vulkan-use-cache: true
 
-      - name: Install trusted-signing-cli
-        if: contains(inputs.platform, 'windows') && inputs.sign-binaries
-        run: cargo install trusted-signing-cli
+      # Windows code signing: Parley has no Windows signer yet, so Windows builds are unsigned
+      # (bundle.windows.signCommand is intentionally unset in src-tauri/tauri.conf.json).
+      # When a signer exists, install it in a step here gated on
+      # `contains(inputs.platform, 'windows') && inputs.sign-binaries`, pass its secrets to the
+      # signed Tauri step below, and add a `bundle.windows.signCommand` override config that the
+      # caller passes through build-args via `--config`.
 
       - name: Prepare Vulkan SDK for Ubuntu 24.04
         if: contains(inputs.platform, 'ubuntu-24.04') && !contains(inputs.platform, 'arm')
@@ -300,9 +303,6 @@ jobs:
           APPLE_CERTIFICATE: ${{ inputs.sign-binaries && secrets.APPLE_CERTIFICATE || '' }}
           APPLE_CERTIFICATE_PASSWORD: ${{ inputs.sign-binaries && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
           APPLE_SIGNING_IDENTITY: ${{ inputs.sign-binaries && env.CERT_ID || '' }}
-          AZURE_CLIENT_ID: ${{ inputs.sign-binaries && secrets.AZURE_CLIENT_ID || '' }}
-          AZURE_CLIENT_SECRET: ${{ inputs.sign-binaries && secrets.AZURE_CLIENT_SECRET || '' }}
-          AZURE_TENANT_ID: ${{ inputs.sign-binaries && secrets.AZURE_TENANT_ID || '' }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ inputs.sign-binaries && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ inputs.sign-binaries && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
           WHISPER_NO_AVX: ${{ contains(inputs.platform, 'ubuntu') && !contains(inputs.platform, 'arm') && 'ON' || '' }}
@@ -552,6 +552,24 @@ jobs:
           else
             echo "No AppImage found to process"
           fi
+
+      # tauri-action uploads the AppImage before the wayland repack above, so replace the
+      # release asset (same file name) with the repacked one.
+      - name: Replace release AppImage with repacked one (Linux)
+        if: inputs.release-id != '' && contains(inputs.platform, 'ubuntu')
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: v${{ steps.get-version.outputs.version }}
+          PROFILE: ${{ steps.build-profile.outputs.profile }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APPIMAGE_PATH="$(find "src-tauri/target/$PROFILE/bundle/appimage" -name '*.AppImage' | head -1)"
+          if [[ -z "$APPIMAGE_PATH" || ! -s "$APPIMAGE_PATH" ]]; then
+            echo "The repacked AppImage is missing or empty." >&2
+            exit 1
+          fi
+          gh release upload "$RELEASE_TAG" "$APPIMAGE_PATH" --clobber
 
       - name: Upload artifacts (Linux)
         if: inputs.upload-artifacts && contains(inputs.platform, 'ubuntu')

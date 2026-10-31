@@ -1,0 +1,44 @@
+name: "Cross-platform Build"
+
+# Proves the Linux and Windows bundles still build. The installers are uploaded as run artifacts
+# (30 days) so they can be downloaded and tried. macOS is covered by the Release workflow.
+
+on:
+  pull_request:
+    paths:
+      - "src-tauri/**"
+      - "src/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+concurrency:
+  group: cross-platform-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "ubuntu-22.04"
+            args: "--bundles appimage,deb,rpm"
+            target: "x86_64-unknown-linux-gnu"
+          - platform: "ubuntu-24.04-arm"
+            args: "--bundles appimage,deb,rpm"
+            target: "aarch64-unknown-linux-gnu"
+          - platform: "windows-latest"
+            args: "--bundles nsis"
+            target: "x86_64-pc-windows-msvc"
+    uses: ./.github/workflows/build.yml
+    with:
+      platform: ${{ matrix.platform }}
+      target: ${{ matrix.target }}
+      build-args: ${{ matrix.args }}
+      sign-binaries: false
+      upload-artifacts: true
+    secrets: inherit
