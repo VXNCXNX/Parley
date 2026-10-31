@@ -305,22 +305,22 @@ impl ModelManager {
         let mut settings = get_settings(&self.app_handle);
         let mut changed = false;
 
+        // Clear rather than point at DEFAULT_MODEL_ID, which may not be downloaded:
+        // auto_select_model_if_needed then picks it if it is, else another downloaded model,
+        // else onboarding asks for one.
         if REMOVED_MODEL_IDS.contains(&settings.selected_model.as_str()) {
             debug!(
-                "Migrating selected model '{}' to '{}'",
-                settings.selected_model, DEFAULT_MODEL_ID
+                "Clearing removed selected model '{}'",
+                settings.selected_model
             );
-            settings.selected_model = DEFAULT_MODEL_ID.to_string();
+            settings.selected_model = String::new();
             changed = true;
         }
 
         if let Some(long_audio_model) = settings.long_audio_model.as_deref() {
             if REMOVED_MODEL_IDS.contains(&long_audio_model) {
-                debug!(
-                    "Migrating long audio model '{}' to '{}'",
-                    long_audio_model, DEFAULT_MODEL_ID
-                );
-                settings.long_audio_model = Some(DEFAULT_MODEL_ID.to_string());
+                debug!("Clearing removed long audio model '{}'", long_audio_model);
+                settings.long_audio_model = None;
                 changed = true;
             }
         }
