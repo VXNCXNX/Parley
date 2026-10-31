@@ -160,11 +160,12 @@ Access debug features: `Cmd+Shift+D` (macOS) or `Ctrl+Shift+D` (Windows/Linux)
 ## Cloud transcription (Gemini / Chirp 3)
 
 - Configured in Settings → Advanced → Gemini.
-- Two modes share the same `gemini_model` setting:
-  - `gemini-*` models: use the Gemini API key (`gemini_api_key`).
+- Two modes share the same `gemini_model` setting (the menu offers only these two; any other saved value is migrated to `gemini-3.5-transcribe` on settings load):
+  - `gemini-3.5-transcribe` (default): Google's dedicated STT model, uses the Gemini API key (`gemini_api_key`). Implementation: `src-tauri/src/gemini_transcribe_client.rs`, `POST https://generativelanguage.googleapis.com/v1beta/interactions` with the audio sent inline as base64 WAV (no Files API upload), `store: false`. It sends `transcription_config` with `mode: "smart"` (removes fillers, formats numbers), `language_codes` (empty for auto-detect, which handles code-switching, else the selected language code) and `custom_vocabulary` (the first 100 `custom_words`). `smart` and `custom_vocabulary` cannot be combined with timestamps or diarization, which the app does not use.
   - `chirp_3`: dedicated STT, requires a GCP service account JSON (`chirp_service_account`) with the `roles/speech.client` role.
+- `gemini_client.rs` only holds the text generation call used by post-processing (`generate_text`), not transcription.
 - Region (`gemini_location`) is sent in the URL `https://{location}-speech.googleapis.com/v2/projects/{project}/locations/{location}/recognizers/_:recognize`. Empirically Chirp 3 works in `eu`, `us`, `europe-west2`, `europe-west3`, `northamerica-northeast1`, `asia-south1`. The Google docs only list `eu`/`us` officially.
-- Implementation: `src-tauri/src/chirp_client.rs`. Service account JSON is encrypted at rest via `secret_store.rs` (AES-256-GCM, machine-bound).
+- Chirp implementation: `src-tauri/src/chirp_client.rs`. Service account JSON is encrypted at rest via `secret_store.rs` (AES-256-GCM, machine-bound).
 - **Known constraint**: Chirp 3 returns 404 NOT_FOUND when phrase-set adaptation (`custom_words`) is combined with `languageCodes=["auto"]`. The client drops adaptation in that case. To get phrase boosts, set a specific language instead of auto-detect.
 - The "long audio" auto-switch in `actions.rs` (audio > `long_audio_threshold_seconds` swaps to `long_audio_model`) does a pre-flight credentials check; it stays on the local model when Gemini/Chirp credentials are missing.
 - Errors during transcription are emitted as a Tauri `transcription-error` event and surfaced as a sonner toast in `App.tsx`.
