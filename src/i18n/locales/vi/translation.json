@@ -588,8 +588,11 @@
       "description": "Dùng Gemini API của Google để chuyển âm thanh thành văn bản trên đám mây. Cần khóa API.",
       "model": "Mô hình",
       "modelDescription": "Chọn mô hình Gemini để chuyển âm thanh thành văn bản",
+      "models": {
+        "gemini35Transcribe": "Gemini 3.5 Transcribe",
+        "chirp3": "Chirp 3"
+      },
       "save": "Lưu",
-      "title": "Gemini API",
       "saved": "Đã lưu ✓",
       "apiKeyConfigured": "Đã cấu hình khóa API ✓",
       "serviceAccountConfigured": "Đã cấu hình tài khoản dịch vụ ✓"

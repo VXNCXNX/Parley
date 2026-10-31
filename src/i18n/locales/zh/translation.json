@@ -590,12 +590,15 @@
       "seconds": "{{value}}秒"
     },
     "gemini": {
-      "title": "Gemini API",
       "description": "使用Google的Gemini API进行云端转录。需要API密钥。",
       "apiKey": "API密钥",
       "apiKeyPlaceholder": "输入Gemini API密钥",
       "model": "模型",
       "modelDescription": "选择用于转录的Gemini模型",
+      "models": {
+        "gemini35Transcribe": "Gemini 3.5 Transcribe",
+        "chirp3": "Chirp 3"
+      },
       "apiKeyRequired": "需要API密钥",
       "apiKeyRequiredDescription": "输入Google Gemini API密钥以使用云端转录。",
       "save": "保存",

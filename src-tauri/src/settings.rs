@@ -814,8 +814,26 @@ fn default_long_audio_threshold_seconds() -> f32 {
     10.0
 }
 
+const GEMINI_TRANSCRIBE_MODEL: &str = crate::gemini_transcribe_client::MODEL_ID;
+const CHIRP_MODEL: &str = "chirp_3";
+
 fn default_gemini_model() -> String {
-    "gemini-2.5-flash".to_string()
+    GEMINI_TRANSCRIBE_MODEL.to_string()
+}
+
+/// Cloud transcription offers only `gemini-3.5-transcribe` and `chirp_3`.
+/// Settings saved with a removed general Gemini model move to the default.
+/// Returns true if the value changed.
+fn migrate_gemini_model(settings: &mut AppSettings) -> bool {
+    if settings.gemini_model == GEMINI_TRANSCRIBE_MODEL || settings.gemini_model == CHIRP_MODEL {
+        return false;
+    }
+    debug!(
+        "Migrating unsupported gemini_model '{}' to '{}'",
+        settings.gemini_model, GEMINI_TRANSCRIBE_MODEL
+    );
+    settings.gemini_model = default_gemini_model();
+    true
 }
 
 fn default_gemini_location() -> String {
@@ -1139,6 +1157,10 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
         store.set("settings", serde_json::to_value(&settings).unwrap());
     }
 
+    if migrate_gemini_model(&mut settings) {
+        store.set("settings", serde_json::to_value(&settings).unwrap());
+    }
+
     // Migrate plaintext API keys and old hostname-derived secrets to enc2.
     if normalize_secret_encryption(&mut settings) {
         store.set("settings", serde_json::to_value(&settings).unwrap());
@@ -1211,6 +1233,10 @@ pub fn get_settings(app: &AppHandle) -> AppSettings {
     };
 
     if ensure_post_process_defaults(&mut settings) {
+        store.set("settings", serde_json::to_value(&settings).unwrap());
+    }
+
+    if migrate_gemini_model(&mut settings) {
         store.set("settings", serde_json::to_value(&settings).unwrap());
     }
 

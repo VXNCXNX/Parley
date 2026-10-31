@@ -590,12 +590,15 @@
       "seconds": "{{value}} ث"
     },
     "gemini": {
-      "title": "Gemini API",
       "description": "استخدم Gemini API من Google للتفريغ الصوتي السحابي. يتطلب مفتاح API.",
       "apiKey": "مفتاح API",
       "apiKeyPlaceholder": "أدخل مفتاح Gemini API الخاص بك",
       "model": "النموذج",
       "modelDescription": "اختر نموذج Gemini الذي سيُستخدم للتفريغ الصوتي",
+      "models": {
+        "gemini35Transcribe": "Gemini 3.5 Transcribe",
+        "chirp3": "Chirp 3"
+      },
       "apiKeyRequired": "مفتاح API مطلوب",
       "apiKeyRequiredDescription": "أدخل مفتاح Google Gemini API الخاص بك لاستخدام التفريغ الصوتي السحابي.",
       "save": "حفظ",

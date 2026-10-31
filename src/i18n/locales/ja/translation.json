@@ -590,12 +590,15 @@
       "seconds": "{{value}}秒"
     },
     "gemini": {
-      "title": "Gemini API",
       "description": "GoogleのGemini APIを使ってクラウドで文字起こしを行います。APIキーが必要です。",
       "apiKey": "APIキー",
       "apiKeyPlaceholder": "GeminiのAPIキーを入力",
       "model": "モデル",
       "modelDescription": "文字起こしに使うGeminiモデルを選択してください",
+      "models": {
+        "gemini35Transcribe": "Gemini 3.5 Transcribe",
+        "chirp3": "Chirp 3"
+      },
       "apiKeyRequired": "APIキーが必要です",
       "apiKeyRequiredDescription": "クラウドで文字起こしを使うには、Google GeminiのAPIキーを入力してください。",
       "save": "保存",

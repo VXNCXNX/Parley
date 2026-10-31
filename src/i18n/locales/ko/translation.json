@@ -590,12 +590,15 @@
       "seconds": "{{value}}초"
     },
     "gemini": {
-      "title": "Gemini API",
       "description": "Google의 Gemini API로 클라우드 음성 텍스트 변환을 사용합니다. API 키가 필요합니다.",
       "apiKey": "API 키",
       "apiKeyPlaceholder": "Gemini API 키 입력",
       "model": "모델",
       "modelDescription": "음성 텍스트 변환에 사용할 Gemini 모델을 선택하세요",
+      "models": {
+        "gemini35Transcribe": "Gemini 3.5 Transcribe",
+        "chirp3": "Chirp 3"
+      },
       "apiKeyRequired": "API 키 필요",
       "apiKeyRequiredDescription": "클라우드 음성 텍스트 변환을 사용하려면 Google Gemini API 키를 입력하세요.",
       "save": "저장",

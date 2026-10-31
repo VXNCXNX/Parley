@@ -11,6 +11,7 @@ mod commands;
 mod crash_logging;
 mod dictation;
 pub mod gemini_client;
+pub mod gemini_transcribe_client;
 mod helpers;
 mod input;
 mod llm_client;

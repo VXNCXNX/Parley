@@ -7,13 +7,7 @@ import { Dropdown } from "../../ui/Dropdown";
 import { Input } from "../../ui/Input";
 import { Button } from "../../ui/Button";
 
-const GEMINI_MODELS = [
-  { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-  { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
-  { value: "gemini-3-flash-preview", label: "Gemini 3 Flash" },
-  { value: "gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite" },
-  { value: "chirp_3", label: "Chirp 3 (dedicated STT, fastest)" },
-];
+const DEFAULT_GEMINI_MODEL = "gemini-3.5-transcribe";
 
 const CHIRP_LOCATIONS = [
   { value: "eu", label: "eu (multi-region)" },
@@ -36,7 +30,14 @@ export const GeminiSettings: React.FC = () => {
     | boolean
     | undefined);
   const currentModel =
-    (getSetting("gemini_model") as string | undefined) ?? "gemini-2.5-flash";
+    (getSetting("gemini_model") as string | undefined) ?? DEFAULT_GEMINI_MODEL;
+  const geminiModels = [
+    {
+      value: DEFAULT_GEMINI_MODEL,
+      label: t("settings.gemini.models.gemini35Transcribe"),
+    },
+    { value: "chirp_3", label: t("settings.gemini.models.chirp3") },
+  ];
   const rawLocation =
     (getSetting("gemini_location") as string | undefined) ?? "europe-west2";
   const location = CHIRP_LOCATIONS.some((l) => l.value === rawLocation)
@@ -149,7 +150,7 @@ export const GeminiSettings: React.FC = () => {
       >
         <div className="flex items-center justify-end gap-2">
           <Dropdown
-            options={GEMINI_MODELS}
+            options={geminiModels}
             selectedValue={currentModel}
             onSelect={(value) => updateSetting("gemini_model", value)}
             className="w-[280px]"

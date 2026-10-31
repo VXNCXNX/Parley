@@ -629,9 +629,16 @@ impl TranscriptionManager {
                         )
                     })?
                 } else {
+                    let language = settings.selected_language.clone();
+                    let custom_words = settings.custom_words.clone();
                     tokio::task::block_in_place(|| {
                         tokio::runtime::Handle::current().block_on(
-                            crate::gemini_client::transcribe_audio(&api_key, &gemini_model, &audio),
+                            crate::gemini_transcribe_client::transcribe_audio(
+                                &api_key,
+                                &language,
+                                &custom_words,
+                                &audio,
+                            ),
                         )
                     })?
                 };
