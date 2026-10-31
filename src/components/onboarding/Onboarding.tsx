@@ -18,7 +18,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onModelSelected }) => {
     downloadModel,
     selectModel,
     downloadingModels,
-    extractingModels,
     downloadProgress,
     downloadStats,
   } = useModelStore();
@@ -26,15 +25,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ onModelSelected }) => {
 
   const isDownloading = selectedModelId !== null;
 
-  // Watch for the selected model to finish downloading + extracting
+  // Watch for the selected model to finish downloading
   useEffect(() => {
     if (!selectedModelId) return;
 
     const model = models.find((m) => m.id === selectedModelId);
     const stillDownloading = selectedModelId in downloadingModels;
-    const stillExtracting = selectedModelId in extractingModels;
 
-    if (model?.is_downloaded && !stillDownloading && !stillExtracting) {
+    if (model?.is_downloaded && !stillDownloading) {
       // Model is ready — select it and transition
       selectModel(selectedModelId).then((success) => {
         if (success) {
@@ -49,7 +47,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onModelSelected }) => {
     selectedModelId,
     models,
     downloadingModels,
-    extractingModels,
     selectModel,
     onModelSelected,
   ]);
@@ -65,7 +62,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onModelSelected }) => {
   };
 
   const getModelStatus = (modelId: string): ModelCardStatus => {
-    if (modelId in extractingModels) return "extracting";
     if (modelId in downloadingModels) return "downloading";
     return "downloadable";
   };

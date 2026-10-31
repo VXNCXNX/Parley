@@ -105,7 +105,7 @@ Handy is a cross-platform desktop speech-to-text application built with Tauri (R
 ### Application Flow
 
 1. **Initialization:** App starts minimized to tray, loads settings, initializes managers
-2. **Model Setup:** First-run downloads preferred Whisper model (Small/Medium/Turbo/Large)
+2. **Model Setup:** First-run downloads the recommended model (Parakeet Ultra)
 3. **Recording:** Global shortcut triggers audio recording with VAD filtering
 4. **Processing:** Audio sent to Whisper model for transcription
 5. **Output:** Text pasted to active application via system clipboard
@@ -116,7 +116,7 @@ Settings are stored using Tauri's store plugin with reactive updates:
 
 - Keyboard shortcuts (configurable, supports push-to-talk)
 - Audio devices (microphone/output selection)
-- Model preferences (Small/Medium/Turbo/Large Whisper variants)
+- Model preferences (Parakeet Ultra, Nemotron, Cohere, Whisper Turbo, Gemini)
 - Audio feedback and translation options
 
 ### Single Instance Architecture

@@ -28,69 +28,17 @@
       "speed": "velocità"
     },
     "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "Veloce e abbastanza accurato."
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "Buona accuratezza, velocità nella media"
-      },
       "turbo": {
         "name": "Whisper Turbo",
         "description": "Bilanciato fra accuratezza e velocità."
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "Buona accuratezza, ma lento."
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "Solo inglese. Il miglior modello per chi parla inglese."
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "Veloce e accurato"
       },
       "parakeet-ultra": {
         "name": "Parakeet Ultra",
         "description": "Parakeet affinato da Moondream. Trascrizione locale in 25 lingue europee."
       },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "Molto veloce, solo inglese. Gestisce bene gli accenti."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "Ultra-veloce, solo inglese"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "Veloce, solo inglese. Buon equilibrio tra velocità e precisione."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "Solo inglese. Alta qualità."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "Ottimizzato per il mandarino taiwanese. Supporto per il code-switching."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "Molto veloce. Cinese, inglese, giapponese, coreano, cantonese."
-      },
       "nemotron-3.5-asr-streaming-0.6b": {
         "name": "Nemotron Streaming 3.5",
         "description": "Trascrizione multilingue in diretta in 28 lingue."
-      },
-      "nemotron-speech-streaming-en-0.6b": {
-        "name": "Nemotron Speech Streaming EN",
-        "description": "Trascrizione vocale in inglese in tempo reale."
-      },
-      "qwen3-asr-0.6b": {
-        "name": "Qwen3-ASR 0.6B",
-        "description": "Trascrizione multilingue in batch."
       },
       "cohere-transcribe-03-2026": {
         "name": "Cohere Transcribe",
@@ -132,9 +80,6 @@
     "active": "Attivo",
     "switching": "Cambio...",
     "noModelsAvailable": "Nessun modello disponibile",
-    "extracting": "Estrazione di {{modelName}}...",
-    "extractingMultiple": "Estrazione di {{count}} modelli...",
-    "extractingGeneric": "Estrazione...",
     "downloading": "Download {{percentage}}%",
     "downloadingMultiple": "Download di {{count}} modelli...",
     "modelReady": "Modello Pronto",
