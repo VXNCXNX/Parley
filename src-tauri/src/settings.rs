@@ -713,6 +713,11 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
         .expect("Failed to initialize store");
 
     let mut settings = if let Some(settings_value) = store.get("settings") {
+        // Settings saved before AI cleanup was a single Gemini switch still carry the old
+        // provider field. The old switch could mean an on-device provider or only the separate
+        // post-process shortcut, so it is not carried over as consent to send every dictation
+        // to Google. Saving below drops the old field, so this runs once.
+        let legacy_post_process = settings_value.get("post_process_provider_id").is_some();
         // Parse the entire settings object
         match serde_json::from_value::<AppSettings>(settings_value) {
             Ok(mut settings) => {
@@ -731,6 +736,14 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
                     .is_some()
                 {
                     debug!("Removed obsolete transcribe_with_post_process binding");
+                    updated = true;
+                }
+
+                if legacy_post_process {
+                    if settings.post_process_enabled {
+                        debug!("Turned AI cleanup off: the old post-processing setting needs a new opt-in");
+                        settings.post_process_enabled = false;
+                    }
                     updated = true;
                 }
 
