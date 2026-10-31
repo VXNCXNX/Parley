@@ -53,6 +53,10 @@ struct InteractionRequest {
 
 #[derive(Deserialize, Default)]
 struct InteractionResponse {
+    /// `completed` when the transcript is whole. `incomplete` (e.g. an output-token limit),
+    /// `failed`, `cancelled` and the continuation states mean the text can't be trusted.
+    #[serde(default)]
+    status: String,
     #[serde(default)]
     steps: Vec<Step>,
 }
@@ -220,6 +224,12 @@ pub async fn transcribe_audio(
         }
     }
     let resp = resp.ok_or_else(|| last_err.unwrap_or_else(|| anyhow!("Gemini request failed")))?;
+    if resp.status != "completed" {
+        return Err(anyhow!(
+            "Gemini transcription ended with status '{}', not 'completed'",
+            resp.status
+        ));
+    }
 
     let text = resp
         .steps
