@@ -739,16 +739,6 @@ async isLaptop() : Promise<Result<boolean, string>> {
 
 /** user-defined types **/
 
-export type AppPromptMapping = { 
-/**
- * Substring (case-insensitive) matched against the active window title.
- * e.g. "Slack", "Gmail", "Cursor", "Claude Code".
- */
-pattern: string; 
-/**
- * Post-process action key (1-9) to auto-trigger when this pattern matches.
- */
-action_key: number }
 /**
  * Frontend-safe version of AppSettings that replaces raw API keys with
  * boolean flags indicating whether a key is configured.
