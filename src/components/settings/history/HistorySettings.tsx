@@ -380,18 +380,9 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
       {entry.post_processed_text ? (
         <div className="space-y-2 pb-2">
           <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-xs font-medium text-text/50">
-                {t("settings.history.postProcessed")}
-              </span>
-              {entry.post_process_action_key != null && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-logo-primary/10 text-logo-primary font-medium">
-                  {t("settings.history.action", {
-                    key: entry.post_process_action_key,
-                  })}
-                </span>
-              )}
-            </div>
+            <span className="text-xs font-medium text-text/50 mb-0.5 block">
+              {t("settings.history.postProcessed")}
+            </span>
             <p className="italic text-text/90 text-sm select-text cursor-text">
               {entry.post_processed_text}
             </p>

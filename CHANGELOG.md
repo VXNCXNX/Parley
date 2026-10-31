@@ -2,9 +2,18 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Replace post-processing with one "Clean up with AI" switch that runs a fixed cleanup pass on Gemini (`gemini-3.5-flash-lite`), using the Gemini API key from Advanced settings. The transcript is now sent inside `<transcript>` tags, so a dictated question or instruction is cleaned instead of answered.
+- Fall back to the raw transcript when the cleanup is unavailable, times out after 8 seconds, or returns something that does not look like a cleaned version of the input.
+
+### Removed
+
+- Post-processing providers, prompts, actions, per-app mappings, processing models, the `Ctrl+1` to `Ctrl+9` action shortcuts, the separate "Transcribe with Post-Processing" shortcut and the `--toggle-post-process` flag. Existing settings files still load.
+- The Apple Intelligence bridge.
+
 ### Fixed
 
-- Keep Swift bridge generation available on Intel macOS hosts when cross-compiling for Apple Silicon.
 - Keep macOS release builds as drafts for manual install and paste verification before publication. Verify the Developer ID team, Gatekeeper assessment, and stapled notarization ticket before uploading signed assets.
 - Submit the final signed macOS DMG for notarization, staple and assess it, and verify its mounted app before upload.
 - Preserve the installed macOS app's designated code requirement before replacing it, and document Accessibility permission recovery after a signing identity change.

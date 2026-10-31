@@ -177,26 +177,7 @@
       },
       "noModelsMatch": "Tomuto filtru neodpovídají žádné modely.",
       "yourModels": "Stažené modely",
-      "availableModels": "Dostupné ke stažení",
-      "tabs": {
-        "transcription": "Přepis",
-        "processing": "Zpracování"
-      },
-      "processingModels": {
-        "title": "Modely pro zpracování",
-        "description": "Uložte velké jazykové modely pro použití v akcích následného zpracování.",
-        "noModels": "Zatím nejsou uložené žádné modely pro zpracování. Přidejte model pro použití ve svých akcích.",
-        "addModel": "Přidat model pro zpracování",
-        "provider": "Poskytovatel",
-        "apiKey": "API klíč",
-        "apiKeyPlaceholder": "Zadejte API klíč",
-        "model": "Model",
-        "modelPlaceholder": "Vyberte model nebo zadejte jeho název",
-        "save": "Uložit",
-        "cancel": "Zrušit",
-        "fetchModels": "Načíst modely",
-        "alreadySaved": "Tento model je již uložený."
-      }
+      "availableModels": "Dostupné ke stažení"
     },
     "general": {
       "title": "Obecné",
@@ -375,90 +356,10 @@
     },
     "postProcessing": {
       "title": "Následné zpracování",
-      "hotkey": {
-        "title": "Klávesová zkratka"
-      },
-      "api": {
-        "title": "API (kompatibilní s OpenAI)",
-        "provider": {
-          "title": "Poskytovatel",
-          "description": "Vyberte poskytovatele kompatibilního s OpenAI."
-        },
-        "appleIntelligence": {
-          "title": "Apple Intelligence",
-          "description": "Běží plně na zařízení. Není potřeba API klíč ani síťové připojení.",
-          "requirements": "Vyžaduje Mac s Apple Silicon a macOS Tahoe (26.0) nebo novější. Apple Intelligence musí být povoleno v Nastavení systému.",
-          "unavailable": "Apple Intelligence není na tomto zařízení k dispozici. Vyžaduje Mac s Apple Silicon a macOS Tahoe (26.0) nebo novější a povolené Apple Intelligence v Nastavení systému."
-        },
-        "baseUrl": {
-          "title": "Základní URL",
-          "description": "Základní URL API pro vybraného poskytovatele. Upravitelné je pouze u vlastního poskytovatele.",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "API klíč",
-          "description": "API klíč pro vybraného poskytovatele.",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "Model",
-          "descriptionApple": "Zadejte volitelný číselný limit tokenů nebo ponechte výchozí předvolbu na zařízení.",
-          "descriptionCustom": "Zadejte identifikátor modelu očekávaný vaším vlastním endpointem.",
-          "descriptionDefault": "Vyberte model dostupný u vybraného poskytovatele.",
-          "placeholderApple": "Apple Intelligence",
-          "placeholderWithOptions": "Vyhledejte nebo vyberte model",
-          "placeholderNoOptions": "Zadejte název modelu",
-          "refreshModels": "Obnovit modely"
-        }
-      },
-      "prompts": {
-        "title": "Prompt",
-        "selectedPrompt": {
-          "title": "Vybraný prompt",
-          "description": "Vyberte šablonu pro zpřesnění přepisu nebo vytvořte novou. V textu promptu použijte ${output} pro vložení zachyceného přepisu."
-        },
-        "noPrompts": "Nejsou k dispozici žádné prompty",
-        "selectPrompt": "Vyberte prompt",
-        "createNew": "Vytvořit nový prompt",
-        "promptLabel": "Název promptu",
-        "promptLabelPlaceholder": "Zadejte název promptu",
-        "promptInstructions": "Instrukce promptu",
-        "promptInstructionsPlaceholder": "Napište instrukce, které se mají spustit po přepisu. Příklad: Zlepšete gramatiku a srozumitelnost následujícího textu: ${output}",
-        "promptTip": "Tip: Použijte <code>${output}</code> pro vložení přepsaného textu do promptu.",
-        "updatePrompt": "Aktualizovat prompt",
-        "deletePrompt": "Smazat prompt",
-        "createPrompt": "Vytvořit prompt",
-        "cancel": "Zrušit",
-        "selectToEdit": "Vyberte výše prompt, abyste zobrazili a upravili jeho podrobnosti.",
-        "createFirst": "Klikněte nahoře na 'Vytvořit nový prompt' a vytvořte svůj první prompt pro následné zpracování."
-      },
-      "actions": {
-        "title": "Akce",
-        "description": "Přiřaďte klávesám Ctrl+číslo (1-9) vlastní prompty. Stisknutím zkratky během nahrávání se akce provede po přepisu.",
-        "noActions": "Zatím nejsou nastavené žádné akce.",
-        "createFirst": "Vytvořte první akci pro zpracování přepisů pomocí nastaveného poskytovatele.",
-        "addAction": "Přidat akci",
-        "editAction": "Upravit akci",
-        "key": "Klávesa",
-        "keyLabel": "Klávesa (1-9)",
-        "name": "Název",
-        "namePlaceholder": "Např. režim e-mailu",
-        "prompt": "Prompt",
-        "promptPlaceholder": "Např. upravte tento text jako profesionální e-mail s oslovením a závěrečným pozdravem. Oddělte odstavce zalomením řádku.",
-        "promptTip": "Tip: Použijte <code>${output}</code> pro vložení přepsaného textu do promptu.",
-        "model": "Model (volitelné)",
-        "modelPlaceholder": "Vyberte model",
-        "modelTip": "Vyberte konkrétní model pro tuto akci nebo použijte výchozí model ze sekce API.",
-        "defaultModel": "Výchozí",
-        "save": "Uložit",
-        "cancel": "Zrušit",
-        "delete": "Smazat",
-        "maxActionsReached": "Bylo dosaženo maximálního počtu 9 akcí."
-      },
-      "appMappings": {
-        "presetsDescription": "Rychlý začátek: načtěte 5 standardních akcí (neformální text / e-mail / kód / dokument / prompt pro AI) a přiřazení pro běžné aplikace.",
-        "loadPresets": "Načíst předvolby",
-        "noActions": "Před přidáním přiřazení vytvořte výše alespoň jednu akci následného zpracování."
+      "cleanup": {
+        "label": "Vyčistit pomocí AI",
+        "description": "Po každém nadiktování opraví pomocí Gemini interpunkci a vycpávková slova. Váš přepis se odesílá společnosti Google.",
+        "missingKey": "Čištění vyžaduje klíč API Gemini. Přidejte ho v části Pokročilé, ve skupině Cloudové modely."
       }
     },
     "history": {
@@ -475,8 +376,7 @@
       "reprocessing": "Probíhá opětovné zpracování...",
       "selectModel": "Vyberte model",
       "originalTranscript": "Původní",
-      "postProcessed": "Po následném zpracování",
-      "action": "Akce {{key}}"
+      "postProcessed": "Po následném zpracování"
     },
     "debug": {
       "title": "Ladění",
@@ -522,10 +422,6 @@
       "clamshellMicrophone": {
         "title": "Mikrofon při zavřeném víku",
         "description": "Mikrofon, který se použije při zavřeném víku notebooku"
-      },
-      "postProcessingToggle": {
-        "label": "Následné zpracování",
-        "description": "Povolit AI vylepšení textu po přepisu"
       },
       "muteWhileRecording": {
         "label": "Ztlumit při nahrávání",

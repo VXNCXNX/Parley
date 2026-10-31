@@ -3,16 +3,14 @@
 //! This module contains the common logic for handling shortcut events,
 //! used by both the Tauri and handy-keys implementations.
 
-use log::{debug, warn};
+use log::warn;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
 use crate::actions::ACTION_MAP;
 use crate::managers::audio::AudioRecordingManager;
 use crate::settings::get_settings;
-use crate::transcription_coordinator::{
-    is_action_binding, is_transcribe_binding, parse_action_key,
-};
+use crate::transcription_coordinator::is_transcribe_binding;
 use crate::TranscriptionCoordinator;
 
 /// Handle a shortcut event from either implementation.
@@ -42,26 +40,6 @@ pub fn handle_shortcut_event(
             coordinator.send_input(binding_id, hotkey_string, is_pressed, settings.push_to_talk);
         } else {
             warn!("TranscriptionCoordinator is not initialized");
-        }
-        return;
-    }
-
-    // Action bindings (1-9): only fires when recording and key is pressed
-    if is_action_binding(binding_id) {
-        if !settings.post_process_enabled {
-            debug!(
-                "Ignoring action shortcut '{}' because post-processing is disabled",
-                binding_id
-            );
-            return;
-        }
-
-        if is_pressed {
-            if let Some(key) = parse_action_key(binding_id) {
-                if let Some(coordinator) = app.try_state::<TranscriptionCoordinator>() {
-                    coordinator.select_action(key);
-                }
-            }
         }
         return;
     }

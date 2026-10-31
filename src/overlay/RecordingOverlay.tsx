@@ -8,11 +8,6 @@ import { getLanguageDirection } from "@/lib/utils/rtl";
 
 type OverlayState = "recording" | "transcribing" | "processing";
 
-interface ActionInfo {
-  key: number;
-  name: string;
-}
-
 const MicIcon: React.FC = () => (
   <svg
     width="14"
@@ -131,7 +126,6 @@ const RecordingOverlay: React.FC = () => {
   const [state, setState] = useState<OverlayState>("recording");
   const [preview, setPreview] = useState("");
   const [timerStart, setTimerStart] = useState(0);
-  const [selectedAction, setSelectedAction] = useState<ActionInfo | null>(null);
   const direction = getLanguageDirection(i18n.language);
 
   const handleCancel = useCallback(() => {
@@ -153,7 +147,6 @@ const RecordingOverlay: React.FC = () => {
         if (overlayState === "recording") {
           setPreview("");
           setTimerStart(Date.now());
-          setSelectedAction(null);
         }
       });
 
@@ -172,26 +165,12 @@ const RecordingOverlay: React.FC = () => {
         acceptPreview = false;
         setPreview("");
         setIsVisible(false);
-        setSelectedAction(null);
-      });
-
-      const unlistenAction = await listen<ActionInfo>(
-        "action-selected",
-        (event) => {
-          setSelectedAction(event.payload);
-        },
-      );
-
-      const unlistenDeselect = await listen("action-deselected", () => {
-        setSelectedAction(null);
       });
 
       if (!isMounted) {
         unlistenShow();
         unlistenPreview();
         unlistenHide();
-        unlistenAction();
-        unlistenDeselect();
         return;
       }
 
@@ -199,8 +178,6 @@ const RecordingOverlay: React.FC = () => {
         unlistenShow();
         unlistenPreview();
         unlistenHide();
-        unlistenAction();
-        unlistenDeselect();
       };
     };
 
@@ -219,10 +196,6 @@ const RecordingOverlay: React.FC = () => {
       <div className="overlay-left">
         {state === "recording" ? <MicIcon /> : <DotsIcon />}
       </div>
-
-      {selectedAction && state === "recording" && (
-        <div className="action-badge">{selectedAction.key}</div>
-      )}
 
       <div className="overlay-middle">
         {state === "recording" && !preview && (
